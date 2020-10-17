@@ -74,7 +74,7 @@ class BgenObject:
 
         # [N1] Bytes are stored right to left hence the reverse, see shorturl.at/cOU78
         # Check the compression of the data
-        compression_flag = _bits_to_int(flag[0: 2][::-1])
+        compression_flag = self._bits_to_int(flag[0: 2][::-1])
         assert 0 <= compression_flag < 3, be.compression_violation(self._bgen_binary.name, compression_flag)
         if compression_flag == 0:
             compression = self._no_decompress
@@ -84,7 +84,7 @@ class BgenObject:
             compression = zstd.decompress
 
         # Check the layout is either 1 or 2, see [N1]
-        layout = _bits_to_int(flag[2:6][::-1])
+        layout = self._bits_to_int(flag[2:6][::-1])
         assert 1 <= layout < 3, be.layout_violation(self._bgen_binary.name, layout)
 
         # Check if the sample identifiers are in the file or not, then return
@@ -149,11 +149,11 @@ class BgenObject:
     def _no_decompress(data):
         return data
 
+    @staticmethod
+    def _bits_to_int(bits):
+        """Converts bits to int."""
+        result = 0
+        for bit in bits:
+            result = (result << 1) | bit
 
-def _bits_to_int(bits):
-    """Converts bits to int."""
-    result = 0
-    for bit in bits:
-        result = (result << 1) | bit
-
-    return result
+        return result
