@@ -3,14 +3,29 @@ import numpy as np
 import struct
 import zlib
 import zstd
+import os
 
 
 class BgenObject:
-    def __init__(self, file_path):
+    def __init__(self, file_path, bgi_file_path=False, probability=None):
+        """
+
+        :param file_path:
+
+        :param bgi_file_path: Takes a value of True if the .bgi is in the same directory and named file_path.bgi
+            otherwise can be passed as a path if it is in a different directory.
+        :type bgi_file_path: bool | str
+
+        :param probability:
+        """
+
         self._bgen_binary = open(file_path, "rb")
 
         self.offset, self.headers, self.variant_number, self.sample_number, self.compression, self.layout, \
             self.sample_identifiers = self.parse_header()
+
+        self.probability = probability
+        self.bgi_file = self._set_bgi(file_path, bgi_file_path)
 
         print(self.offset, self.headers, self.variant_number, self.sample_number, self.compression, self.layout,
               self.sample_identifiers)
@@ -105,6 +120,30 @@ class BgenObject:
             return struct.unpack(struct_format, self._bgen_binary.read(size))
         else:
             return struct.unpack(struct_format, self._bgen_binary.read(size))[0]
+
+    @staticmethod
+    def _set_bgi(bgen_path, bgi_file_path):
+        """
+        Connect to the index file either via a bgi file in the same directory or in another directory.
+
+        :param bgen_path: The path to bgen_path
+        :param bgi_file_path: The bgi_position
+        """
+
+        if not bgi_file_path:
+            return False
+        elif bgi_file_path:
+            if not os.path.isfile(f"{bgen_path}.bgi"):
+                raise IOError(f"{bgen_path}.bgi was not found")
+            else:
+                pass  # This is where we set the .bgi file
+        elif isinstance(bgi_file_path, str):
+            if not os.path.isfile(f"{bgi_file_path}"):
+                raise IOError(f"{bgi_file_path} was not found")
+            else:
+                pass  # This is where we set the .bgi file
+        else:
+            raise TypeError(be.bgi_path_violation(bgen_path, bgi_file_path))
 
     @staticmethod
     def _no_decompress(data):
