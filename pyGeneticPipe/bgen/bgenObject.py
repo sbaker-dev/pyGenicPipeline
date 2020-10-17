@@ -143,7 +143,7 @@ class BgenObject:
             else:
                 pass  # This is where we set the .bgi file
         else:
-            raise TypeError(be.bgi_path_violation(bgen_path, bgi_file_path))
+            raise TypeError(be.bgi_path_violation(bgi_file_path))
 
     @staticmethod
     def _no_decompress(data):

@@ -29,3 +29,11 @@ def sample_identifier_violation(file_name, sample_identifier):
            f"Bgen files have a flag, where bit 31 represents if sample identifiers as within the file at 1 or not" \
            f" at 0. Yet found\n" \
            f"Sample Identifier flag: {sample_identifier}"
+
+
+def bgi_path_violation(bgi_path):
+    return f"INVALID BGI TYPE for bgi_path of type: {bgi_path}\n" \
+           f"Bgi_path defaults to False where you don't have an index in an external file. If you do have .bgi file" \
+           f" in the same directory, name the same thing but with .bgi on the end, then it should be True. If the " \
+           f"file is in another directory you may also pass the path as a str in to bgi_path. Yet Found\n" \
+           f"BGI path type: {type(bgi_path)}"
