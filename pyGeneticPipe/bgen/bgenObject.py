@@ -1,6 +1,6 @@
 from pyGeneticPipe.bgen import error_codes as be
-import struct
 import numpy as np
+import struct
 import zlib
 import zstd
 
@@ -73,8 +73,11 @@ class BgenObject:
         assert 1 <= layout < 3, be.layout_violation(self._bgen_binary.name, layout)
 
         # Check if the sample identifiers are in the file or not, then return
-        assert flag[31] == 0 or flag[31] == 1
-        return compression, layout, flag[31]
+        assert flag[31] == 0 or flag[31] == 1, be.sample_identifier_violation(self._bgen_binary.name, flag[31])
+        if flag[31] == 0:
+            return compression, layout, False
+        else:
+            return compression, layout, True
 
     def unpack(self, struct_format, size, list_return=False):
         """
