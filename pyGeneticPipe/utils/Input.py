@@ -4,6 +4,12 @@ from pathlib import Path
 
 class Input:
     def __init__(self, args):
+
+        self._args = args
+        self._frequencies = args["Summary_Frequency"]
+        self._mandatory_headers = ["SNP_ID", "Effect_Allele", "Alt_Allele", "Effect_size", "P_Value"]
+        self._summary_headers = self._set_summary_headers()
+
         self.debug = args["Debug"]
         self.ld_ref_mode, self.bgen, self.bed, self.bim, self.fam = self._set_ld_ref(args["LD_Reference_Genotype"])
 
@@ -102,15 +108,7 @@ class Input:
 
         print(header_dict)
 
-    @property
-    def _mandatory_headers(self):
-        """
-        Some headers are required, make sure these headers have been set
-        """
-        return ["SNP_ID", "Effect_Allele", "Alt_Allele", "Effect_size", "P_Value"]
-
-    @property
-    def _summary_headers(self):
+    def _set_summary_headers(self):
         """
         We may have users using custom headers, or they may be using a format we already have covered
 
