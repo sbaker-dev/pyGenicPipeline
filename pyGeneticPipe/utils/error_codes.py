@@ -1,3 +1,6 @@
+
+
+# Bgen error codes
 def magic_violation(file_name):
     return f"INVALID BGEN FILE for file at path: {file_name}\n" \
            f"Bgen files have a magic number, which in more modern files is 4 bytes of b'bgen' but can" \
@@ -37,3 +40,9 @@ def bgi_path_violation(bgi_path):
            f" in the same directory, name the same thing but with .bgi on the end, then it should be True. If the " \
            f"file is in another directory you may also pass the path as a str in to bgi_path. Yet Found\n" \
            f"BGI path type: {type(bgi_path)}"
+
+
+# Input error codes
+def path_invalid(parent_path, operation):
+    return f"INVALID Path for {operation}\n" \
+           f"{operation} attempt to navigate to a directory or file at {parent_path} but it does not exist"

@@ -2,7 +2,7 @@
 This is a modified version of the pybgen project available at https://github.com/lemieuxl/pybgen
 """
 
-from pyGeneticPipe.bgen import error_codes as be
+from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils.misc import bits_to_int
 import numpy as np
 import struct
@@ -18,7 +18,7 @@ class BgenObject:
         :param file_path:
 
         :param bgi_file_path: Takes a value of True if the .bgi is in the same directory and named file_path.bgi
-            otherwise can be passed as a path if it is in a different directory.
+            otherwise can ec passed as a path if it is in a different directory.
         :type bgi_file_path: bool | str
 
         :param probability:
@@ -47,7 +47,7 @@ class BgenObject:
         # Check the header block is not larger than offset
         offset = self.unpack("<I", 4)
         headers = self.unpack("<I", 4)
-        assert headers <= offset, be.offset_violation(self._bgen_binary.name, offset, headers)
+        assert headers <= offset, ec.offset_violation(self._bgen_binary.name, offset, headers)
 
         # Extract the number of variants and samples
         variant_number = self.unpack("<I", 4)
@@ -55,7 +55,7 @@ class BgenObject:
 
         # Check the file is valid
         magic = self.unpack("4s", 4)
-        assert (magic == b'bgen') or (struct.unpack("<I", magic)[0] == 0), be.magic_violation(self._bgen_binary.name)
+        assert (magic == b'bgen') or (struct.unpack("<I", magic)[0] == 0), ec.magic_violation(self._bgen_binary.name)
 
         # Skip the free data area
         self._bgen_binary.read(headers - 20)
@@ -80,7 +80,7 @@ class BgenObject:
         # [N1] Bytes are stored right to left hence the reverse, see shorturl.at/cOU78
         # Check the compression of the data
         compression_flag = bits_to_int(flag[0: 2][::-1])
-        assert 0 <= compression_flag < 3, be.compression_violation(self._bgen_binary.name, compression_flag)
+        assert 0 <= compression_flag < 3, ec.compression_violation(self._bgen_binary.name, compression_flag)
         if compression_flag == 0:
             compression = self._no_decompress
         elif compression_flag == 1:
@@ -90,10 +90,10 @@ class BgenObject:
 
         # Check the layout is either 1 or 2, see [N1]
         layout = bits_to_int(flag[2:6][::-1])
-        assert 1 <= layout < 3, be.layout_violation(self._bgen_binary.name, layout)
+        assert 1 <= layout < 3, ec.layout_violation(self._bgen_binary.name, layout)
 
         # Check if the sample identifiers are in the file or not, then return
-        assert flag[31] == 0 or flag[31] == 1, be.sample_identifier_violation(self._bgen_binary.name, flag[31])
+        assert flag[31] == 0 or flag[31] == 1, ec.sample_identifier_violation(self._bgen_binary.name, flag[31])
         if flag[31] == 0:
             return compression, layout, False
         else:
@@ -148,7 +148,7 @@ class BgenObject:
             else:
                 pass  # This is where we set the .bgi file
         else:
-            raise TypeError(be.bgi_path_violation(bgi_file_path))
+            raise TypeError(ec.bgi_path_violation(bgi_file_path))
 
     @staticmethod
     def _no_decompress(data):
