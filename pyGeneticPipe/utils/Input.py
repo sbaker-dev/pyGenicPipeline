@@ -102,9 +102,12 @@ class Input:
 
         print(header_dict)
 
-        header_dict = {h: i for i, h in enumerate(headers)}
-
-        return header_dict
+    @property
+    def _mandatory_headers(self):
+        """
+        Some headers are required, make sure these headers have been set
+        """
+        return ["SNP_ID", "Effect_Allele", "Alt_Allele", "Effect_size", "P_Value"]
 
     @property
     def _summary_headers(self):
