@@ -9,10 +9,24 @@ class Input:
 
     @staticmethod
     def _set_ld_ref(ref_path):
+        """
+        When cleaning summary statistics we need an ld-reference-genotype file to do so. This method will attempt to
+        load ethier a .bgen file and return it as an object or load a .bed, .bim, and .fam plink file.
+
+        :param ref_path: path to ld_ref_file
+        :type ref_path: None | str
+
+        :return: The mode we are working in (bgen or plink), the bgen object if loaded else None, and the three plink
+            files that where load else None.
+        """
+        # If there was no path for ld_ref, then just return None for all 5 parameters
+        if not ref_path:
+            return None, None, None, None, None
+
         # Construct path as an object
         ld_path = Path(ref_path)
 
-        # Check file directory can be reached
+        # Check file home directory can be reached
         assert ld_path.parent.exists(), ec.path_invalid(ld_path.parent, "_set_ld_ref")
 
         # Check the mode we are running in, and return args of mode, bgenObject and the 3 plink files accordingly
