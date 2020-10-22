@@ -119,7 +119,9 @@ class Input:
         :return: The headers to validate
         """
         if self._args["Summary_Headers"]:
-            return self._args["Summary_Headers"]
+            # Recast so that the values are in a list so they can be checked by the same method as defaults
+            header_sets = self._args["Summary_Headers"]
+            return {key: [v] for key, v in zip(header_sets.keys(), header_sets.values())}
         else:
             # Based on known summary statistics from LDPred sum_stats_parsers.py
             header_sets = {
