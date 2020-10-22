@@ -94,19 +94,24 @@ class Input:
         summary_headers = self._summary_headers
         mandatory_headers = ["SNP_ID", "Effect_Allele", "Alt_Allele", "Effect_size", "P_Value"]
 
-        for summary_header in summary_headers:
-            print(summary_header)
-            header_indexes = [i for i, h in enumerate(headers) if h == summary_headers[summary_header]]
-            print(header_indexes)
+    def _check_header(self, summary_header, headers):
+        """
+        We need to standardise our headers, and locate where the current header is in our summary file in terms of a
+        base zero index.
 
-            assert len(header_indexes) < 2, ec
-            if len(header_indexes) == 0:
-                assert summary_header not in mandatory_headers, ec
-                header_dict[summary_header] = None
-            else:
-                header_dict[summary_header] = header_indexes[0]
+        :param summary_header: Standardised header
+        :param headers: summary statistics headers
+        :return: None if not found else the index of the header in our file for this standardised header
+        :rtype: None | int
+        """
+        header_indexes = [i for i, h in enumerate(headers) if h in self._summary_headers[summary_header]]
 
-        print(header_dict)
+        assert len(header_indexes) < 2, ec
+        if len(header_indexes) == 0:
+            assert summary_header not in self._mandatory_headers, ec
+            return None
+        else:
+            return header_indexes[0]
 
     def _set_summary_headers(self):
         """
