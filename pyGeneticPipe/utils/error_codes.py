@@ -46,3 +46,15 @@ def bgi_path_violation(bgi_path):
 def path_invalid(parent_path, operation):
     return f"INVALID Path for {operation}\n" \
            f"{operation} attempt to navigate to a directory or file at {parent_path} but it does not exist"
+
+
+def mandatory_header(header, found_headers, match_headers):
+    return f"MANDATORY HEADER {header} NOT SET\n" \
+           f"When reading in summary statistics {header} is required yet\n" \
+           f"Tried to find {header} in headers: {found_headers} by matching {match_headers}"
+
+
+def ambiguous_header(header, found_headers, match_headers):
+    return f"AMBIGUOUS HEADERS FOUND FOR {header}\n" \
+           f"When reading the headers linknig should be unique yet\n" \
+           f"Founding {found_headers} indexes for {header} by matching {match_headers}"

@@ -99,16 +99,17 @@ class Input:
         We need to standardise our headers, and locate where the current header is in our summary file in terms of a
         base zero index.
 
-        :param summary_header: Standardised header
+        :param sum_header: Standardised header
         :param headers: summary statistics headers
         :return: None if not found else the index of the header in our file for this standardised header
         :rtype: None | int
         """
-        header_indexes = [i for i, h in enumerate(headers) if h in self._summary_headers[summary_header]]
+        header_indexes = [i for i, h in enumerate(headers) if h in self._summary_headers[sum_header]]
 
-        assert len(header_indexes) < 2, ec
+        assert len(header_indexes) < 2, ec.ambiguous_header(sum_header, headers, self._summary_headers[sum_header])
         if len(header_indexes) == 0:
-            assert summary_header not in self._mandatory_headers, ec
+            assert sum_header not in self._mandatory_headers, ec.mandatory_header(
+                sum_header, headers, self._summary_headers[sum_header])
             return None
         else:
             return header_indexes[0]
