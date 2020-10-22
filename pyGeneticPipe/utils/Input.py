@@ -1,4 +1,5 @@
 from pyGeneticPipe.utils import error_codes as ec
+from pyGeneticPipe.utils import misc as mc
 from pathlib import Path
 
 
@@ -12,6 +13,7 @@ class Input:
 
         self.debug = args["Debug"]
         self.ld_ref_mode, self.bgen, self.bed, self.bim, self.fam = self._set_ld_ref(args["LD_Reference_Genotype"])
+        self.summary_stats = self._set_summary_stats(args["Summary_Stats"])
 
     @staticmethod
     def _set_ld_ref(ref_path):
@@ -70,31 +72,32 @@ class Input:
         gz_status = (summary_path.suffix == ".gz")
 
         with mc.open_setter(summary_path)(summary_path) as file:
-            headers = self._validate_summary_headers(file.readline(), gz_status)
-            #
-            # print(headers)
-            #
-            # for index, line in enumerate(file):
-            #     print(index, line)
-            #     line = mc.decode_line(line, gz_status)
-            #     print(line)
-            #     print(line[headers["SNP"]])
-            #
-            #     break
+            raw_headers = file.readline()
+            # Determine if we have custom headers or not via _summary_headers
+            headers = {header: self._check_header(header, mc.decode_line(raw_headers, gz_status))
+                       for header in self._summary_headers}
 
+            if self._frequencies:
+                self._sum_stats_frequencies()
+            else:
+                self._sum_stats(file, gz_status, headers)
 
         return 0
 
-    def _validate_summary_headers(self, header_line, zip_status):
-        # Extract the raw headers
-        headers = mc.decode_line(header_line, zip_status)
-        header_dict = {}
+    def _sum_stats(self, file, gz_status, headers):
+        for index, line in enumerate(file):
+            print(index, line)
+            line = mc.decode_line(line, gz_status)
+            print(line)
+            print(line[headers["SNP_ID"]])
+            print(self.fam)
 
-        # Determine if we have custom headers or not via _summary_headers
-        summary_headers = self._summary_headers
-        mandatory_headers = ["SNP_ID", "Effect_Allele", "Alt_Allele", "Effect_size", "P_Value"]
+            break
 
-    def _check_header(self, summary_header, headers):
+    def _sum_stats_frequencies(self):
+        raise NotImplementedError("Frequencies are not yet implemented")
+
+    def _check_header(self, sum_header, headers):
         """
         We need to standardise our headers, and locate where the current header is in our summary file in terms of a
         base zero index.
