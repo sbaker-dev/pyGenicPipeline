@@ -17,7 +17,8 @@ class Input:
         self._effect_types = ["OR", "LINREG", "LOGOR", "BLUP"]
 
         self.ld_ref_mode, self.bgen, self.bed, self.bim, self.fam = self._set_ld_ref(args["LD_Reference_Genotype"])
-        self.summary_path, self.snp_map, self.valid_snps, self.zipped = self._set_summary_stats(args["Summary_Stats"])
+        self.summary_path, self.snp_map, self.valid_snps, self.zipped, self.sample_size = self._set_summary_stats(
+            args["Summary_Stats"])
         self._summary_headers = self._set_summary_headers(args["Summary_Headers"], args["Summary_Stats"])
         self.frequencies = args["Summary_Frequency"]
         self.effect_type = self._set_effect_type(args["Effect_type"])
@@ -67,6 +68,15 @@ class Input:
         return "plink", None, bed, bim, fam
 
     def _set_summary_stats(self, summary_stats_path):
+        """
+        If we are reading in the summary statistics file then validate its path, construct a valid set of snps in a set
+        and map the chromosome and bp_position to each valid snp in a dict. Validate the type of zipped structure and
+        the sample size of the study
+        :param summary_stats_path: Path to the summary stats file or None if we don't need to read one in
+        :type summary_stats_path: str | None
+
+        :return: summary_path, snp_pos_map, valid_snp, gz_status, sample_size
+        """
 
         # Stop if not required
         if not summary_stats_path:
@@ -83,7 +93,7 @@ class Input:
 
         # Determine if the summary file is g-zipped
         gz_status = (summary_path.suffix == ".gz")
-        return summary_path, snp_pos_map, valid_snp, gz_status
+        return summary_path, snp_pos_map, valid_snp, gz_status, sample_size
 
     def _validation_snp_list(self):
         """
