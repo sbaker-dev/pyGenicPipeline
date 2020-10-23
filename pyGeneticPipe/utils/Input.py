@@ -3,7 +3,6 @@ from pyGeneticPipe.utils import misc as mc
 from pathlib import Path
 import pickle
 import gzip
-import sys
 
 
 class Input:
@@ -119,7 +118,8 @@ class Input:
             raise NotImplementedError("Bgen mode not yet implemented")
 
         else:
-            sys.exit(f"CRITICAL ERROR: ld_ref_mode takes the value 'plink' or 'bgen' yet found {self.ld_ref_mode}")
+            raise Exception(f"CRITICAL ERROR: ld_ref_mode takes the value 'plink' or 'bgen' yet found"
+                            f" {self.ld_ref_mode}")
 
     def _check_header(self, sum_header, headers, summary_headers):
         """
