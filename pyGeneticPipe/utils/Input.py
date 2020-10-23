@@ -1,6 +1,9 @@
 from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils import misc as mc
 from pathlib import Path
+import pickle
+import gzip
+import sys
 
 
 class Input:
@@ -9,7 +12,8 @@ class Input:
         self._args = args
         self._frequencies = args["Summary_Frequency"]
         self._mandatory_headers = ["SNP_ID", "Effect_Allele", "Alt_Allele", "Effect_size", "P_Value"]
-        self._summary_headers = self._set_summary_headers()
+        self._loaded_sum_headers = self._set_summary_headers()
+        self._hap_map_3 = self._set_hap_map_3()
 
         self.debug = args["Debug"]
         self.ld_ref_mode, self.bgen, self.bed, self.bim, self.fam = self._set_ld_ref(args["LD_Reference_Genotype"])
@@ -159,3 +163,24 @@ class Input:
             return self._args["Custom_Chromosome"]
         else:
             return None
+
+    def _set_hap_map_3(self):
+        """
+        Users may wish to limit valid snps to those found within HapMap3. If they do, they need to provide a path to the
+        hapmap3 snp file which will be check that it exists, have the snps extracted and return. Otherwise set to none
+        :return: The valid HapMap3 snps or None
+        """
+
+        if self._args["Only_HapMap3"]:
+            # Construct path as an object and check it exists
+            hap_map_path = Path(self._args["Only_HapMap3"])
+            assert hap_map_path.exists(), ec.path_invalid(hap_map_path, "_set_hap_map_3")
+
+            # If the hapmap3 file exists, then extract the snp ids and return them
+            f = gzip.open(hap_map_path, 'r')
+            hm3_sids = pickle.load(f)
+            f.close()
+            return hm3_sids
+        else:
+            return None
+
