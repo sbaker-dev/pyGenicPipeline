@@ -63,16 +63,19 @@ class Input:
         return "plink", None, bed, bim, fam
 
     def _set_summary_stats(self, summary_stats_path):
+
+        # Stop if not required
         if not summary_stats_path:
             return None
 
-        # Construct path as an object
+        # Construct path as an object and check it exists
         summary_path = Path(summary_stats_path)
-
-        # Check file exists
         assert summary_path.exists(), ec.path_invalid(summary_path, "_set_summary_stats")
 
-        # Determine if file is g-zipped
+        # Construct the valid snp list
+        snp_pos_map, valid_snp = self._validation_snp_list()
+
+        # Determine if the summary file is g-zipped
         gz_status = (summary_path.suffix == ".gz")
 
         with mc.open_setter(summary_path)(summary_path) as file:
@@ -101,6 +104,43 @@ class Input:
     def _sum_stats_frequencies(self):
         raise NotImplementedError("Frequencies are not yet implemented")
 
+    def _validation_snp_list(self):
+        """
+        Create a set of valid snps and a position map to them via plink or bgen with option censuring of chromosome and
+        snps via HapMap3
+
+        :return: A dict of the snp_id: morgan positioning and chromosome
+        """
+        if self.ld_ref_mode == "plink":
+            accepted_chromosomes = self._set_accepted_chromosomes()
+            snp_pos_map = {}
+            valid_snp = set()
+
+            with open(self.bim) as f:
+                for line in f:
+                    chromosome, variant_id, morgan_pos, bp_cord, a1, a2 = line.split()
+                    # If the user has specified certain chromosomes check that this snps chromosome is in accepted_list
+                    if accepted_chromosomes and (chromosome not in accepted_chromosomes):
+                        continue
+
+                    # If the user has specified only to use snp id's from HapMap3 then check this condition
+                    if self._hap_map_3 and (variant_id in self._hap_map_3):
+                        valid_snp.add(variant_id)
+                        snp_pos_map[variant_id] = {"position": morgan_pos, "chromosome": chromosome}
+
+                    # Otherwise add to valid snps / snp_pos_map
+                    else:
+                        valid_snp.add(variant_id)
+                        snp_pos_map[variant_id] = {"position": morgan_pos, "chromosome": chromosome}
+            assert len(valid_snp) > 0, ec.no_valid_snps(self.bim, accepted_chromosomes, self._hap_map_3)
+            return snp_pos_map, valid_snp
+
+        elif self.ld_ref_mode == "bgen":
+            raise NotImplementedError("Bgen mode not yet implemented")
+
+        else:
+            sys.exit(f"CRITICAL ERROR: ld_ref_mode takes the value 'plink' or 'bgen' yet found {self.ld_ref_mode}")
+
     def _check_header(self, sum_header, headers):
         """
         We need to standardise our headers, and locate where the current header is in our summary file in terms of a
@@ -111,12 +151,12 @@ class Input:
         :return: None if not found else the index of the header in our file for this standardised header
         :rtype: None | int
         """
-        header_indexes = [i for i, h in enumerate(headers) if h in self._summary_headers[sum_header]]
+        header_indexes = [i for i, h in enumerate(headers) if h in self._loaded_sum_headers[sum_header]]
 
-        assert len(header_indexes) < 2, ec.ambiguous_header(sum_header, headers, self._summary_headers[sum_header])
+        assert len(header_indexes) < 2, ec.ambiguous_header(sum_header, headers, self._loaded_sum_headers[sum_header])
         if len(header_indexes) == 0:
             assert sum_header not in self._mandatory_headers, ec.mandatory_header(
-                sum_header, headers, self._summary_headers[sum_header])
+                sum_header, headers, self._loaded_sum_headers[sum_header])
             return None
         else:
             return header_indexes[0]
@@ -176,7 +216,7 @@ class Input:
             hap_map_path = Path(self._args["Only_HapMap3"])
             assert hap_map_path.exists(), ec.path_invalid(hap_map_path, "_set_hap_map_3")
 
-            # If the hapmap3 file exists, then extract the snp ids and return them
+            # If the HapMap3 file exists, then extract the snp ids and return them
             f = gzip.open(hap_map_path, 'r')
             hm3_sids = pickle.load(f)
             f.close()
