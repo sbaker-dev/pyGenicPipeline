@@ -14,11 +14,13 @@ class Input:
         # Summary setters
         self._hap_map_3 = self._set_hap_map_3()
         self._mandatory_headers = ["SNP_ID", "Effect_Allele", "Alt_Allele", "Effect_size", "P_Value"]
+        self._effect_types = ["OR", "LINREG", "LOGOR", "BLUP"]
 
         self.ld_ref_mode, self.bgen, self.bed, self.bim, self.fam = self._set_ld_ref(args["LD_Reference_Genotype"])
         self.summary_path, self.snp_map, self.valid_snps, self.zipped = self._set_summary_stats(args["Summary_Stats"])
         self._summary_headers = self._set_summary_headers(args["Summary_Headers"], args["Summary_Stats"])
         self.frequencies = args["Summary_Frequency"]
+        self.effect_type = self._set_effect_type(args["Effect_type"])
 
     @staticmethod
     def _set_ld_ref(ref_path):
@@ -212,6 +214,16 @@ class Input:
             hm3_sids = pickle.load(f)
             f.close()
             return hm3_sids
+        else:
+            return None
+
+    def _set_effect_type(self, effect_type):
+        """
+        Set the effect type of the betas for GWAS summary stats if set
+        """
+        if effect_type:
+            assert effect_type in self._effect_types, ec.invalid_effect_type(self._effect_types, effect_type)
+            return effect_type
         else:
             return None
 
