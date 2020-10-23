@@ -45,7 +45,18 @@ def bgi_path_violation(bgi_path):
 # Input error codes
 def path_invalid(parent_path, operation):
     return f"INVALID Path for {operation}\n" \
-           f"{operation} attempt to navigate to a directory or file at {parent_path} but it does not exist"
+           f"{operation} attempt to navigate to a directory or file at {parent_path} but it does not exist"#
+
+
+def invalid_effect_type(effect_types, effect_found):
+    return f"INVALID EFFECT TYPE of {effect_found}\n" \
+           f"Summary statistics from GWAS's can have effect types of {effect_types} yet found {effect_found}"
+
+
+def z_scores_with_standard_errors():
+    return f"CALCULATING Z SCORES SET YET NO STANDARD ERRORS IN SUMMARY STATS\n" \
+           f"A standard error column was not specified or found in the gwas summary stats so z scores cannot be " \
+           f"calculated"
 
 
 def no_valid_snps(bim_file, chromosomes_status, hm3_status):
