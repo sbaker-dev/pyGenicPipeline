@@ -3,13 +3,15 @@ This code is based on LDpred available at https://github.com/bvilhjal/ldpred
 """
 from pyGeneticPipe.utils.Input import Input
 from pyGeneticPipe.utils import misc as mc
-import math
+import numpy as np
+from scipy import stats
 
 
 class Summary(Input):
     def __init__(self, args):
         super().__init__(args)
-        self._error_dict = {"Chromosome": {}, "Position": {}, "Effect_Size": {}, "P_Value": {}}
+        self._error_dict = {"Invalid_Snps": [], "Chromosome": {}, "Position": {}, "Effect_Size": {}, "P_Value": {},
+                            "Standard_Errors": {}}
 
     def clean_summary_data(self):
 
@@ -37,7 +39,7 @@ class Summary(Input):
 
         return 0
 
-    def _sum_stats(self, snp_id, line, snp_pos_map):
+    def _validate_line(self, snp_id, line, snp_pos_map):
 
         # If we have chromosomes in our summary statistics check the chromosome of the snp against the validation
         chromosome = snp_pos_map[snp_id]['Chromosome']
@@ -55,13 +57,13 @@ class Summary(Input):
 
         # Set beta unless it is not a finite number
         beta = float(line[self.effect_size])
-        if not math.isfinite(beta):
+        if not np.isfinite(beta):
             self._error_dict["Effect_Size"][snp_id] = {"effect_size": line[self.effect_size]}
             return None
 
         # Set p value as long as it is not zero or a non finite number
         p_value = float(line[self.p_value])
-        if not math.isfinite(p_value) or p_value == 0:
+        if not np.isfinite(p_value) or p_value == 0:
             self._error_dict["P_Value"][snp_id] = {"p_value": line[self.p_value]}
             return None
 
