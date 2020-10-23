@@ -147,3 +147,15 @@ class Input:
                 "Info": ["Info", "info"]
             }
             return header_sets
+
+    def _set_accepted_chromosomes(self):
+        """
+        Individuals may wish to censure Y or Mitochondrial genes, and can do so via Custom_Chromosome. Else all
+        chromosomes are assumed to be valid
+
+        :return: A list of accept chromosome names
+        """
+        if self._args["Custom_Chromosome"]:
+            return self._args["Custom_Chromosome"]
+        else:
+            return None
