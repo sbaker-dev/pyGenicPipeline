@@ -83,15 +83,25 @@ class Input:
         gz_status = (summary_path.suffix == ".gz")
 
         with mc.open_setter(summary_path)(summary_path) as file:
-            raw_headers = file.readline()
-            # Determine if we have custom headers or not via _summary_headers
-            headers = {header: self._check_header(header, mc.decode_line(raw_headers, gz_status))
-                       for header in self._summary_headers}
 
-            if self._frequencies:
-                self._sum_stats_frequencies()
-            else:
-                self._sum_stats(file, gz_status, headers)
+            # Determine if we have custom headers or not via _loaded_sum_headers
+            raw_headers = file.readline()
+            headers = {header: self._check_header(header, mc.decode_line(raw_headers, gz_status))
+                       for header in self._loaded_sum_headers}
+
+            for index, line in enumerate(file):
+                if index % 10000 == 0:
+                    print(f"{index}")
+
+                line = mc.decode_line(line, gz_status)
+                snp_id = line[headers["SNP_ID"]]
+
+                if snp_id in valid_snp:
+                    data = self._sum_stats(snp_id, line, headers, snp_pos_map)
+                    if data:
+                        print("Then we add the information")
+
+                    break
 
         return 0
 
@@ -251,4 +261,3 @@ class Input:
             return hm3_sids
         else:
             return None
-
