@@ -27,9 +27,11 @@ class Summary(Input):
                 print(snp_id)
 
                 if snp_id in self.valid_snps:
-                    data = self._sum_stats(snp_id, line, self.snp_map)
+                    data = self._validate_line(snp_id, line, self.snp_map)
                     if data:
                         print("Then we add the information")
+                else:
+                    self._error_dict["Invalid_Snps"].append(snp_id)
 
                 break
 
