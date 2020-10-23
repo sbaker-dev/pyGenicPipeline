@@ -126,12 +126,13 @@ class Input:
                     # If the user has specified only to use snp id's from HapMap3 then check this condition
                     if self._hap_map_3 and (variant_id in self._hap_map_3):
                         valid_snp.add(variant_id)
-                        snp_pos_map[variant_id] = {"position": morgan_pos, "chromosome": chromosome}
+                        snp_pos_map[variant_id] = {"Position": bp_cord, "Chromosome": chromosome}
 
                     # Otherwise add to valid snps / snp_pos_map
                     else:
                         valid_snp.add(variant_id)
-                        snp_pos_map[variant_id] = {"position": morgan_pos, "chromosome": chromosome}
+                        snp_pos_map[variant_id] = {"Position": bp_cord, "Chromosome": chromosome}
+
             assert len(valid_snp) > 0, ec.no_valid_snps(self.bim, accepted_chromosomes, self._hap_map_3)
             return snp_pos_map, valid_snp
 
