@@ -14,6 +14,8 @@ class Input:
         self._mandatory_headers = ["SNP_ID", "Effect_Allele", "Alt_Allele", "Effect_size", "P_Value"]
         self._loaded_sum_headers = self._set_summary_headers()
         self._hap_map_3 = self._set_hap_map_3()
+        self._error_dict = {"Chromosome": {}, "Position": {}, "Effect_Size": {}, "P_Value": {}}
+        self._sample_size = self._args["Sample_Size"]
 
         self.debug = args["Debug"]
         self.ld_ref_mode, self.bgen, self.bed, self.bim, self.fam = self._set_ld_ref(args["LD_Reference_Genotype"])
@@ -68,9 +70,10 @@ class Input:
         if not summary_stats_path:
             return None
 
-        # Construct path as an object and check it exists
+        # Construct path as an object and that check it exists and the sample size from this study has been provided
         summary_path = Path(summary_stats_path)
         assert summary_path.exists(), ec.path_invalid(summary_path, "_set_summary_stats")
+        assert self._sample_size, ec.sample_size()
 
         # Construct the valid snp list
         snp_pos_map, valid_snp = self._validation_snp_list()
