@@ -67,6 +67,11 @@ class Summary(Input):
             self._error_dict["P_Value"][snp_id] = {"p_value": line[self.p_value]}
             return None
 
+        # calculate the beta and beta odds
+        beta, beta_odds = self._calculate_beta(beta, line, snp_id, p_value)
+        if not beta or not beta_odds:
+            return None
+
         if self.frequencies:
             self._sum_stats_frequencies()
 
@@ -75,4 +80,58 @@ class Summary(Input):
     def _sum_stats_frequencies(self):
         raise NotImplementedError("Frequencies are not yet implemented")
 
+    def _beta_by_type(self, beta):
+        """
+        If we are working with ods rations we need to take the log of the read beta
+        """
+        if self.effect_type == "OR":
+            return np.log(beta)
+        else:
+            return beta
 
+    def _beta_from_se(self, beta, beta_typed, se):
+        """Calculate z score with standard error"""
+        if self.effect_type == "OR":
+            abs_beta = np.absolute(1-beta) / se
+        else:
+            abs_beta = np.absolute(beta) / se
+        return np.sign(beta_typed) * (abs_beta / np.sqrt(self.sample_size))
+
+    def _calculate_beta(self, beta, line, snp_id, p_value):
+        """
+        Calculate both the beta, and the beta odds depending on the effect_type and if the user wants to constructed a
+        standardised z score or not
+
+        :param beta: beta from summary stats
+        :type beta: float
+
+        :param line: The line of the current file
+        :type line: list
+
+        :param snp_id: the current snp_id for writing errors if z_scores selected and se is invalid
+        :type snp_id: str
+
+        :param p_value: p value from summary stats
+        :type p_value: float
+
+        :return: If succesfful, return the beta and beta odds otherwise None and None
+        """
+
+        beta_odds = self._beta_by_type(beta)
+
+        # If effect type is Best linear unbiased prediction (BLUP) return beta
+        if self.effect_type == "BLUP":
+            return beta, beta_odds
+
+        # If we want to compute z scores, compute them as long as standard errors are valid
+        elif self.z_scores:
+            se = float(line[self.standard_errors])
+            if not np.isfinite(se) or se == 0:
+                self._error_dict["Standard_Errors"][snp_id] = {line[self.standard_errors]}
+                return None, None
+            else:
+                return self._beta_from_se(beta, beta_odds, se), beta_odds
+
+        # Otherwise compute beta from p values
+        else:
+            return np.sign(beta) * (stats.norm.ppf(p_value / 2.0) / np.sqrt(self.sample_size)), beta_odds
