@@ -48,6 +48,23 @@ def path_invalid(parent_path, operation):
            f"{operation} attempt to navigate to a directory or file at {parent_path} but it does not exist"
 
 
+def no_valid_snps(bim_file, chromosomes_status, hm3_status):
+    if chromosomes_status is not None:
+        chromosomes_status = True
+    if hm3_status is not None:
+        hm3_status = True
+
+    return f"NO VALID SNPS FOUND WITHIN {bim_file}\n" \
+           f"You currently have set custom_chromosomes to : {chromosomes_status} and HapMap3 censuring" \
+           f" to {hm3_status}\n, and with these options zero snps have been found in {bim_file}"
+
+
+def sample_size():
+    return f"NO SAMPLE SIZE FOUND\n" \
+           f"When working on constructing summary statistics the sample size of the GWAS studies summary statistics" \
+           f"is required."
+
+
 def mandatory_header(header, found_headers, match_headers):
     return f"MANDATORY HEADER {header} NOT SET\n" \
            f"When reading in summary statistics {header} is required yet\n" \
