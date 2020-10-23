@@ -18,7 +18,7 @@ class Input:
 
         self.ld_ref_mode, self.bgen, self.bed, self.bim, self.fam = self._set_ld_ref(args["LD_Reference_Genotype"])
         self.summary_path, self.snp_map, self.valid_snps, self.zipped = self._set_summary_stats(args["Summary_Stats"])
-        self.summary_headers = self._set_summary_headers(args["Summary_Headers"])
+        self._summary_headers = self._set_summary_headers(args["Summary_Headers"])
         self.frequencies = args["Summary_Frequency"]
 
     @staticmethod
@@ -211,3 +211,48 @@ class Input:
             return hm3_sids
         else:
             return None
+
+    @property
+    def chromosome(self):
+        """Summary stat chromosome header index in GWAS summary file"""
+        return self._summary_headers["Chromosome"]
+
+    @property
+    def snp_id(self):
+        """Snp/variant id header index in GWAS summary file"""
+        return self._summary_headers["SNP_ID"]
+
+    @property
+    def effect_allele(self):
+        """Effect allele header index in GWAS summary file"""
+        return self._summary_headers["Effect_Allele"]
+
+    @property
+    def alt_allele(self):
+        """Alt allele header index in GWAS summary file"""
+        return self._summary_headers["Alt_Allele"]
+
+    @property
+    def bp_position(self):
+        """Base pair position header index in GWAS summary file"""
+        return self._summary_headers["Position"]
+
+    @property
+    def p_value(self):
+        """P value position header index in GWAS summary file"""
+        return self._summary_headers["P_Value"]
+
+    @property
+    def effect_size(self):
+        """Effect size header index in GWAS summary file"""
+        return self._summary_headers["Effect_size"]
+
+    @property
+    def minor_allele_freq(self):
+        """Minor allele Frequency header index in GWAS summary file"""
+        return self._summary_headers["Minor_Allele_Freq"]
+
+    @property
+    def info(self):
+        """Info score header index in GWAS summary file"""
+        return self._summary_headers["Info"]
