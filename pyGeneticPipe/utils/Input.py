@@ -21,6 +21,7 @@ class Input:
         self._summary_headers = self._set_summary_headers(args["Summary_Headers"], args["Summary_Stats"])
         self.frequencies = args["Summary_Frequency"]
         self.effect_type = self._set_effect_type(args["Effect_type"])
+        self.z_scores = self._set_z_scores(args["Z_Scores"])
 
     @staticmethod
     def _set_ld_ref(ref_path):
@@ -172,7 +173,8 @@ class Input:
                 "Effect_size": ["LINREG", "OR"],
                 "Minor_Allele_Freq": ["REF_FRQ", "reffrq", "Freq.Hapmap.Ceu", "Freq.Allele1.HapMapCEU", "MAF"
                                       "Freq.Hapmap.Ceu"],
-                "Info": ["Info", "info"]
+                "Info": ["Info", "info"],
+                "Standard_Errors": ["SE", "se", "SE.2gc"]
             }
 
         with mc.open_setter(self.summary_path)(self.summary_path) as file:
@@ -227,6 +229,22 @@ class Input:
         else:
             return None
 
+    def _set_z_scores(self, set_z_scores):
+        """
+        If the user wants to compute z scores, then standard_errors most be set but otherwise it isn't a mandatory
+        header.
+        :param set_z_scores: A bool of if z scores should be calculated or not
+        :type set_z_scores: bool
+
+        :return: True if assertion of standard errors is also True, if set_z_scores is None then return None
+        :rtype: None | bool
+        """
+        if set_z_scores:
+            assert self.standard_errors is not None, ec.z_scores_with_standard_errors
+            return True
+        else:
+            return None
+
     @property
     def chromosome(self):
         """Summary stat chromosome header index in GWAS summary file"""
@@ -271,3 +289,8 @@ class Input:
     def info(self):
         """Info score header index in GWAS summary file"""
         return self._summary_headers["Info"]
+
+    @property
+    def standard_errors(self):
+        """Standard error header index in GWAS summary file"""
+        return self._summary_headers["Standard_Errors"]
