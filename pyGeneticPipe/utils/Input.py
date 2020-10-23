@@ -3,24 +3,23 @@ from pyGeneticPipe.utils import misc as mc
 from pathlib import Path
 import pickle
 import gzip
-import math
 import sys
 
 
 class Input:
     def __init__(self, args):
 
-        self._args = args
-        self._frequencies = args["Summary_Frequency"]
-        self._mandatory_headers = ["SNP_ID", "Effect_Allele", "Alt_Allele", "Effect_size", "P_Value"]
-        self._loaded_sum_headers = self._set_summary_headers()
-        self._hap_map_3 = self._set_hap_map_3()
-        self._error_dict = {"Chromosome": {}, "Position": {}, "Effect_Size": {}, "P_Value": {}}
-        self._sample_size = self._args["Sample_Size"]
-
+        self.args = args
         self.debug = args["Debug"]
+
+        # Summary setters
+        self._hap_map_3 = self._set_hap_map_3()
+        self._mandatory_headers = ["SNP_ID", "Effect_Allele", "Alt_Allele", "Effect_size", "P_Value"]
+
         self.ld_ref_mode, self.bgen, self.bed, self.bim, self.fam = self._set_ld_ref(args["LD_Reference_Genotype"])
-        self.summary_stats = self._set_summary_stats(args["Summary_Stats"])
+        self.summary_path, self.snp_map, self.valid_snps, self.zipped = self._set_summary_stats(args["Summary_Stats"])
+        self.summary_headers = self._set_summary_headers(args["Summary_Headers"])
+        self.frequencies = args["Summary_Frequency"]
 
     @staticmethod
     def _set_ld_ref(ref_path):
@@ -73,73 +72,16 @@ class Input:
 
         # Construct path as an object and that check it exists and the sample size from this study has been provided
         summary_path = Path(summary_stats_path)
+        sample_size = self.args["Sample_Size"]
         assert summary_path.exists(), ec.path_invalid(summary_path, "_set_summary_stats")
-        assert self._sample_size, ec.sample_size()
+        assert (sample_size is not None) and (sample_size > 0), ec.sample_size()
 
         # Construct the valid snp list
         snp_pos_map, valid_snp = self._validation_snp_list()
 
         # Determine if the summary file is g-zipped
         gz_status = (summary_path.suffix == ".gz")
-
-        with mc.open_setter(summary_path)(summary_path) as file:
-
-            # Determine if we have custom headers or not via _loaded_sum_headers
-            raw_headers = file.readline()
-            headers = {header: self._check_header(header, mc.decode_line(raw_headers, gz_status))
-                       for header in self._loaded_sum_headers}
-
-            for index, line in enumerate(file):
-                if index % 10000 == 0:
-                    print(f"{index}")
-
-                line = mc.decode_line(line, gz_status)
-                snp_id = line[headers["SNP_ID"]]
-
-                if snp_id in valid_snp:
-                    data = self._sum_stats(snp_id, line, headers, snp_pos_map)
-                    if data:
-                        print("Then we add the information")
-
-                    break
-
-        return 0
-
-    def _sum_stats(self, snp_id, line, headers, snp_pos_map):
-
-        # If we have chromosomes in our summary statistics check the chromosome of the snp against the validation
-        chromosome = snp_pos_map[snp_id]['Chromosome']
-        if (headers["Chromosome"] is not None) and (line[headers["Chromosome"]] != chromosome):
-            self._error_dict["Chromosome"][snp_id] = {"summary_chromosome": line[headers["Chromosome"]],
-                                                      "valid_chromosome": snp_pos_map[snp_id]["Chromosome"]}
-            return None
-
-        # If we have base pair position in our summary then validate the base par
-        position = snp_pos_map[snp_id]['Position']
-        if (headers["Position"] is not None) and (line[headers["Position"]] != position):
-            self._error_dict["Position"][snp_id] = {"summary_position": line[headers["Position"]],
-                                                    "valid_position": snp_pos_map[snp_id]["Position"]}
-            return None
-
-        # Set beta unless it is not a finite number
-        beta = float(line[headers["Effect_size"]])
-        if not math.isfinite(beta):
-            self._error_dict["Effect_Size"][snp_id] = {"effect_size": line[headers["Effect_size"]]}
-            return None
-
-        # Set p value as long as it is not zero or a non finite number
-        p_value = float(line[headers["P_Value"]])
-        if not math.isfinite(p_value) or p_value == 0:
-            self._error_dict["P_Value"][snp_id] = {"p_value": line[headers["P_Value"]]}
-            return None
-
-        if self._frequencies:
-            self._sum_stats_frequencies()
-
-        return 0
-
-    def _sum_stats_frequencies(self):
-        raise NotImplementedError("Frequencies are not yet implemented")
+        return summary_path, snp_pos_map, valid_snp, gz_status
 
     def _validation_snp_list(self):
         """
@@ -179,7 +121,7 @@ class Input:
         else:
             sys.exit(f"CRITICAL ERROR: ld_ref_mode takes the value 'plink' or 'bgen' yet found {self.ld_ref_mode}")
 
-    def _check_header(self, sum_header, headers):
+    def _check_header(self, sum_header, headers, summary_headers):
         """
         We need to standardise our headers, and locate where the current header is in our summary file in terms of a
         base zero index.
@@ -189,17 +131,17 @@ class Input:
         :return: None if not found else the index of the header in our file for this standardised header
         :rtype: None | int
         """
-        header_indexes = [i for i, h in enumerate(headers) if h in self._loaded_sum_headers[sum_header]]
+        header_indexes = [i for i, h in enumerate(headers) if h in summary_headers[sum_header]]
 
-        assert len(header_indexes) < 2, ec.ambiguous_header(sum_header, headers, self._loaded_sum_headers[sum_header])
+        assert len(header_indexes) < 2, ec.ambiguous_header(sum_header, headers, summary_headers[sum_header])
         if len(header_indexes) == 0:
             assert sum_header not in self._mandatory_headers, ec.mandatory_header(
-                sum_header, headers, self._loaded_sum_headers[sum_header])
+                sum_header, headers, summary_headers[sum_header])
             return None
         else:
             return header_indexes[0]
 
-    def _set_summary_headers(self):
+    def _set_summary_headers(self, header_arg):
         """
         We may have users using custom headers, or they may be using a format we already have covered
 
@@ -210,10 +152,9 @@ class Input:
 
         :return: The headers to validate
         """
-        if self._args["Summary_Headers"]:
+        if header_arg:
             # Recast so that the values are in a list so they can be checked by the same method as defaults
-            header_sets = self._args["Summary_Headers"]
-            return {key: [v] for key, v in zip(header_sets.keys(), header_sets.values())}
+            header_sets = {key: [v] for key, v in zip(header_arg.keys(), header_arg.values())}
         else:
             # Based on known summary statistics from LDPred sum_stats_parsers.py
             header_sets = {
@@ -228,7 +169,16 @@ class Input:
                                       "Freq.Hapmap.Ceu"],
                 "Info": ["Info", "info"]
             }
-            return header_sets
+
+        with mc.open_setter(self.summary_path)(self.summary_path) as file:
+
+            # Determine if we have custom headers or not via _loaded_sum_headers
+            raw_headers = file.readline()
+            headers = {header: self._check_header(header, mc.decode_line(raw_headers, self.zipped), header_sets)
+                       for header in header_sets}
+
+            file.close()
+            return headers
 
     def _set_accepted_chromosomes(self):
         """
@@ -237,8 +187,8 @@ class Input:
 
         :return: A list of accept chromosome names
         """
-        if self._args["Custom_Chromosome"]:
-            return self._args["Custom_Chromosome"]
+        if self.args["Custom_Chromosome"]:
+            return self.args["Custom_Chromosome"]
         else:
             return None
 
@@ -249,9 +199,9 @@ class Input:
         :return: The valid HapMap3 snps or None
         """
 
-        if self._args["Only_HapMap3"]:
+        if self.args["Only_HapMap3"]:
             # Construct path as an object and check it exists
-            hap_map_path = Path(self._args["Only_HapMap3"])
+            hap_map_path = Path(self.args["Only_HapMap3"])
             assert hap_map_path.exists(), ec.path_invalid(hap_map_path, "_set_hap_map_3")
 
             # If the HapMap3 file exists, then extract the snp ids and return them
