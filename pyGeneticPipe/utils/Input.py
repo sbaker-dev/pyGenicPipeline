@@ -3,6 +3,7 @@ from pyGeneticPipe.utils import misc as mc
 from pathlib import Path
 import pickle
 import gzip
+import math
 import sys
 
 
@@ -94,15 +95,38 @@ class Input:
 
         return 0
 
-    def _sum_stats(self, file, gz_status, headers):
-        for index, line in enumerate(file):
-            print(index, line)
-            line = mc.decode_line(line, gz_status)
-            print(line)
-            print(line[headers["SNP_ID"]])
-            print(self.fam)
+    def _sum_stats(self, snp_id, line, headers, snp_pos_map):
 
-            break
+        # If we have chromosomes in our summary statistics check the chromosome of the snp against the validation
+        chromosome = snp_pos_map[snp_id]['Chromosome']
+        if (headers["Chromosome"] is not None) and (line[headers["Chromosome"]] != chromosome):
+            self._error_dict["Chromosome"][snp_id] = {"summary_chromosome": line[headers["Chromosome"]],
+                                                      "valid_chromosome": snp_pos_map[snp_id]["Chromosome"]}
+            return None
+
+        # If we have base pair position in our summary then validate the base par
+        position = snp_pos_map[snp_id]['Position']
+        if (headers["Position"] is not None) and (line[headers["Position"]] != position):
+            self._error_dict["Position"][snp_id] = {"summary_position": line[headers["Position"]],
+                                                    "valid_position": snp_pos_map[snp_id]["Position"]}
+            return None
+
+        # Set beta unless it is not a finite number
+        beta = float(line[headers["Effect_size"]])
+        if not math.isfinite(beta):
+            self._error_dict["Effect_Size"][snp_id] = {"effect_size": line[headers["Effect_size"]]}
+            return None
+
+        # Set p value as long as it is not zero or a non finite number
+        p_value = float(line[headers["P_Value"]])
+        if not math.isfinite(p_value) or p_value == 0:
+            self._error_dict["P_Value"][snp_id] = {"p_value": line[headers["P_Value"]]}
+            return None
+
+        if self._frequencies:
+            self._sum_stats_frequencies()
+
+        return 0
 
     def _sum_stats_frequencies(self):
         raise NotImplementedError("Frequencies are not yet implemented")
