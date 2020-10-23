@@ -17,7 +17,7 @@ class Input:
 
         self.ld_ref_mode, self.bgen, self.bed, self.bim, self.fam = self._set_ld_ref(args["LD_Reference_Genotype"])
         self.summary_path, self.snp_map, self.valid_snps, self.zipped = self._set_summary_stats(args["Summary_Stats"])
-        self._summary_headers = self._set_summary_headers(args["Summary_Headers"])
+        self._summary_headers = self._set_summary_headers(args["Summary_Headers"], args["Summary_Stats"])
         self.frequencies = args["Summary_Frequency"]
 
     @staticmethod
@@ -141,7 +141,7 @@ class Input:
         else:
             return header_indexes[0]
 
-    def _set_summary_headers(self, header_arg):
+    def _set_summary_headers(self, header_arg, construct_summary_stats):
         """
         We may have users using custom headers, or they may be using a format we already have covered
 
@@ -152,6 +152,9 @@ class Input:
 
         :return: The headers to validate
         """
+        if not construct_summary_stats:
+            return None
+
         if header_arg:
             # Recast so that the values are in a list so they can be checked by the same method as defaults
             header_sets = {key: [v] for key, v in zip(header_arg.keys(), header_arg.values())}
