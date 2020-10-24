@@ -43,6 +43,10 @@ class Summary(Input):
         return 0
 
     def _validate_line(self, snp_id, line, snp_pos_map):
+        """
+        For a given line in the summary statistics, extract the information that is required and push the errors to the
+        error dict if it fails.:
+        """
 
         # If we have chromosomes in our summary statistics check the chromosome of the snp against the validation
         chromosome = snp_pos_map[snp_id]['Chromosome']
@@ -53,7 +57,7 @@ class Summary(Input):
 
         # If we have base pair position in our summary then validate the base par
         position = snp_pos_map[snp_id]['Position']
-        if (self.bp_position is not None) and (line[self.bp_position] != position):
+        if (self.bp_position is not None) and (int(line[self.bp_position]) != position):
             self._error_dict["Position"][snp_id] = {"summary_position": line[self.bp_position],
                                                     "valid_position": snp_pos_map[snp_id]["Position"]}
             return None
@@ -103,6 +107,7 @@ class Summary(Input):
             self._chromosome_dict[chromosome]["nucleotide"].append(nucleotides)
             self._chromosome_dict[chromosome]["info"].append(info)
             self._chromosome_dict[chromosome]["frequency"].append(frequency)
+            return 0
 
     def _sum_stats_frequencies(self):
         raise NotImplementedError("Frequencies are not yet implemented")
