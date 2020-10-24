@@ -86,3 +86,8 @@ def ambiguous_header(header, found_headers, match_headers):
     return f"AMBIGUOUS HEADERS FOUND FOR {header}\n" \
            f"When reading the headers linknig should be unique yet\n" \
            f"Founding {found_headers} indexes for {header} by matching {match_headers}"
+
+
+def invalid_working_directory(working_direction):
+    return f"INVALID WORKING DIRECTORY OF {working_direction} \n" \
+           f"Tried to navigate to working directory but failed"

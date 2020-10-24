@@ -8,8 +8,13 @@ import gzip
 class Input:
     def __init__(self, args):
 
+        # General operational parameters
         self.args = args
         self.debug = args["Debug"]
+        self.override_file = args["Override"]
+        self.project_name = args["Project_Name"]
+        self.working_dir = args["Working_Directory"]
+        assert Path(self.working_dir).exists(), ec.invalid_working_directory(self.working_dir)
 
         # Summary setters
         self._hap_map_3 = self._set_hap_map_3()
