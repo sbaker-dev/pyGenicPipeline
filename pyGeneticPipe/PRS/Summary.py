@@ -3,8 +3,8 @@ This code is based on LDpred available at https://github.com/bvilhjal/ldpred
 """
 from pyGeneticPipe.utils.Input import Input
 from pyGeneticPipe.utils import misc as mc
-import numpy as np
 from scipy import stats
+import numpy as np
 
 
 class Summary(Input):
@@ -18,6 +18,9 @@ class Summary(Input):
                                  for chromosome in self.valid_chromosomes}
 
     def clean_summary_data(self):
+        """
+        Clean the summary data by logging just valid snps to _chromosome_dict whilst logging errors to _error_dict
+        """
 
         with mc.open_setter(self.summary_path)(self.summary_path) as file:
             # Skip header row
@@ -25,22 +28,54 @@ class Summary(Input):
 
             # For each line in the GWAS Summary file
             for index, line in enumerate(file):
-                if index % 10000 == 0:
+                if index % 10000 == 0 and self.debug:
                     print(f"{index}")
-                    if index != 0:
-                        break
 
                 # Decode the line and extract the snp_id
                 line = mc.decode_line(line, self.zipped)
                 snp_id = line[self.snp_id]
 
+                # If the snp is valid, validate the line's components
                 if snp_id in self.valid_snps:
                     self._validate_line(snp_id, line, self.snp_map)
                 else:
                     self._error_dict["Invalid_Snps"].append(snp_id)
 
+        self.write_to_hdf5()
 
-        return 0
+    def write_to_hdf5(self):
+        """
+        Write both the valid and invalid data to hdf5
+        """
+
+        summary_file = self.create_hdf5("Summary_stats")
+        summary_group = summary_file.create_group('Sum_Stats')
+        errors = summary_file.create_group('Errors')
+
+        # Write the valid information
+        for chromosome in self._chromosome_dict:
+            c_group = summary_group.create_group(chromosome)
+            c_group.create_dataset("snp_id", data=np.array(self._chromosome_dict[chromosome]["snp_id"], dtype="|S30"))
+            c_group.create_dataset("position", data=self._chromosome_dict[chromosome]["position"])
+            c_group.create_dataset("p_value", data=np.array(self._chromosome_dict[chromosome]["p_value"]))
+            c_group.create_dataset("log_odds", data=self._chromosome_dict[chromosome]["log_odds"])
+            c_group.create_dataset("beta", data=self._chromosome_dict[chromosome]["beta"])
+            c_group.create_dataset("nucleotide", data=np.array(self._chromosome_dict[chromosome]["nucleotide"],
+                                                               dtype="|S1"))
+            c_group.create_dataset("info", data=self._chromosome_dict[chromosome]["info"])
+            c_group.create_dataset("frequency", data=np.array(self._chromosome_dict[chromosome]["frequency"]))
+            summary_file.flush()
+
+        # Log errors
+        for key in self._error_dict:
+            print(f"{len(self._error_dict[key])} dropped because of {key}")
+            if len(self._error_dict[key]) > 0:
+                if key == "Invalid_Snps" or key == "Chromosome":
+                    errors.create_dataset(key, data=np.array(self._error_dict[key], dtype="|S30"))
+                else:
+                    errors.create_dataset(key, data=self._error_dict[key])
+            summary_file.flush()
+        summary_file.close()
 
     def _validate_line(self, snp_id, line, snp_pos_map):
         """
