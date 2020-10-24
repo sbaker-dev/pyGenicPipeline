@@ -3,6 +3,7 @@ from pyGeneticPipe.utils import misc as mc
 from pathlib import Path
 import pickle
 import gzip
+import h5py
 
 
 class Input:
@@ -14,7 +15,6 @@ class Input:
         self.override_file = args["Override"]
         self.project_name = args["Project_Name"]
         self.working_dir = args["Working_Directory"]
-        assert Path(self.working_dir).exists(), ec.invalid_working_directory(self.working_dir)
 
         # Summary setters
         self._hap_map_3 = self._set_hap_map_3()
@@ -262,6 +262,18 @@ class Input:
             return True
         else:
             return None
+
+    def create_hdf5(self, file_name):
+        """
+        Setup the hdf5 file for this run
+        """
+        project_file = Path(self.working_dir, f"{self.project_name}_{file_name}")
+        assert Path(self.working_dir), ec.invalid_working_directory(self.working_dir)
+
+        if (project_file.exists() and self.override_file) or not project_file.exists():
+            return h5py.File(Path(self.working_dir, f"{self.project_name}_{file_name}"), "w")
+        else:
+            raise Exception(f"File already exists: Stopping")
 
     @property
     def chromosome(self):
