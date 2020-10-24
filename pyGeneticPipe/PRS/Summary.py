@@ -11,7 +11,11 @@ class Summary(Input):
     def __init__(self, args):
         super().__init__(args)
         self._error_dict = {"Invalid_Snps": [], "Chromosome": {}, "Position": {}, "Effect_Size": {}, "P_Value": {},
-                            "Standard_Errors": {}}
+                            "Standard_Errors": {}, "Duplicate_Position": {}}
+
+        self._chromosome_dict = {chromosome: {"snp_id": [], "position": [], "p_value": [], "log_odds": [], "beta": [],
+                                              "nucleotide": [], "info": [], "frequency": []}
+                                 for chromosome in self.valid_chromosomes}
 
     def clean_summary_data(self):
 
@@ -23,19 +27,18 @@ class Summary(Input):
             for index, line in enumerate(file):
                 if index % 10000 == 0:
                     print(f"{index}")
+                    if index != 0:
+                        break
 
+                # Decode the line and extract the snp_id
                 line = mc.decode_line(line, self.zipped)
                 snp_id = line[self.snp_id]
-                print(snp_id)
 
                 if snp_id in self.valid_snps:
-                    data = self._validate_line(snp_id, line, self.snp_map)
-                    if data:
-                        print("Then we add the information")
+                    self._validate_line(snp_id, line, self.snp_map)
                 else:
                     self._error_dict["Invalid_Snps"].append(snp_id)
 
-                break
 
         return 0
 
@@ -72,10 +75,34 @@ class Summary(Input):
         if not beta or not beta_odds:
             return None
 
-        if self.frequencies:
-            self._sum_stats_frequencies()
+        # Set the nucleotides
+        nucleotides = [line[self.effect_allele].upper(), line[self.alt_allele].upper()]
 
-        return 0
+        # All necessary information has been found, but check for info and frequency setting to -1 otherwise
+        # Get the INFO score if it exists
+        if self.info is not None:
+            info = float(line[self.info])
+        else:
+            info = -1
+
+        if self.frequencies:
+            frequency = self._sum_stats_frequencies()
+        else:
+            frequency = -1
+
+        # remove duplicated positions
+        if position in self._chromosome_dict[chromosome]["position"]:
+            self._error_dict["Duplicate_Position"][snp_id] = {"position": position}
+            return None
+        else:
+            self._chromosome_dict[chromosome]["snp_id"].append(snp_id)
+            self._chromosome_dict[chromosome]["position"].append(position)
+            self._chromosome_dict[chromosome]["p_value"].append(p_value)
+            self._chromosome_dict[chromosome]["log_odds"].append(beta_odds)
+            self._chromosome_dict[chromosome]["beta"].append(beta)
+            self._chromosome_dict[chromosome]["nucleotide"].append(nucleotides)
+            self._chromosome_dict[chromosome]["info"].append(info)
+            self._chromosome_dict[chromosome]["frequency"].append(frequency)
 
     def _sum_stats_frequencies(self):
         raise NotImplementedError("Frequencies are not yet implemented")
@@ -92,7 +119,7 @@ class Summary(Input):
     def _beta_from_se(self, beta, beta_typed, se):
         """Calculate z score with standard error"""
         if self.effect_type == "OR":
-            abs_beta = np.absolute(1-beta) / se
+            abs_beta = np.absolute(1 - beta) / se
         else:
             abs_beta = np.absolute(beta) / se
         return np.sign(beta_typed) * (abs_beta / np.sqrt(self.sample_size))
