@@ -1,3 +1,4 @@
+from datetime import datetime
 import gzip
 
 
@@ -36,3 +37,10 @@ def decode_line(line, zip_status):
         return line.decode("utf-8").split()
     else:
         return line.readline().split()
+
+
+def terminal_time():
+    """
+    A way to remember when you initialised a cell by return the current hour and minute as a string
+    """
+    return f"{datetime.now().time().hour}:{datetime.now().time().minute}"
