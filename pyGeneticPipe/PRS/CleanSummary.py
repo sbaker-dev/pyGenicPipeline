@@ -7,7 +7,7 @@ from scipy import stats
 import numpy as np
 
 
-class Summary(Input):
+class CleanSummary(Input):
     def __init__(self, args):
         super().__init__(args)
         self._error_dict = {"Invalid_Snps": [], "Chromosome": {}, "Position": {}, "Effect_Size": {}, "P_Value": {},
