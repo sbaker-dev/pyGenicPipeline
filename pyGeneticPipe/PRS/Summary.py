@@ -17,7 +17,7 @@ class Summary(Input):
                                               "nucleotide": [], "info": [], "frequency": []}
                                  for chromosome in self.valid_chromosomes}
 
-    def clean_summary_data(self):
+    def clean_summary_data(self, file_name):
         """
         Clean the summary data by logging just valid snps to _chromosome_dict whilst logging errors to _error_dict
         """
@@ -41,14 +41,14 @@ class Summary(Input):
                 else:
                     self._error_dict["Invalid_Snps"].append(snp_id)
 
-        self.write_to_hdf5()
+        self.write_to_hdf5(file_name)
 
-    def write_to_hdf5(self):
+    def write_to_hdf5(self, file_name):
         """
         Write both the valid and invalid data to hdf5
         """
 
-        summary_file = self.create_hdf5("Summary_stats")
+        summary_file = self.create_hdf5(file_name)
         summary_group = summary_file.create_group('Sum_Stats')
         errors = summary_file.create_group('Errors')
 
