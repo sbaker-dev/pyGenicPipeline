@@ -2,6 +2,7 @@ from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.plink.plinkObject import PlinkObject
 from pyGeneticPipe.utils import misc as mc
 from pathlib import Path
+import numpy as np
 import pickle
 import gzip
 import h5py
@@ -88,6 +89,23 @@ class Input:
         gz_status = (summary_path.suffix == ".gz")
         return summary_path, snp_pos_map, valid_snp, gz_status, sample_size, valid_chromosomes
 
+    def _validate_chromosomes(self, chromosome_set):
+        """
+        It is possible for non valid chromosomes, this will validate for numeric or known maps from str chromosomes to
+        numeric, for example X: 23,  and flag and error if it fails to find a map.
+        """
+        ok_chromosomes = []
+        for chromosome in chromosome_set:
+            try:
+                ok_chromosomes.append(int(chromosome))
+            except ValueError:
+                try:
+                    ok_chromosomes.append(self._chromosome_map[chromosome])
+                except KeyError:
+                    raise Exception(f"Found chromosome {chromosome} which could not be mapped!")
+
+        return np.unique(ok_chromosomes)
+
     def _validation_snp_list(self):
         """
         Create a set of valid snps and a position map to them via plink or bgen with option censuring of chromosome and
@@ -121,7 +139,7 @@ class Input:
                         valid_chromosomes.add(chromosome)
 
             assert len(valid_snp) > 0, ec.no_valid_snps(self.bim, accepted_chromosomes, self._hap_map_3)
-            return snp_pos_map, valid_snp, valid_chromosomes
+            return snp_pos_map, valid_snp, self._validate_chromosomes(valid_chromosomes)
 
         elif self.ld_ref_mode == "bgen":
             raise NotImplementedError("Bgen mode not yet implemented")
@@ -262,6 +280,18 @@ class Input:
             return h5py.File(Path(self.working_dir, f"{self.project_name}_{file_name}"), "w")
         else:
             raise Exception(f"File already exists: Stopping")
+
+    @property
+    def _chromosome_map(self):
+        """
+        By default we assume chromosome are numeric, but can catch X and turn it into 23. If someone wants to specific
+        a new map, for example if they have a y chromosome and want to map it to a number, they can do so with a custom
+        dict. Otherwise we just return the dict that was embedded in ldpred
+        """
+        if self.args["Chromosome_Map"]:
+            return self.args["Chromosome_Map"]
+        else:
+            return {"X": 23, "chr_x": 23, "chrom_x": 23}
 
     @property
     def chromosome(self):

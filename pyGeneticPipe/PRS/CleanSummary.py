@@ -13,8 +13,8 @@ class CleanSummary(Input):
         self._error_dict = {"Invalid_Snps": [], "Chromosome": {}, "Position": {}, "Effect_Size": {}, "P_Value": {},
                             "Standard_Errors": {}, "Duplicate_Position": {}}
 
-        self._chromosome_dict = {chromosome: {"snp_id": [], "position": [], "p_value": [], "log_odds": [], "beta": [],
-                                              "nucleotide": [], "info": [], "frequency": []}
+        self._chromosome_dict = {str(chromosome): {"snp_id": [], "position": [], "p_value": [], "log_odds": [],
+                                                   "beta": [], "nucleotide": [], "info": [], "frequency": []}
                                  for chromosome in self.valid_chromosomes}
 
     def clean_summary_data(self, file_name):
