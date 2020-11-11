@@ -1,5 +1,6 @@
 from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.plink.plinkObject import PlinkObject
+from pyGeneticPipe.plink.rowObjects import BimObject
 from pyGeneticPipe.utils import misc as mc
 from pathlib import Path
 import numpy as np
@@ -121,22 +122,22 @@ class Input:
 
             with open(self.bim) as f:
                 for line in f:
-                    chromosome, variant_id, morgan_pos, bp_cord, a1, a2 = line.split()
+                    bim = BimObject(line)
                     # If the user has specified certain chromosomes check that this snps chromosome is in accepted_list
-                    if accepted_chromosomes and (chromosome not in accepted_chromosomes):
+                    if accepted_chromosomes and (bim.chromosome not in accepted_chromosomes):
                         continue
 
                     # If the user has specified only to use snp id's from HapMap3 then check this condition
-                    if self._hap_map_3 and (variant_id in self._hap_map_3):
-                        valid_snp.add(variant_id)
-                        snp_pos_map[variant_id] = {"Position": int(bp_cord), "Chromosome": chromosome}
-                        valid_chromosomes.add(chromosome)
+                    if self._hap_map_3 and (bim.variant_id in self._hap_map_3):
+                        valid_snp.add(bim.variant_id)
+                        snp_pos_map[bim.variant_id] = {"Position": int(bim.bp_cord), "Chromosome": bim.chromosome}
+                        valid_chromosomes.add(bim.chromosome)
 
                     # Otherwise add to valid snps / snp_pos_map
                     else:
-                        valid_snp.add(variant_id)
-                        snp_pos_map[variant_id] = {"Position": int(bp_cord), "Chromosome": chromosome}
-                        valid_chromosomes.add(chromosome)
+                        valid_snp.add(bim.variant_id)
+                        snp_pos_map[bim.variant_id] = {"Position": int(bim.bp_cord), "Chromosome": bim.chromosome}
+                        valid_chromosomes.add(bim.chromosome)
 
             assert len(valid_snp) > 0, ec.no_valid_snps(self.bim, accepted_chromosomes, self._hap_map_3)
             return snp_pos_map, valid_snp, self._validate_chromosomes(valid_chromosomes)
