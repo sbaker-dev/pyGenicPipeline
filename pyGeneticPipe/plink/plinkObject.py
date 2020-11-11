@@ -4,12 +4,22 @@ available at https://github.com/mfranberg/libplinkio
 """
 from pathlib import Path
 from pyGeneticPipe.utils import error_codes as ec
+from pyGeneticPipe.plink.rowObjects import BimObject
 
 
 class PlinkObject:
     def __init__(self, plink_path):
         self.base_path = plink_path
         self._bed_path, self._bim_path, self._fam_path = self.validate_paths()
+
+    def bim_object(self):
+        """
+        Turns the bim file into a set of objects to be called.
+
+        :return: A BimObject for each line in the bim file
+        """
+        with open(self._bim_path) as f:
+            return [BimObject(line) for line in f]
 
     def validate_paths(self):
         """
