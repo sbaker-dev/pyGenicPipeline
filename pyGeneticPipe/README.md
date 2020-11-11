@@ -4,7 +4,7 @@ pyGeneticPipe has lots of separate code both original and re-worked from pre-exi
 help explain what each file does so you can find the source code you are looking for and also provide links back to the
 original sources should you want the unmodified versions.
 
-### bgen folder
+### bgen
 
 This contains a modified version of [pybgen][pbgen] that was altered slightly, not because there was anything wrong with
 it, but so that it fit my own code style so it would be easier to debug and also add features. 
@@ -12,6 +12,26 @@ it, but so that it fit my own code style so it would be easier to debug and also
 ###### bgenObject.py
 
 This contains the class of BgenObject that can parse in a file header of a bgen file and then use its properties.
+
+### plink
+
+This contains a modified version of [plinkio][pio] due to the linux binaries not compiling on one of the older super 
+computers and it not being cross compatible.  
+
+###### plinkObject
+
+This file is used as a controlling for working with a set of plink files (bed, bim, fam).
+
+###### supportObjects
+
+Many files are set in rows, groups, sets or some for of object that needs to be reference. supportObjects contains 
+objects for plinkObject to use, these are designed to the reference multiple times per file or operation and are 
+unlikely to be needed by an end user. However, they are kept separate to avoid nest classes in case they are required.
+
+supportObjects contains:
+
+* ***BimLoci***: This contains a row a Bim file, which can be accessed via keys
+* ***BimByChromosome***: This contains all the information from the bim, but formatted by chromosome
 
 
 ### PRS
@@ -52,3 +72,4 @@ these methods are found they will be spun out into a new class within utils.
 
 [pbgen]: https://github.com/lemieuxl/pybgen
 [ldp]: https://github.com/bvilhjal/ldpred
+[pio]: https://github.com/mfranberg/libplinkio

@@ -2,9 +2,10 @@
 This is a modified version of pandas plink found at https://github.com/limix/pandas-plink to act more like plinkio
 available at https://github.com/mfranberg/libplinkio
 """
-from pathlib import Path
+from pyGeneticPipe.plink.supportObjects import BimLoci, BimByChromosome
 from pyGeneticPipe.utils import error_codes as ec
-from pyGeneticPipe.plink.rowObjects import BimObject
+from pathlib import Path
+import numpy as np
 
 
 class PlinkObject:
@@ -19,7 +20,37 @@ class PlinkObject:
         :return: A BimObject for each line in the bim file
         """
         with open(self.bim_path) as f:
-            return [BimObject(line) for line in f]
+            return [BimLoci(line) for line in f]
+
+    def bim_by_chromosome(self):
+        """
+        When validating, we may need to cross compare by chromosome. THis will take the bim information and reformat it
+        into a by chromosome rather than by snp.
+        """
+
+        # Extract the loci from the bim file
+        bim_loci = self.bim_object()
+
+        # Extract the unique sorted chromosomes
+        valid_chromosomes = np.unique([int(loci.chromosome) for loci in bim_loci])
+        valid_chromosomes.sort()
+
+        # Create a dict, where each key is chromosome with its snps ids, indexes of those ids, base pair positions of
+        # those ids and the nucleotides of those ids
+        chr_dict = {}
+        for chromosome in valid_chromosomes:
+            chr_dict[str(chromosome)] = {'sids': [], 'snp_indices': [], 'positions': [], 'nts': []}
+
+        # For everything found within the loci via bim, append it to the sub dict within the master dict
+        for i, loci in enumerate(bim_loci):
+            chr_dict[loci.chromosome]['sids'].append(loci.variant_id)
+            chr_dict[loci.chromosome]['snp_indices'].append(i)
+            chr_dict[loci.chromosome]['positions'].append(loci.bp_position)
+            chr_dict[loci.chromosome]['nts'].append([loci.a1, loci.a2])
+
+        # Return a ChromosomeBimObj for each chromosome
+        return [BimByChromosome(chromosome, values["sids"], values["snp_indices"], values["positions"], values["nts"])
+                for chromosome, values in zip(chr_dict.keys(), chr_dict.values())]
 
     def validation_snps(self, accepted_chromosomes, hap_map_3):
         """
@@ -41,7 +72,7 @@ class PlinkObject:
 
         with open(self.bim_path) as f:
             for line in f:
-                bim = BimObject(line)
+                bim = BimLoci(line)
                 # If the user has specified certain chromosomes check that this snps chromosome is in accepted_list
                 if accepted_chromosomes and (bim.chromosome not in accepted_chromosomes):
                     continue
@@ -49,13 +80,13 @@ class PlinkObject:
                 # If the user has specified only to use snp id's from HapMap3 then check this condition
                 if hap_map_3 and (bim.variant_id in hap_map_3):
                     valid_snp.add(bim.variant_id)
-                    snp_pos_map[bim.variant_id] = {"Position": int(bim.bp_cord), "Chromosome": bim.chromosome}
+                    snp_pos_map[bim.variant_id] = {"Position": int(bim.bp_position), "Chromosome": bim.chromosome}
                     valid_chromosomes.add(bim.chromosome)
 
                 # Otherwise add to valid snps / snp_pos_map
                 else:
                     valid_snp.add(bim.variant_id)
-                    snp_pos_map[bim.variant_id] = {"Position": int(bim.bp_cord), "Chromosome": bim.chromosome}
+                    snp_pos_map[bim.variant_id] = {"Position": int(bim.bp_position), "Chromosome": bim.chromosome}
                     valid_chromosomes.add(bim.chromosome)
 
         return snp_pos_map, valid_snp, valid_chromosomes
