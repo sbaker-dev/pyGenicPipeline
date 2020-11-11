@@ -8,3 +8,10 @@ class BimObject:
         """
         self.chromosome, self.variant_id, self.morgan_pos, self.bp_cord, self.a1, self.a2 = bim_line.split()
 
+    def __repr__(self):
+        """
+        Allow for human readable printing
+
+        :return: Each column in order printed as a string warped in square brackets
+        """
+        return f"[{self.chromosome}, {self.variant_id}, {self.morgan_pos}, {self.bp_cord}, {self.a1}, {self.a2}]"
