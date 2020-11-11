@@ -24,6 +24,7 @@ class Input:
         self._effect_types = ["OR", "LINREG", "LOGOR", "BLUP"]
 
         self.ld_ref_mode = self._set_ld_ref(args["LD_Reference_Genotype"])
+        self.validation_file = args["Validation_File"]
         self.summary_path, self.zipped, self.sample_size = self._set_summary_stats(args["Summary_Stats"])
         self._summary_headers = self._set_summary_headers(args["Summary_Headers"], args["Summary_Stats"])
         self.frequencies = args["Summary_Frequency"]
