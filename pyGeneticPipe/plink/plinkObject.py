@@ -10,7 +10,7 @@ from pyGeneticPipe.plink.rowObjects import BimObject
 class PlinkObject:
     def __init__(self, plink_path):
         self.base_path = plink_path
-        self._bed_path, self._bim_path, self._fam_path = self.validate_paths()
+        self.bed_path, self.bim_path, self.fam_path = self.validate_paths()
 
     def bim_object(self):
         """
@@ -18,8 +18,47 @@ class PlinkObject:
 
         :return: A BimObject for each line in the bim file
         """
-        with open(self._bim_path) as f:
+        with open(self.bim_path) as f:
             return [BimObject(line) for line in f]
+
+    def validation_snps(self, accepted_chromosomes, hap_map_3):
+        """
+        Create a set of valid snps and a position map to them via plink or bgen with option censuring of chromosome and
+        snps via HapMap3
+
+        :param accepted_chromosomes: Allowed chromosomes, if a chromosome is found for a given snp that is not in this
+         list then this snp will be skipped
+
+        :param hap_map_3: If you only want to use hap_map_3 snps then you need to provide a path to that file
+
+        :return: A dict of snps where each snp has a key of base pair position (Position) and Chromosome AND
+                 A set of all the valid snps AND
+                 A set of all the valid chromosomes
+        """
+        snp_pos_map = {}
+        valid_snp = set()
+        valid_chromosomes = set()
+
+        with open(self.bim_path) as f:
+            for line in f:
+                bim = BimObject(line)
+                # If the user has specified certain chromosomes check that this snps chromosome is in accepted_list
+                if accepted_chromosomes and (bim.chromosome not in accepted_chromosomes):
+                    continue
+
+                # If the user has specified only to use snp id's from HapMap3 then check this condition
+                if hap_map_3 and (bim.variant_id in hap_map_3):
+                    valid_snp.add(bim.variant_id)
+                    snp_pos_map[bim.variant_id] = {"Position": int(bim.bp_cord), "Chromosome": bim.chromosome}
+                    valid_chromosomes.add(bim.chromosome)
+
+                # Otherwise add to valid snps / snp_pos_map
+                else:
+                    valid_snp.add(bim.variant_id)
+                    snp_pos_map[bim.variant_id] = {"Position": int(bim.bp_cord), "Chromosome": bim.chromosome}
+                    valid_chromosomes.add(bim.chromosome)
+
+        return snp_pos_map, valid_snp, valid_chromosomes
 
     def validate_paths(self):
         """

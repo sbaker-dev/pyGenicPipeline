@@ -1,6 +1,8 @@
 """
 This code is based on LDpred available at https://github.com/bvilhjal/ldpred
 """
+from pyGeneticPipe.plink.plinkObject import PlinkObject
+from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils.Input import Input
 from pyGeneticPipe.utils import misc as mc
 from scipy import stats
@@ -10,6 +12,9 @@ import numpy as np
 class CleanSummary(Input):
     def __init__(self, args):
         super().__init__(args)
+
+        self.snp_map, self.valid_snps, self.valid_chromosomes = self._set_validation_snps()
+
         self._error_dict = {"Invalid_Snps": [], "Chromosome": {}, "Position": {}, "Effect_Size": {}, "P_Value": {},
                             "Standard_Errors": {}, "Duplicate_Position": {}}
 
@@ -202,3 +207,29 @@ class CleanSummary(Input):
         # Otherwise compute beta from p values
         else:
             return np.sign(beta) * (stats.norm.ppf(p_value / 2.0) / np.sqrt(self.sample_size)), beta_odds
+
+    def _set_validation_snps(self):
+        """
+        Create a set of valid snps and a position map to them via plink or bgen with option censuring of chromosome and
+        snps via HapMap3
+
+        :return: A dict of the snp_id: morgan positioning and chromosome
+        """
+        if self.ld_ref_mode == "plink":
+            # Construct a plink object from the relevant path
+            # todo: we need to allow for different bim files from validations
+            plink_obj = PlinkObject(self.args["LD_Reference_Genotype"])
+
+            # Extract the snp position map, and sets of valid snps and chromosomes.
+            snp_map, valid_snp, valid_chromosomes = plink_obj.validation_snps(self.valid_chromosomes, self.hap_map_3)
+
+            # Check that we found any snps, and validate the chromosomes, then return
+            assert len(valid_snp) > 0, ec.no_valid_snps(self.bim, self.valid_chromosomes, self.hap_map_3)
+            return snp_map, valid_snp, self.validate_chromosomes(valid_chromosomes)
+
+        elif self.ld_ref_mode == "bgen":
+            raise NotImplementedError("Bgen mode not yet implemented")
+
+        else:
+            raise Exception(f"CRITICAL ERROR: ld_ref_mode takes the value 'plink' or 'bgen' yet found"
+                            f" {self.ld_ref_mode}")

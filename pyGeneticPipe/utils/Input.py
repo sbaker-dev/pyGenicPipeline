@@ -1,6 +1,5 @@
 from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.plink.plinkObject import PlinkObject
-from pyGeneticPipe.plink.rowObjects import BimObject
 from pyGeneticPipe.utils import misc as mc
 from pathlib import Path
 import numpy as np
@@ -20,13 +19,13 @@ class Input:
         self.working_dir = args["Working_Directory"]
 
         # Summary setters
-        self._hap_map_3 = self._set_hap_map_3()
+        self.hap_map_3 = self._set_hap_map_3()
+        self.valid_chromosomes = self._set_accepted_chromosomes()
         self._mandatory_headers = ["SNP_ID", "Effect_Allele", "Alt_Allele", "Effect_size", "P_Value"]
         self._effect_types = ["OR", "LINREG", "LOGOR", "BLUP"]
 
         self.ld_ref_mode, self.bgen, self.bed, self.bim, self.fam = self._set_ld_ref(args["LD_Reference_Genotype"])
-        self.summary_path, self.snp_map, self.valid_snps, self.zipped, self.sample_size, self.valid_chromosomes = \
-            self._set_summary_stats(args["Summary_Stats"])
+        self.summary_path, self.zipped, self.sample_size = self._set_summary_stats(args["Summary_Stats"])
         self._summary_headers = self._set_summary_headers(args["Summary_Headers"], args["Summary_Stats"])
         self.frequencies = args["Summary_Frequency"]
         self.effect_type = self._set_effect_type(args["Effect_type"])
@@ -83,14 +82,11 @@ class Input:
         assert summary_path.exists(), ec.path_invalid(summary_path, "_set_summary_stats")
         assert (sample_size is not None) and (sample_size > 0), ec.sample_size()
 
-        # Construct the valid snp list
-        snp_pos_map, valid_snp, valid_chromosomes = self._validation_snp_list()
-
         # Determine if the summary file is g-zipped
         gz_status = (summary_path.suffix == ".gz")
-        return summary_path, snp_pos_map, valid_snp, gz_status, sample_size, valid_chromosomes
+        return summary_path, gz_status, sample_size
 
-    def _validate_chromosomes(self, chromosome_set):
+    def validate_chromosomes(self, chromosome_set):
         """
         It is possible for non valid chromosomes, this will validate for numeric or known maps from str chromosomes to
         numeric, for example X: 23,  and flag and error if it fails to find a map.
@@ -106,48 +102,6 @@ class Input:
                     raise Exception(f"Found chromosome {chromosome} which could not be mapped!")
 
         return np.unique(ok_chromosomes)
-
-    def _validation_snp_list(self):
-        """
-        Create a set of valid snps and a position map to them via plink or bgen with option censuring of chromosome and
-        snps via HapMap3
-
-        :return: A dict of the snp_id: morgan positioning and chromosome
-        """
-        if self.ld_ref_mode == "plink":
-            accepted_chromosomes = self._set_accepted_chromosomes()
-            snp_pos_map = {}
-            valid_snp = set()
-            valid_chromosomes = set()
-
-            with open(self.bim) as f:
-                for line in f:
-                    bim = BimObject(line)
-                    # If the user has specified certain chromosomes check that this snps chromosome is in accepted_list
-                    if accepted_chromosomes and (bim.chromosome not in accepted_chromosomes):
-                        continue
-
-                    # If the user has specified only to use snp id's from HapMap3 then check this condition
-                    if self._hap_map_3 and (bim.variant_id in self._hap_map_3):
-                        valid_snp.add(bim.variant_id)
-                        snp_pos_map[bim.variant_id] = {"Position": int(bim.bp_cord), "Chromosome": bim.chromosome}
-                        valid_chromosomes.add(bim.chromosome)
-
-                    # Otherwise add to valid snps / snp_pos_map
-                    else:
-                        valid_snp.add(bim.variant_id)
-                        snp_pos_map[bim.variant_id] = {"Position": int(bim.bp_cord), "Chromosome": bim.chromosome}
-                        valid_chromosomes.add(bim.chromosome)
-
-            assert len(valid_snp) > 0, ec.no_valid_snps(self.bim, accepted_chromosomes, self._hap_map_3)
-            return snp_pos_map, valid_snp, self._validate_chromosomes(valid_chromosomes)
-
-        elif self.ld_ref_mode == "bgen":
-            raise NotImplementedError("Bgen mode not yet implemented")
-
-        else:
-            raise Exception(f"CRITICAL ERROR: ld_ref_mode takes the value 'plink' or 'bgen' yet found"
-                            f" {self.ld_ref_mode}")
 
     def _check_header(self, sum_header, headers, summary_headers):
         """
