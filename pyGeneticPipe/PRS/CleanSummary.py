@@ -224,7 +224,7 @@ class CleanSummary(Input):
             snp_map, valid_snp, valid_chromosomes = plink_obj.validation_snps(self.valid_chromosomes, self.hap_map_3)
 
             # Check that we found any snps, and validate the chromosomes, then return
-            assert len(valid_snp) > 0, ec.no_valid_snps(self.bim, self.valid_chromosomes, self.hap_map_3)
+            assert len(valid_snp) > 0, ec.no_valid_snps(plink_obj.bim_path, self.valid_chromosomes, self.hap_map_3)
             return snp_map, valid_snp, self.validate_chromosomes(valid_chromosomes)
 
         elif self.ld_ref_mode == "bgen":

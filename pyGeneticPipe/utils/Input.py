@@ -1,5 +1,4 @@
 from pyGeneticPipe.utils import error_codes as ec
-from pyGeneticPipe.plink.plinkObject import PlinkObject
 from pyGeneticPipe.utils import misc as mc
 from pathlib import Path
 import numpy as np
@@ -24,7 +23,7 @@ class Input:
         self._mandatory_headers = ["SNP_ID", "Effect_Allele", "Alt_Allele", "Effect_size", "P_Value"]
         self._effect_types = ["OR", "LINREG", "LOGOR", "BLUP"]
 
-        self.ld_ref_mode, self.bgen, self.bed, self.bim, self.fam = self._set_ld_ref(args["LD_Reference_Genotype"])
+        self.ld_ref_mode = self._set_ld_ref(args["LD_Reference_Genotype"])
         self.summary_path, self.zipped, self.sample_size = self._set_summary_stats(args["Summary_Stats"])
         self._summary_headers = self._set_summary_headers(args["Summary_Headers"], args["Summary_Stats"])
         self.frequencies = args["Summary_Frequency"]
@@ -53,13 +52,12 @@ class Input:
         # Check file home directory can be reached
         assert ld_path.parent.exists(), ec.path_invalid(ld_path.parent, "_set_ld_ref")
 
-        # Check the mode we are running in, and return args of mode, bgenObject and the 3 plink files accordingly
+        # Check the mode we are running in and return the mode
         if ld_path.suffix == ".bgen":
-            # return "bgen", bgenObject(ld_path), None, None, None
+            # return "bgen"
             raise NotImplementedError("Reading bgen files not yet implemented")
         else:
-            bed, bim, fam = PlinkObject(ref_path).validate_paths()
-            return "plink", None, bed, bim, fam
+            return "plink"
 
     def _set_summary_stats(self, summary_stats_path):
         """
