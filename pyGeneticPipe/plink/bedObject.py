@@ -10,7 +10,7 @@ class BedObject:
     def __init__(self, bed_path):
         self._bed_path = bed_path
         self._bed_binary = open(self._bed_path, "rb")
-        self.bed_order = self._validate()
+        self.sample_order = self._validate()
 
     def unpack(self, struct_format, size, list_return=False):
         """
@@ -41,15 +41,21 @@ class BedObject:
 
     def _validate(self):
         """
-        Check the magic number as well as the order
-        :return:
+        Check the magic number as well as the order of the bed file before continuing
+
+        :return: The order of the bed file, if it is variant order is sample, then return True else False where false
+            will referer to variant ordering
+        :rtype: bool
         """
 
         # Check the magic numbers
         magic = self.unpack("2s", 2).hex()
         assert magic == "6c1b", ec.bed_magic_violation(self._bed_path, magic)
 
-        # Validate the order of the matrix
+        # Validate the order of the matrix where "00" is sample layout and "01" variant
         order = self.unpack("1s", 1).hex()
         assert order == "00" or order == "01", ec.bed_matrix_order(self._bed_path, order)
-        return order
+        if order == "00":
+            return True
+        else:
+            return False
