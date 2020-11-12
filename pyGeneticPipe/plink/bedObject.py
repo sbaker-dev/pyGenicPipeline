@@ -13,7 +13,7 @@ class BedObject:
 
         # Open the file
         self._bed_binary = open(self._bed_path, "rb")
-        self.rows, self.columns = self._validate(variant_number, sample_number)
+        self.rows, self.columns, self.order = self._validate(variant_number, sample_number)
 
     def close(self):
         """
@@ -68,7 +68,7 @@ class BedObject:
 
         # If we have sample notation then matrix is variant_number of columns by sample_number of rows
         if order == "00":
-            return variant_number, sample_number
+            return variant_number, sample_number, "Sample"
         # If we have variant notation then matrix is sample_number of columns by variant_number of rows
         else:
-            return sample_number, variant_number
+            return sample_number, variant_number, "Variant"
