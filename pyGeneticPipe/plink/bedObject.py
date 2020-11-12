@@ -7,10 +7,22 @@ import struct
 
 
 class BedObject:
-    def __init__(self, bed_path):
+    def __init__(self, bed_path, variant_number, sample_number):
+        # Required to load
         self._bed_path = bed_path
+        self.variant_number = variant_number
+        self.sample_number = sample_number
+
+        # Open the file
         self._bed_binary = open(self._bed_path, "rb")
         self.sample_order = self._validate()
+
+    def close(self):
+        """
+        When we are done with the file, close it
+        :return: Nothing, just close the opened file
+        """
+        self._bed_binary.close()
 
     def unpack(self, struct_format, size, list_return=False):
         """

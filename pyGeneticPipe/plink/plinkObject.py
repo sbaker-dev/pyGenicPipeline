@@ -16,7 +16,8 @@ class PlinkObject:
 
     def bed_object(self):
         print("Starting bed")
-        BedObject(self.bed_path)
+        variant_number, sample_number = self.get_dimensions()
+        BedObject(self.bed_path, variant_number, sample_number)
 
     def bim_object(self):
         """
@@ -123,4 +124,23 @@ class PlinkObject:
         assert bed.exists(), ec.path_invalid(bed, "_set_ld_ref")
         assert bim.exists(), ec.path_invalid(bim, "_set_ld_ref")
         assert fam.exists(), ec.path_invalid(fam, "_set_ld_ref")
+
         return bed, bim, fam
+
+    def get_dimensions(self):
+        """
+        When working with Bed files we need to know the number of variants, the length of the bim file, and the number
+        of individuals, the length of the fam file.
+
+        :return: The length of the variants and number of samples
+        """
+        # Get the number of variants in the bim file
+        with open(self.bim_path, "r") as f:
+            variant_length = len(list(f))
+        f.close()
+
+        # Get the number of samples in the fam file
+        with open(self.fam_path, "r") as f:
+            number_of_samples = len(list(f))
+        f.close()
+        return variant_length, number_of_samples
