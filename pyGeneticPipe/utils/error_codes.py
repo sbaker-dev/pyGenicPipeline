@@ -91,3 +91,15 @@ def ambiguous_header(header, found_headers, match_headers):
 def invalid_working_directory(working_direction):
     return f"INVALID WORKING DIRECTORY OF {working_direction} \n" \
            f"Tried to navigate to working directory but failed"
+
+
+# bed file codes
+def bed_magic_violation(file_name, magic):
+    return f"INVALID BED FILE for file at path: {file_name}\n" \
+           f"BED files have a magic number of 6c1b in hex for the first two bytes but found {magic}"
+
+
+def bed_matrix_order(file_name, order):
+    return f"INVALID BED FILE ORDER for bed file at path: {file_name}\n" \
+           f"Bed files have the third byte relate to the order, a 00 relating to sample and 01 variant yet found " \
+           f"BED file matrix order {order}"

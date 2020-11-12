@@ -3,6 +3,7 @@ This is a modified version of pandas plink found at https://github.com/limix/pan
 available at https://github.com/mfranberg/libplinkio
 """
 from pyGeneticPipe.plink.supportObjects import BimLoci, BimByChromosome
+from pyGeneticPipe.plink.bedObject import BedObject
 from pyGeneticPipe.utils import error_codes as ec
 from pathlib import Path
 import numpy as np
@@ -12,6 +13,10 @@ class PlinkObject:
     def __init__(self, plink_path):
         self.base_path = plink_path
         self.bed_path, self.bim_path, self.fam_path = self.validate_paths()
+
+    def bed_object(self):
+        print("Starting bed")
+        BedObject(self.bed_path)
 
     def bim_object(self):
         """
