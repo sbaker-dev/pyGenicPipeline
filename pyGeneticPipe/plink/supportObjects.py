@@ -36,3 +36,35 @@ class BimByChromosome:
         :return: Just the chromosome number
         """
         return f"BimByChromosome {self.chromosome}"
+
+
+class Nucleotide:
+    def __init__(self, nucleotide):
+        """
+        Sometimes we need to work with saved nucleotides, so we can construct an object that allows us to extract the
+        first and second alleles based on what they written as; for example effect allele alt allele.
+        :param nucleotide:
+        """
+        self.a1 = nucleotide[0]
+        self.a2 = nucleotide[1]
+
+    def __repr__(self):
+        """
+        Human readable printing
+        :return: String of the tuple of the attributes
+        """
+        return f"{self.to_tuple()}"
+
+    def to_tuple(self):
+        """
+        Allow return as tuple
+        :return: Tuple of attributes
+        """
+        return self.a1, self.a2
+
+    def to_list(self):
+        """
+        Allow return as list
+        :return: List of attributes
+        """
+        return [self.a1, self.a2]
