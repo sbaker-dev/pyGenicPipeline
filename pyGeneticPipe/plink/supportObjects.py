@@ -24,10 +24,11 @@ class BimByChromosome:
         the bim files, but for a given chromosome.
         """
         self.chromosome = chromosome
-        self.chromosome_snps = sids
+        self.snps = sids
         self.indexes = indexes
-        self.chromosome_positions = pos
+        self.positions = pos
         self.nucleotides = nts
+        self.indexed_snps = {snp_id: index for snp_id, index in zip(self.snps, self.indexes)}
 
     def __repr__(self):
         """
