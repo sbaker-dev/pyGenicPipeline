@@ -10,12 +10,10 @@ class BedObject:
     def __init__(self, bed_path, variant_number, sample_number):
         # Required to load
         self._bed_path = bed_path
-        self.variant_number = variant_number
-        self.sample_number = sample_number
 
         # Open the file
         self._bed_binary = open(self._bed_path, "rb")
-        self.sample_order = self._validate()
+        self.rows, self.columns = self._validate(variant_number, sample_number)
 
     def close(self):
         """
@@ -51,7 +49,7 @@ class BedObject:
         else:
             return struct.unpack(struct_format, self._bed_binary.read(size))[0]
 
-    def _validate(self):
+    def _validate(self, variant_number, sample_number):
         """
         Check the magic number as well as the order of the bed file before continuing
 
@@ -67,7 +65,10 @@ class BedObject:
         # Validate the order of the matrix where "00" is sample layout and "01" variant
         order = self.unpack("1s", 1).hex()
         assert order == "00" or order == "01", ec.bed_matrix_order(self._bed_path, order)
+
+        # If we have sample notation then matrix is variant_number of columns by sample_number of rows
         if order == "00":
-            return True
+            return variant_number, sample_number
+        # If we have variant notation then matrix is sample_number of columns by variant_number of rows
         else:
-            return False
+            return sample_number, variant_number
