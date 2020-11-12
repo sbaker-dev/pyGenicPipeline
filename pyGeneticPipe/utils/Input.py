@@ -31,6 +31,11 @@ class Input:
         self.effect_type = self._set_effect_type(args["Effect_type"])
         self.z_scores = self._set_z_scores(args["Z_Scores"])
 
+        # Snp types
+        self.ambiguous_snps = {('A', 'T'), ('T', 'A'), ('G', 'C'), ('C', 'G')}
+        self.allowed_alleles = {'A', 'T', 'C', 'G'}
+        self.allele_flip = {'A': 'T', 'G': 'C', 'T': 'A', 'C': 'G'}
+
     @staticmethod
     def _set_ld_ref(ref_path):
         """
@@ -296,3 +301,4 @@ class Input:
     def standard_errors(self):
         """Standard error header index in GWAS summary file"""
         return self._summary_headers["Standard_Errors"]
+
