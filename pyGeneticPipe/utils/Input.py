@@ -23,7 +23,7 @@ class Input:
         self._mandatory_headers = ["SNP_ID", "Effect_Allele", "Alt_Allele", "Effect_size", "P_Value"]
         self._effect_types = ["OR", "LINREG", "LOGOR", "BLUP"]
 
-        self.ld_ref_mode = self._set_ld_ref(args["LD_Reference_Genotype"])
+        self.ld_ref_mode, self.ld_ref_path = self._set_ld_ref(args["LD_Reference_Genotype"])
         self.validation_file = args["Validation_File"]
         self.summary_path, self.zipped, self.sample_size = self._set_summary_stats(args["Summary_Stats"])
         self._summary_headers = self._set_summary_headers(args["Summary_Headers"], args["Summary_Stats"])
@@ -60,10 +60,10 @@ class Input:
 
         # Check the mode we are running in and return the mode
         if ld_path.suffix == ".bgen":
-            # return "bgen"
+            # return "bgen", ld_path
             raise NotImplementedError("Reading bgen files not yet implemented")
         else:
-            return "plink"
+            return "plink", ld_path
 
     def _set_summary_stats(self, summary_stats_path):
         """
