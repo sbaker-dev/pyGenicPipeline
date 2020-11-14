@@ -6,7 +6,14 @@ class BimLoci:
         https://www.cog-genomics.org/plink2/formats#bim
 
         """
-        self.chromosome, self.variant_id, self.morgan_pos, self.bp_position, self.a1, self.a2 = bim_line.split()
+        chromosome, variant_id, morgan_pos, bp_position, a1, a2 = bim_line.split()
+
+        self.chromosome = chromosome
+        self.variant_id = variant_id
+        self.morgan_pos = float(morgan_pos)
+        self.bp_position = int(bp_position)
+        self.a1 = str(a1)
+        self.a2 = str(a2)
 
     def __repr__(self):
         """
