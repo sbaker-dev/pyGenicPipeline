@@ -1,3 +1,6 @@
 /venv
 /Tests
 /.idea
+/GUI/.idea
+/GUI/css/boot
+/GUI/js
