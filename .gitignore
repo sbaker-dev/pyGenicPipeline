@@ -3,4 +3,5 @@
 /.idea
 /GUI/.idea
 /GUI/css/boot
-/GUI/js
+/GUI/js/boot
+/GUI/Images/Theme.png

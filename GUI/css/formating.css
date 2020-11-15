@@ -1,0 +1,31 @@
+body{
+    background: #1d1d1d;
+}
+
+.titles_background{
+    color: #3f6f8c;
+}
+
+.titles_foreground{
+    color: #8C8C8C;
+}
+
+.text_c{
+    color: #F2F2F2;
+}
+
+.minor_gap{
+    margin-top: 10px;
+}
+
+.section_gap{
+    margin-top: 50px;
+}
+
+.breakpoint_gap{
+    margin-bottom: 100px;
+}
+
+.card{
+    background: #3f6f8c;
+}
