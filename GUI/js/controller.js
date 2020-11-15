@@ -1,3 +1,11 @@
+function setGeneticPath(){
+    /**
+     * This will set the path to either the directory of multiple files of genetic data or the genetic data that needs
+     * to be split
+     */
+    const file_path = document.getElementById("path_to_genetic");
+    eel.set_genetic_path(file_path.value);
+}
 
 eel.expose(showStatus);
 function showStatus(text, element_id, failed){

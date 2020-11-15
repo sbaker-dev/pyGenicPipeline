@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>pyGeneticPipe - Quality Control</title>
+
+    <link rel="stylesheet" href="css/boot/bootstrap.min.css">
+    <link rel="stylesheet" href="css/boot/bootstrap-utilities.css">
+    <link rel="stylesheet" href="css/boot/bootstrap-reboot.css">
+    <link rel="stylesheet" href="css/boot/bootstrap-grid.css">
+    <link rel="stylesheet" href="css/formating.css">
+
+    <script src="eel.js"></script>
+    <script src="js/controller.js"></script>
+
+    <link rel="icon" href="Images/dna.svg" type="=image/x-icon">
+
+
+</head>
+
+<body>
+<div class="container">
+
+    <!-- Current jumbotron holder -->
+    <div class="row">
+        <h1 class="card-title text-center titles_background minor_gap">pyGeneticPipe</h1>
+        <h4 class="card-body text-center text_c breakpoint_gap">Let's clean our summary statistics!</h4>
+    </div>
+
+    <!-- Check the user has QCed base data -->
+    <div class="row">
+        <div class="card h-100">
+            <div class="card-header">
+                <h2 class="titles_foreground">
+                    Genetic data
+                </h2>
+            </div>
+            <div class="card-body d-flex flex-column">
+                <p class="card-text text_c">
+                    Have you already under taken quality control (QC) on your Genetic data? Certain QC procedures like
+                    strand flipping require validation data so if your genetic data has not been QCed you should
+                    undertake that process first.
+                </p>
+                <div class="center-align">
+
+                    <a href="target_clean.html" class="btn btn-outline-light align-bottom" style="margin-top: auto">
+                        No i have not QC'ed my genetic data
+                    </a>
+
+                </div>
+
+                <p></p>
+
+                <p class="card-text text_c">
+                    Work with genetic data is often done on a super computer, so variables are not validated in this
+                    step. However, this pipeline will generate a validation file that can be run before submission to
+                    check that you have set everything correctly before submitting work to a que.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Making a gap -->
+    <div class="row">
+        <p class="breakpoint_gap"></p>
+    </div>
+
+    <!-- Getting the genetic data -->
+    <div class="row">
+        <div class="card h-100">
+            <div class="card-header">
+                <h2 class="titles_foreground">
+                    Genetic Path
+                </h2>
+            </div>
+            <div class="card-body d-flex flex-column">
+                <p class="card-text text_c">
+                    If you have genetic data split by chromosome, please provide a path to that directory, otherwise
+                    please specify the path including the prefix if it is a plink file, or a full path to a bgen file
+                </p>
+                <p class="card-text text_c">
+                    For example I:\Work\UKBiobankQCed, where this contains chr1.bed / chr2.bgen etc for a path
+                </p>
+                <p class="card-text text_c">
+                    Or I:\Work\UKBiobankQced\biobank, for plink files you don't need to add the .bed but it will not
+                    fail if you do. Where as if you have a bgen file you <b>must</b> add the .bgen
+                </p>
+
+                <label>
+                    <input id="path_to_genetic" type="text" class="form-control" placeholder="Put you path here!">
+                </label>
+                <button class="btn btn-outline-light align-bottom" onclick="setGeneticPath()">ASDSAD</button>
+
+                <h2 id="genetic_path_set"></h2>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
