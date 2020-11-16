@@ -9,13 +9,14 @@ import h5py
 
 class Input:
     def __init__(self, args):
-
         # General operational parameters
         self.args = args
         self.debug = args["Debug"]
-        self.override_file = args["Override"]
-        self.project_name = args["Project_Name"]
         self.working_dir = args["Working_Directory"]
+        self.operation = args["Operation"]
+
+        # The project file for this project
+        self.project_file = self._create_project_file()
 
         # Summary setters
         self.hap_map_3 = self._set_hap_map_3()
@@ -228,17 +229,28 @@ class Input:
         else:
             return None
 
-    def create_hdf5(self, file_name):
+    def _create_project_file(self):
         """
-        Setup the hdf5 file for this run
+        Setup the hdf5 file for this project
+
+        :rtype: h5py.File
         """
-        project_file = Path(self.working_dir, f"{self.project_name}_{file_name}")
+
+        # Construct the path and validate it
+        project_file = Path(self.working_dir, f"{self.args['Project_Name']}")
         assert Path(self.working_dir), ec.invalid_working_directory(self.working_dir)
 
-        if (project_file.exists() and self.override_file) or not project_file.exists():
-            return h5py.File(Path(self.working_dir, f"{self.project_name}_{file_name}"), "w")
+        # Creates file if it doesn't exist, or overrides it, ie for fast debugging iterations, if set.
+        if (project_file.exists() and self.args["Override"]) or not project_file.exists():
+            return h5py.File(Path(self.working_dir, f"{self.args['Project_Name']}"), "w")
+
+        # If we don't want to override it, we load it in appending mode
+        elif project_file.exists() and not self.args["Override"]:
+            return h5py.File(Path(self.working_dir, f"{self.args['Project_Name']}"), "a")
+
+        # Should be impossible to reach here
         else:
-            raise Exception(f"File already exists: Stopping")
+            raise Exception(f"CRITICAL ERROR: Cannot load file - unknown reason")
 
     @property
     def _chromosome_map(self):
@@ -301,4 +313,3 @@ class Input:
     def standard_errors(self):
         """Standard error header index in GWAS summary file"""
         return self._summary_headers["Standard_Errors"]
-
