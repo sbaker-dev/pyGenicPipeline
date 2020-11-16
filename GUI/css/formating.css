@@ -29,3 +29,8 @@ body{
 .card{
     background: #3f6f8c;
 }
+
+.center-align{
+    margin-left: auto;
+    margin-right: auto;
+}
