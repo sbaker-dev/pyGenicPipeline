@@ -17,6 +17,9 @@ class Input:
 
         # The project file for this project
         self.project_file = self._create_project_file()
+        self.load_file = args["Load_File"]
+        self.load_directory = args["Load_Directory"]
+        self.load_type = args["Load_Type"]
 
         # Summary setters
         self.hap_map_3 = self._set_hap_map_3()
@@ -328,3 +331,13 @@ class Input:
     def standard_errors(self):
         """Standard error header index in GWAS summary file"""
         return self._summary_headers["Standard_Errors"]
+
+    @property
+    def h5_validation(self):
+        """Validation key for h5py for group data such as chromosomes and snps"""
+        return "Validation"
+
+    @property
+    def h5_valid_chromosome(self):
+        """Key for accessing valid chromosomes within validation group within the h5py file"""
+        return "Valid_Chromosomes"
