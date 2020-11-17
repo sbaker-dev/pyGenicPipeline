@@ -45,8 +45,10 @@ class Input:
             False bool. Only one job should be true for each process
         :return: the current job name to be processed via getattr
         """
-        job = [job_name for job_name, job_status in zip(operation_dict.keys(), operation_dict.values()) if job_status]
+        if not operation_dict:
+            return None
 
+        job = [job_name for job_name, job_status in zip(operation_dict.keys(), operation_dict.values()) if job_status]
         assert len(job) == 1, ec.job_violation(job)
         return job[0]
 
