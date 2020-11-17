@@ -1,4 +1,5 @@
 from datetime import datetime
+from itertools import chain
 import gzip
 import os
 
@@ -66,3 +67,10 @@ def directory_iterator(directory, file_only=True):
         return [file for file in os.listdir(directory) if os.path.isfile(f"{directory}/{file}")]
     else:
         return [file for file in os.listdir(directory)]
+
+
+def flatten(list_of_lists):
+    """
+    Flatten a list of lists into a list
+    """
+    return list(chain(*list_of_lists))
