@@ -13,7 +13,7 @@ class Input:
         self.args = args
         self.debug = args["Debug"]
         self.working_dir = args["Working_Directory"]
-        self.operation = args["Operation"]
+        self.operation = self._set_current_job(args["Operation"])
 
         # The project file for this project
         self.project_file = self._create_project_file()
@@ -36,6 +36,19 @@ class Input:
         self.ambiguous_snps = {('A', 'T'), ('T', 'A'), ('G', 'C'), ('C', 'G')}
         self.allowed_alleles = {'A', 'T', 'C', 'G'}
         self.allele_flip = {'A': 'T', 'G': 'C', 'T': 'A', 'C': 'G'}
+
+    @staticmethod
+    def _set_current_job(operation_dict):
+        """
+        Set the current job from a dict of possible jobs
+        :param operation_dict: A dict where each key is a method_call to be done via getattr and the value is a True or
+            False bool. Only one job should be true for each process
+        :return: the current job name to be processed via getattr
+        """
+        job = [job_name for job_name, job_status in zip(operation_dict.keys(), operation_dict.values()) if job_status]
+
+        assert len(job) == 1, ec.job_violation(job)
+        return job[0]
 
     @staticmethod
     def _set_ld_ref(ref_path):

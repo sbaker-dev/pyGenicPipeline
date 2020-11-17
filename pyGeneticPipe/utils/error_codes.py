@@ -43,6 +43,13 @@ def bgi_path_violation(bgi_path):
 
 
 # Input error codes
+def job_violation(jobs):
+    return f"TO MANY JOBS SPECIFIED\n" \
+           f"pyGeneticPipe is setup to take a single process at a time, controlled via shell scripts or via separate " \
+           f"calls to the respective Classes within it.\nHowever in the current operation {len(jobs)} where found to " \
+           f"be set to run: {jobs}"
+
+
 def path_invalid(parent_path, operation):
     return f"INVALID Path for {operation}\n" \
            f"{operation} attempt to navigate to a directory or file at {parent_path} but it does not exist"
