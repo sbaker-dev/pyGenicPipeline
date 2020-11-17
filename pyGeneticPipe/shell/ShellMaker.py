@@ -12,13 +12,31 @@ class ShellMaker(Input):
         """
         Create a script to split the current master .bed into separate chromosomes
         """
-        self._note_args(["Plink_Path", "Load_File"])
+        self._note_and_construct_args(["Plink_Path", "Load_File"])
         self.file.write("# Load shell modules required to run\n")
         self.file.write(f"module load {self.args['Plink_Path']}\n\n")
         self.file.write('# For each chromosome within the file specified create a new file\n')
+
+        # Iterate through chromosomes and generate a .bed file for each one
         self.file.write("for chr in {1..23}; do \\\n")
         self.file.write(f"plink2 --bfile {self.args['Load_File']} --chr $chr --make-bed "
                         f"--out {self.args['Load_File']}_${{chr}}; \\\n")
+        self.file.write(f"done\n")
+        self.file.close()
+
+    def convert_to_bgen(self):
+        """
+        Creates a script to use QCtoolv2 to convert .bed files to .bgen v1.2 files
+        """
+        self._note_and_construct_args(["QCTool_Path"])
+        self.file.write("# Load shell modules required to run\n")
+        self.file.write(f"module load {self.args['QCTool_Path']}\n\n")
+        self.file.write('# For each .bed chromosome file within this directory convert it to .bgen v1.2\n')
+
+        # Iterate through chromosomes and create a .bgen file for each one
+        self.file.write("for chr in {1..23}; do \\\n")
+        self.file.write(f"qctool -g {self.args['Load_File']}_${{chr}}.bed -og "
+                        f"{self.args['Load_File']}_${{chr}}.bgen; \\\n")
         self.file.write(f"done\n")
         self.file.close()
 
@@ -30,7 +48,7 @@ class ShellMaker(Input):
         file.write("#!/bin/bash\n\n")
         return file
 
-    def _note_args(self, args_list):
+    def _note_and_construct_args(self, args_list):
         """
         Add the args that have been used for this file to make debugging easier
         """
