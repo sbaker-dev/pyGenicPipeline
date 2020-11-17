@@ -12,6 +12,7 @@ class ShellMaker(Input):
         """
         Create a script to split the current master .bed into separate chromosomes
         """
+        self._note_args(["Plink_Path", "Load_File"])
         self.file.write("# Load shell modules required to run\n")
         self.file.write(f"module load {self.args['Plink_Path']}\n\n")
         self.file.write('# For each chromosome within the file specified create a new file\n')
@@ -25,10 +26,18 @@ class ShellMaker(Input):
         """
         Create an sh file
         """
-        file = open(Path(self.working_dir, "Test.sh"), "w")
+        file = open(Path(self.working_dir, f"{self.operation}.sh"), "w")
         file.write("#!/bin/bash\n\n")
-        # file.write(f"plink2 --bfile {}")
         return file
+
+    def _note_args(self, args_list):
+        """
+        Add the args that have been used for this file to make debugging easier
+        """
+        self.file.write("# This pyGeneticPipe job takes the following direct args:\n")
+        for arg in args_list:
+            self.file.write(f"# {arg}:\t {self.args[arg]}\n")
+        self.file.write("\n")
 
     def _create_batch_header(self):
         """
