@@ -22,7 +22,7 @@ class ShellMaker(Input):
         self.file.write(f"plink2 --bfile {self.args['Load_File']} --chr $chr --make-bed "
                         f"--out {self.args['Load_File']}_${{chr}}; \\\n")
         self.file.write(f"done\n")
-        self.file.close()
+        self._close()
 
     def convert_to_bgen(self):
         """
@@ -38,7 +38,14 @@ class ShellMaker(Input):
         self.file.write(f"qctool -g {self.args['Load_File']}_${{chr}}.bed -og "
                         f"{self.args['Load_File']}_${{chr}}.bgen; \\\n")
         self.file.write(f"done\n")
+        self._close()
+
+    def _close(self):
+        """
+        Close the file and log the process is finished
+        """
         self.file.close()
+        print(f"Created {self.operation}.sh script")
 
     def _create_shell_file(self):
         """
