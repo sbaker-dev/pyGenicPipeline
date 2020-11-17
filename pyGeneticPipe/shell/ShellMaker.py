@@ -12,15 +12,16 @@ class ShellMaker(Input):
         """
         Create a script to split the current master .bed into separate chromosomes
         """
-        self._note_and_construct_args(["Plink_Path", "Load_File"])
+        self.file.write("# Source: zx8754 - https://www.biostars.org/p/387132/ \n\n")
+        self._construct_args([self.plink_key, self.load_key])
         self.file.write("# Load shell modules required to run\n")
-        self.file.write(f"module load {self.args['Plink_Path']}\n\n")
+        self.file.write(f"module load ${self.plink_key}\n\n")
         self.file.write('# For each chromosome within the file specified create a new file\n')
 
         # Iterate through chromosomes and generate a .bed file for each one
         self.file.write("for chr in {1..23}; do \\\n")
-        self.file.write(f"plink2 --bfile {self.args['Load_File']} --chr $chr --make-bed "
-                        f"--out {self.args['Load_File']}_${{chr}}; \\\n")
+        self.file.write(f"plink2 --bfile ${self.load_key} --chr $chr --make-bed "
+                        f"--out ${{{self.load_key}}}_${{chr}}; \\\n")
         self.file.write(f"done\n")
         self._close()
 
@@ -28,15 +29,16 @@ class ShellMaker(Input):
         """
         Creates a script to use QCtoolv2 to convert .bed files to .bgen v1.2 files
         """
-        self._note_and_construct_args(["QCTool_Path"])
+        self.file.write("# See other conversions from "
+                        "https://www.well.ox.ac.uk/~gav/qctool/documentation/examples/converting.html \n\n")
+        self._construct_args([self.qc_key, self.load_key])
         self.file.write("# Load shell modules required to run\n")
-        self.file.write(f"module load {self.args['QCTool_Path']}\n\n")
+        self.file.write(f"module load ${self.qc_key}\n\n")
         self.file.write('# For each .bed chromosome file within this directory convert it to .bgen v1.2\n')
 
         # Iterate through chromosomes and create a .bgen file for each one
         self.file.write("for chr in {1..23}; do \\\n")
-        self.file.write(f"qctool -g {self.args['Load_File']}_${{chr}}.bed -og "
-                        f"{self.args['Load_File']}_${{chr}}.bgen; \\\n")
+        self.file.write(f"qctool -g ${{{self.load_key}}}_${{chr}}.bed -og ${{{self.load_key}}}_${{chr}}.bgen; \\\n")
         self.file.write(f"done\n")
         self._close()
 
@@ -53,15 +55,17 @@ class ShellMaker(Input):
         """
         file = open(Path(self.working_dir, f"{self.operation}.sh"), "w")
         file.write("#!/bin/bash\n\n")
+        file.write("# Generate by pyGeneticPipe/shell/ShellMaker.py\n\n")
         return file
 
-    def _note_and_construct_args(self, args_list):
+    def _construct_args(self, args_list):
         """
-        Add the args that have been used for this file to make debugging easier
+        Add the args that have been used for this file to make debugging easier, allow quick switch and editing for
+        those who know what went wrong.
         """
         self.file.write("# This pyGeneticPipe job takes the following direct args:\n")
         for arg in args_list:
-            self.file.write(f"# {arg}:\t {self.args[arg]}\n")
+            self.file.write(f"{arg}={self.args[arg]}\n")
         self.file.write("\n")
 
     def _create_batch_header(self):
@@ -97,3 +101,24 @@ class ShellMaker(Input):
 
         self.file.write(f"#SBATCH --time={self.args['Job_Time']}\n")
         self.file.write(f"#SBATCH --mem={self.args['Job_Memory']}\n\n")
+
+    @property
+    def qc_key(self):
+        """
+        Key for qc path from args
+        """
+        return "QCTool_Path"
+
+    @property
+    def load_key(self):
+        """
+        Key for Load_File from args
+        """
+        return "Load_File"
+
+    @property
+    def plink_key(self):
+        """
+        Key for plink_key from args
+        """
+        return "Plink_Path"
