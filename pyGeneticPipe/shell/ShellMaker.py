@@ -1,0 +1,65 @@
+from pyGeneticPipe.core.Input import Input
+from pathlib import Path
+
+
+class ShellMaker(Input):
+    def __init__(self, args):
+        super().__init__(args)
+        self.file = self._create_shell_file()
+        self._create_batch_header()
+
+    def split_bed_by_chromosome(self):
+        """
+        Create a script to split the current master .bed into separate chromosomes
+        """
+        self.file.write("# Load shell modules required to run\n")
+        self.file.write(f"module load {self.args['Plink_Path']}\n\n")
+        self.file.write('# For each chromosome within the file specified create a new file\n')
+        self.file.write("for chr in {1..23}; do \\\n")
+        self.file.write(f"plink2 --bfile {self.args['Load_File']} --chr $chr --make-bed "
+                        f"--out {self.args['Load_File']}_${{chr}}; \\\n")
+        self.file.write(f"done\n")
+        self.file.close()
+
+    def _create_shell_file(self):
+        """
+        Create an sh file
+        """
+        file = open(Path(self.working_dir, "Test.sh"), "w")
+        file.write("#!/bin/bash\n\n")
+        # file.write(f"plink2 --bfile {}")
+        return file
+
+    def _create_batch_header(self):
+        """
+        Different submission types require a different header for batch control, set the header according to the type
+        specified in Job_Scheduler
+        """
+        if self.args["Job_Scheduler"] == "slurm":
+            self._set_slurm_header()
+
+        elif self.args["Job_Scheduler"] == "qsub":
+            raise NotImplementedError("Qsub not yet supported")
+
+        elif self.args["Job_Scheduler"] == "local":
+            print("No batch job requested, skipping header")
+
+        else:
+            raise Exception(f"Job_Scheduler takes the arguments slurm, qsub, and local yet was passed "
+                            f"{self.args['Job_Scheduler']}")
+
+    def _set_slurm_header(self):
+        """
+        Set the header for slurm for the current shell script
+        """
+        self.file.write(f"# Setup batch control for slurm\n")
+        self.file.write(f"#SBATCH --job-name={self.operation}\n")
+        self.file.write(f"#SBATCH --partition={self.args['Partition']}\n")
+        self.file.write(f"#SBATCH --nodes={self.args['Nodes']}\n")
+
+        # todo Expose these
+        self.file.write(f"#SBATCH --ntasks-per-node=1\n")
+        self.file.write(f"#SBATCH --cpus-per-task=1\n")
+
+        self.file.write(f"#SBATCH --time={self.args['Job_Time']}\n")
+        self.file.write(f"#SBATCH --mem={self.args['Job_Memory']}\n\n")
