@@ -50,10 +50,10 @@ class Cleaner(Input):
                 if self.load_type == ".bed":
                     valid_snps.append(Bed(string_path, count_A1=True).sid)
                 elif self.load_type == ".bgen":
-                    valid_snps.append(Bgen(string_path).sid)
+                    valid_snps.append([snp.split(",")[0] for snp in Bgen(string_path).sid])
 
         # Remove duplicates via set
-        return np.array(set(flatten(valid_snps)), dtype=self.h5_string_type)
+        return np.array(list(set(flatten(valid_snps))), dtype=self.h5_string_type)
 
     def _validation_chromosomes(self):
         """
