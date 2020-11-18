@@ -10,17 +10,17 @@ import h5py
 class Input:
     def __init__(self, args):
         # General operational parameters
-        self.args = args
-        self.debug = args["Debug"]
-        self.working_dir = args["Working_Directory"]
-        self.operation = self._set_current_job(args["Operation"])
+        self.args = self._set_args(args)
+        self.debug = self.args["Debug"]
+        self.working_dir = self.args["Working_Directory"]
+        self.operation = self._set_current_job(self.args["Operation"])
 
         # The project file for this project
         self.project_name = self.args['Project_Name']
         self.project_file = self._create_project_file()
-        self.load_file = args["Load_File"]
-        self.load_directory = args["Load_Directory"]
-        self.load_type = args["Load_Type"]
+        self.load_file = self.args["Load_File"]
+        self.load_directory = self.args["Load_Directory"]
+        self.load_type = self.args["Load_Type"]
 
         # Summary setters
         self.hap_map_3 = self._set_hap_map_3()
@@ -28,18 +28,19 @@ class Input:
         self._mandatory_headers = ["SNP_ID", "Effect_Allele", "Alt_Allele", "Effect_size", "P_Value"]
         self._effect_types = ["OR", "LINREG", "LOGOR", "BLUP"]
 
-        self.ld_ref_mode, self.ld_ref_path = self._set_ld_ref(args["LD_Reference_Genotype"])
-        self.validation_file = args["Validation_File"]
-        self.summary_path, self.zipped, self.sample_size = self._set_summary_stats(args["Summary_Stats"])
-        self._summary_headers = self._set_summary_headers(args["Summary_Headers"], args["Summary_Stats"])
-        self.frequencies = args["Summary_Frequency"]
-        self.effect_type = self._set_effect_type(args["Effect_type"])
-        self.z_scores = self._set_z_scores(args["Z_Scores"])
+    @staticmethod
+    def _set_args(args):
+        """
+        Args may be set as a dict, or as a yaml file with its path passed as the args. If the later then we need to load
+        in the dict of values
+        """
+        if isinstance(args, dict):
+            return args
+        else:
+            yaml_path = Path(args)
+            assert (yaml_path.exists() and yaml_path.suffix == ".yaml"), ec
 
-        # Snp types
-        self.ambiguous_snps = {('A', 'T'), ('T', 'A'), ('G', 'C'), ('C', 'G')}
-        self.allowed_alleles = {'A', 'T', 'C', 'G'}
-        self.allele_flip = {'A': 'T', 'G': 'C', 'T': 'A', 'C': 'G'}
+            return mc.load_yaml(yaml_path)
 
     @staticmethod
     def _set_current_job(operation_dict):
