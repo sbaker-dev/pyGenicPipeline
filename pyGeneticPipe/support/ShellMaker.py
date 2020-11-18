@@ -49,7 +49,7 @@ class ShellMaker(Input):
         Close the file and log the process is finished
         """
         self.file.close()
-        print(f"Created {self.operation}.sh script")
+        print(f"Created {self.operation}.sh script {terminal_time()}")
 
     def _create_shell_file(self):
         """
