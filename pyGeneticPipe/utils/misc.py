@@ -78,11 +78,11 @@ def flatten(list_of_lists):
     return list(chain(*list_of_lists))
 
 
-def _load_yaml():
+def load_yaml(path_to_file):
     """
     Load the yaml file from package into scope
     """
-    with open(Path(Path(__file__).parent, "args.yaml"), "r") as f:
+    with open(path_to_file, "r") as f:
         try:
             return yaml.safe_load(f)
         except yaml.YAMLError:
