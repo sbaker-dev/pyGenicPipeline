@@ -1,5 +1,7 @@
 from datetime import datetime
 from itertools import chain
+from pathlib import Path
+import yaml
 import gzip
 import os
 
@@ -74,3 +76,14 @@ def flatten(list_of_lists):
     Flatten a list of lists into a list
     """
     return list(chain(*list_of_lists))
+
+
+def _load_yaml():
+    """
+    Load the yaml file from package into scope
+    """
+    with open(Path(Path(__file__).parent, "args.yaml"), "r") as f:
+        try:
+            return yaml.safe_load(f)
+        except yaml.YAMLError:
+            raise yaml.YAMLError
