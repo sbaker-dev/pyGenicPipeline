@@ -7,48 +7,56 @@ from pathlib import Path
 class ShellMaker(Input):
     def __init__(self, args):
         super().__init__(args)
-        self.file = self._create_shell_file()
-        self._create_batch_header()
 
     def split_bed_by_chromosome(self):
         """
         Create a script to split the current master .bed into separate chromosomes
         """
-        self.file.write("# Source: zx8754 - https://www.biostars.org/p/387132/ \n\n")
-        self._construct_args([self.plink_key, self.load_key])
-        self.file.write("# Load shell modules required to run\n")
-        self.file.write(f"module load ${self.plink_key}\n\n")
-        self.file.write('# For each chromosome within the file specified create a new file\n')
+        # Create the file
+        file = self._create_shell_file()
+        self._create_batch_header(file)
+        file.write("# Source: zx8754 - https://www.biostars.org/p/387132/ \n\n")
+
+        # Validate the args
+        self._construct_args(file, [self.plink_key, self.load_key])
+        file.write("# Load shell modules required to run\n")
+        file.write(f"module load ${self.plink_key}\n\n")
+        file.write('# For each chromosome within the file specified create a new file\n')
 
         # Iterate through chromosomes and generate a .bed file for each one
-        self.file.write("for chr in {1..23}; do \\\n")
-        self.file.write(f"plink2 --bfile ${self.load_key} --chr $chr --make-bed "
-                        f"--out ${{{self.load_key}}}_${{chr}}; \\\n")
-        self.file.write(f"done\n")
-        self._close()
+        file.write("for chr in {1..23}; do \\\n")
+        file.write(f"plink2 --bfile ${self.load_key} --chr $chr --make-bed "
+                   f"--out ${{{self.load_key}}}_${{chr}}; \\\n")
+        file.write(f"done\n")
+        self._close(file)
 
     def convert_to_bgen(self):
         """
         Creates a script to use QCtoolv2 to convert .bed files to .bgen v1.2 files
         """
-        self.file.write("# See other conversions from "
-                        "https://www.well.ox.ac.uk/~gav/qctool/documentation/examples/converting.html \n\n")
-        self._construct_args([self.qc_key, self.load_key])
-        self.file.write("# Load shell modules required to run\n")
-        self.file.write(f"module load ${self.qc_key}\n\n")
-        self.file.write('# For each .bed chromosome file within this directory convert it to .bgen v1.2\n')
+        # Create the file
+        file = self._create_shell_file()
+        self._create_batch_header(file)
+        file.write("# See other conversions from "
+                   "https://www.well.ox.ac.uk/~gav/qctool/documentation/examples/converting.html \n\n")
+
+        # Validate the args
+        self._construct_args(file, [self.qc_key, self.load_key])
+        file.write("# Load shell modules required to run\n")
+        file.write(f"module load ${self.qc_key}\n\n")
+        file.write('# For each .bed chromosome file within this directory convert it to .bgen v1.2\n')
 
         # Iterate through chromosomes and create a .bgen file for each one
-        self.file.write("for chr in {1..23}; do \\\n")
-        self.file.write(f"qctool -g ${{{self.load_key}}}_${{chr}}.bed -og ${{{self.load_key}}}_${{chr}}.bgen; \\\n")
-        self.file.write(f"done\n")
-        self._close()
+        file.write("for chr in {1..23}; do \\\n")
+        file.write(f"qctool -g ${{{self.load_key}}}_${{chr}}.bed -og ${{{self.load_key}}}_${{chr}}.bgen; \\\n")
+        file.write(f"done\n")
+        self._close(file)
 
-    def _close(self):
+    def _close(self, file):
         """
         Close the file and log the process is finished
         """
-        self.file.close()
+        file.close()
         print(f"Created {self.operation}.sh script {terminal_time()}")
 
     def _create_shell_file(self):
@@ -60,24 +68,24 @@ class ShellMaker(Input):
         file.write("# Generate by pyGeneticPipe/support/ShellMaker.py\n\n")
         return file
 
-    def _construct_args(self, args_list):
+    def _construct_args(self, file, args_list):
         """
         Add the args that have been used for this file to make debugging easier, allow quick switch and editing for
         those who know what went wrong.
         """
-        self.file.write("# This pyGeneticPipe job takes the following direct args:\n")
+        file.write("# This pyGeneticPipe job takes the following direct args:\n")
         for arg in args_list:
             assert self.args[arg], ec.missing_arg(self.operation, arg)
-            self.file.write(f"{arg}={self.args[arg]}\n")
-        self.file.write("\n")
+            file.write(f"{arg}={self.args[arg]}\n")
+        file.write("\n")
 
-    def _create_batch_header(self):
+    def _create_batch_header(self, file):
         """
         Different submission types require a different header for batch control, set the header according to the type
         specified in Job_Scheduler
         """
         if self.args["Job_Scheduler"] == "slurm":
-            self._set_slurm_header()
+            self._set_slurm_header(file)
 
         elif self.args["Job_Scheduler"] == "qsub":
             raise NotImplementedError("Qsub not yet supported")
@@ -89,21 +97,21 @@ class ShellMaker(Input):
             raise Exception(f"Job_Scheduler takes the arguments slurm, qsub, and local yet was passed "
                             f"{self.args['Job_Scheduler']}")
 
-    def _set_slurm_header(self):
+    def _set_slurm_header(self, file):
         """
         Set the header for slurm for the current shell script
         """
-        self.file.write(f"# Setup batch control for slurm\n")
-        self.file.write(f"#SBATCH --job-name={self.operation}\n")
-        self.file.write(f"#SBATCH --partition={self.args['Partition']}\n")
-        self.file.write(f"#SBATCH --nodes={self.args['Nodes']}\n")
+        file.write(f"# Setup batch control for slurm\n")
+        file.write(f"#SBATCH --job-name={self.operation}\n")
+        file.write(f"#SBATCH --partition={self.args['Partition']}\n")
+        file.write(f"#SBATCH --nodes={self.args['Nodes']}\n")
 
         # todo Expose these
-        self.file.write(f"#SBATCH --ntasks-per-node=1\n")
-        self.file.write(f"#SBATCH --cpus-per-task=1\n")
+        file.write(f"#SBATCH --ntasks-per-node=1\n")
+        file.write(f"#SBATCH --cpus-per-task=1\n")
 
-        self.file.write(f"#SBATCH --time={self.args['Job_Time']}\n")
-        self.file.write(f"#SBATCH --mem={self.args['Job_Memory']}\n\n")
+        file.write(f"#SBATCH --time={self.args['Job_Time']}\n")
+        file.write(f"#SBATCH --mem={self.args['Job_Memory']}\n\n")
 
     @property
     def qc_key(self):
