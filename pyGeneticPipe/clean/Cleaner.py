@@ -34,6 +34,7 @@ class Cleaner(Input):
 
         # Create a dataset of all the validation snps
         validation_group.create_dataset(self.h5_valid_snps, data=self._validation_snps())
+        self.project_file.close()
         print(f"Create Validation snps and chromosomes: {terminal_time()}")
 
     def _validation_snps(self):
