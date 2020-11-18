@@ -16,6 +16,7 @@ class Input:
         self.operation = self._set_current_job(args["Operation"])
 
         # The project file for this project
+        self.project_name = self.args['Project_Name']
         self.project_file = self._create_project_file()
         self.load_file = args["Load_File"]
         self.load_directory = args["Load_Directory"]
@@ -255,16 +256,16 @@ class Input:
         """
 
         # Construct the path and validate it
-        project_file = Path(self.working_dir, f"{self.args['Project_Name']}")
+        project_file = Path(self.working_dir, self.project_name)
         assert Path(self.working_dir), ec.invalid_working_directory(self.working_dir)
 
         # Creates file if it doesn't exist, or overrides it, ie for fast debugging iterations, if set.
         if (project_file.exists() and self.args["Override"]) or not project_file.exists():
-            return h5py.File(Path(self.working_dir, f"{self.args['Project_Name']}"), "w")
+            return h5py.File(Path(self.working_dir, self.project_name), "w")
 
         # If we don't want to override it, we load it in appending mode
         elif project_file.exists() and not self.args["Override"]:
-            return h5py.File(Path(self.working_dir, f"{self.args['Project_Name']}"), "a")
+            return h5py.File(Path(self.working_dir, self.project_name), "a")
 
         # Should be impossible to reach here
         else:

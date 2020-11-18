@@ -1,3 +1,4 @@
+from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils.misc import directory_iterator, flatten
 from pyGeneticPipe.core.Input import Input
 from pysnptools.distreader import Bgen
@@ -17,6 +18,10 @@ class Cleaner(Input):
         chromosomes for validation against summary statistics
         """
 
+        # Add meaningful error out if process attempts to repeat itself in append mode
+        assert self.h5_validation not in self.project_file.keys(), ec.appending_error(self.project_name,
+                                                                                      self.h5_validation)
+
         # Create the validation group
         validation_group = self.project_file.create_group(self.h5_validation)
 
@@ -25,6 +30,9 @@ class Cleaner(Input):
 
         # Create a dataset of all the validation snps
         validation_group.create_dataset(self.h5_valid_snps, data=self._validation_snps())
+
+    def _a(self):
+        pass
 
     def _validation_snps(self):
         """
