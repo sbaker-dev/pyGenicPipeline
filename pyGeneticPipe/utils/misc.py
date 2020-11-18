@@ -45,7 +45,7 @@ def terminal_time():
     """
     A way to remember when you initialised a cell by return the current hour and minute as a string
     """
-    return f"{datetime.now().time().hour}:{datetime.now().time().minute}"
+    return f"{datetime.now().time().hour}:{datetime.now().time().minute}:{datetime.now().time().second}"
 
 
 def directory_iterator(directory, file_only=True):

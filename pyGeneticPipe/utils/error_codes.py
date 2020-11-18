@@ -52,8 +52,8 @@ def job_violation(jobs):
 
 def appending_error(project, keys):
     return f"JOB HAS ALREADY BEEN UNDERTAKEN FOR PROJECT {project}\n" \
-           f"The h5py file already contains {keys}, if you want to re-do the project you need to set Override to be" \
-           f"equal to True\nWARNING: This will delete ALL data within the h5py file, not just this part"
+           f"The h5py file already contains {keys}, if you want to re-do the project you need to set Override to " \
+           f"True\nWARNING: This will delete ALL data within the h5py file, not just this part"
 
 
 def path_invalid(parent_path, operation):

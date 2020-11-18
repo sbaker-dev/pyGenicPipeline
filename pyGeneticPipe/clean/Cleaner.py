@@ -1,5 +1,5 @@
+from pyGeneticPipe.utils.misc import directory_iterator, flatten, terminal_time
 from pyGeneticPipe.utils import error_codes as ec
-from pyGeneticPipe.utils.misc import directory_iterator, flatten
 from pyGeneticPipe.core.Input import Input
 from pysnptools.distreader import Bgen
 from pysnptools.snpreader import Bed
@@ -30,9 +30,7 @@ class Cleaner(Input):
 
         # Create a dataset of all the validation snps
         validation_group.create_dataset(self.h5_valid_snps, data=self._validation_snps())
-
-    def _a(self):
-        pass
+        print(f"Create Validation snps and chromosomes: {terminal_time()}")
 
     def _validation_snps(self):
         """
