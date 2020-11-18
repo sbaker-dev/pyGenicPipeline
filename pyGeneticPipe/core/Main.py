@@ -1,4 +1,4 @@
-from pyGeneticPipe.shell.ShellMaker import ShellMaker
+from pyGeneticPipe.support.ShellMaker import ShellMaker
 from pyGeneticPipe.utils.misc import terminal_time
 from pyGeneticPipe.clean.Cleaner import Cleaner
 from pyGeneticPipe.core.Input import Input
