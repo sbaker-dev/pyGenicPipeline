@@ -43,7 +43,7 @@ all_args:
   Nodes: 1
 
   # Job time via Job_Scheduler
-  Job_Time: null
+  Job_Time: "00:05:00"
 
   # Amount of memory to allocate via Job_Memory, defaults to 100m
   Job_Memory: "100m"
@@ -129,7 +129,7 @@ split_bed_by_chromosome:
   Nodes: 1
 
   # Job time via Job_Scheduler
-  Job_Time: null
+  Job_Time: "00:05:00"
 
   # Amount of memory to allocate via Job_Memory, defaults to 100m
   Job_Memory: "100m"
