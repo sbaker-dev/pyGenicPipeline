@@ -268,6 +268,8 @@ class Input:
 
         :rtype: h5py.File
         """
+        if not self.project_name:
+            return None
 
         # Construct the path and validate it
         project_file = Path(self.working_dir, self.project_name)
