@@ -67,6 +67,11 @@ class ArgMaker:
         return self._yaml_parameters["convert_to_bgen"]
 
     @property
+    def create_validation_group(self):
+        """Returns the arguments the user needs to set for create_validation_group"""
+        return self._yaml_parameters["create_validation_group"]
+
+    @property
     def _arg_descriptions(self):
         """So we can replicate comments in write file"""
         return self._yaml_parameters["Arg_Descriptions"]
