@@ -2,6 +2,7 @@ import unittest
 import subprocess
 from pathlib import Path
 from pyGeneticPipe.clean.Cleaner import Cleaner
+from pyGeneticPipe.utils.misc import load_yaml
 import h5py
 
 
@@ -12,22 +13,24 @@ class MyTestCase(unittest.TestCase):
         """
         Test Plink 1.9 installed and can run
         """
-        testing_path = Path(__file__).parent.absolute()
-        plink_path = Path(r"C:\Users\Samuel\plink.exe")
-        assert plink_path.exists()
+        print("TESTING PLINK RUNS")
+        load_dict = load_yaml(Path(Path(__file__).parent.absolute(), "plink.yaml"))
+        plink_path = Path(load_dict["plink_1_path"])
+        write_path = Path(load_dict['test_path'])
+        assert (plink_path.exists() and write_path.exists())
 
         job = subprocess.run(f"{plink_path}"
                              r" --dummy 2 2"
                              r" --freq"
                              r" --make-bed"
-                             f" --out {Path(testing_path, 'TestDirectory', 'toy_data')}")
+                             f" --out {Path(write_path, 'toy_data')}")
 
         # Check for process
         assert not job.returncode, "Subprocess of plink1 failed"
 
         # Create paths to these files
-        freq_file = Path(testing_path, "TestDirectory", 'toy_data.frq')
-        log_file = Path(testing_path, "TestDirectory", 'toy_data.log')
+        freq_file = Path(write_path, 'toy_data.frq')
+        log_file = Path(write_path, 'toy_data.log')
 
         # Check the two test outputs have been created, delete them if they have
         assert freq_file.exists(), "plink failed to produce toy_data.frq"
@@ -40,6 +43,7 @@ class MyTestCase(unittest.TestCase):
 
     def test_cvg_bed(self):
         """Test the create_validation_group for .bed"""
+        print("TESTING create_validation_group for .bed")
         testing_path = Path(__file__).parent.absolute()
 
         # For .bed (within config)
@@ -50,6 +54,7 @@ class MyTestCase(unittest.TestCase):
 
     def test_cvg_bgen(self):
         """Test the create_validation_group for .bgen"""
+        print("TESTING create_validation_group for .bgen")
         testing_path = Path(__file__).parent.absolute()
 
         # For .bgen (within config)
