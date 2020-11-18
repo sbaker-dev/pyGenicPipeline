@@ -62,6 +62,11 @@ class ArgMaker:
         return self._yaml_parameters["split_bed_by_chromosome"]
 
     @property
+    def convert_to_bgen(self):
+        """Returns the arguments the user needs to set for convert_to_bgen"""
+        return self._yaml_parameters["convert_to_bgen"]
+
+    @property
     def _arg_descriptions(self):
         """So we can replicate comments in write file"""
         return self._yaml_parameters["Arg_Descriptions"]
