@@ -12,7 +12,7 @@ class Input:
         # General operational parameters
         self.args = self._set_args(args)
         self.debug = self.args["Debug"]
-        self.working_dir = self.args["Working_Directory"]
+        self.working_dir = self._set_working_directory()
         self.operation = self._set_current_job(self.args["Operation"])
 
         # The project file for this project
@@ -58,6 +58,17 @@ class Input:
             job = [job_name for job_name, run in zip(operation_dict.keys(), operation_dict.values()) if run]
             assert len(job) == 1, ec.job_violation(job)
             return job[0]
+
+    def _set_working_directory(self):
+        """
+        Validate the working directory exists and is not none
+
+        :return: str path to working directory
+        """
+        assert (self.args["Working_Directory"] and Path(self.args["Working_Directory"]).exists()), ec.path_invalid(
+            self.args["Working_Directory"], "_set_working_directory")
+
+        return self.args["Working_Directory"]
 
     @staticmethod
     def _set_ld_ref(ref_path):

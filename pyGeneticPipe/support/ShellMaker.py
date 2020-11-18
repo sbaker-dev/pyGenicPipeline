@@ -55,9 +55,6 @@ class ShellMaker(Input):
         """
         Create an sh file
         """
-
-        assert (self.working_dir and Path(self.working_dir).exists()), ec.path_invalid(
-            self.working_dir, "_create_shell_file")
         file = open(Path(self.working_dir, f"{self.operation}.sh"), "w")
         file.write("#!/bin/bash\n\n")
         file.write("# Generate by pyGeneticPipe/support/ShellMaker.py\n\n")
