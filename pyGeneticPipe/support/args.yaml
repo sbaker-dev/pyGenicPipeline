@@ -5,6 +5,7 @@
 
 
 all_args:
+
   ## LOAD ARGUMENTS
   # During debug mode some additional print statements may occur
   Debug: null
@@ -58,6 +59,7 @@ all_args:
 # For writing new yaml files with human readable comments, here the comments for all args are stored so they can be
 # accessed via keys
 Arg_Descriptions:
+
   Debug: During debug mode some additional print statements may occur
 
   Project_Name: >-
@@ -92,6 +94,8 @@ Arg_Descriptions:
 
   QCTool_Path: Path to qctoolv2 on sever, has a default based on bc4 bristol
 
+
+# Valid operations
 Operations:
 
   # This will generate a shell script using plink to split a bed file into the respective chromosomes
@@ -109,7 +113,40 @@ Operations:
   clean_summary_statistics: false
 
 
+# Mandatory arguments for convert_to_bgen
+convert_to_bgen:
+
+  # Where you want the h5py file or any other files to be written
+  Working_Directory: null
+
+  # Some operations will require a path to a set file
+  Load_File: null
+
+  # The operation to be run, can take a string if the method name or a dict of operations where only one element is true
+  Operation: convert_to_bgen
+
+  # Takes the values of slurm, qsub, and local
+  Job_Scheduler: null
+
+  # Partition to use when using slurm
+  Partition: null
+
+  # Number of nodes to use, defaults to 1
+  Nodes: 1
+
+  # Job time via Job_Scheduler
+  Job_Time: "00:05:00"
+
+  # Amount of memory to allocate via Job_Memory, defaults to 100m
+  Job_Memory: "100m"
+
+  # Path to qctoolv2 on sever, has a default based on bc4 bristol
+  QCTool_Path: "apps/qctool/2.0rc4"
+
+
+# Mandatory arguments for split_bed_by_chromosome
 split_bed_by_chromosome:
+
   # Where you want the h5py file or any other files to be written
   Working_Directory: null
 
@@ -138,11 +175,10 @@ split_bed_by_chromosome:
   Plink_Path: "apps/plink/2.00"
 
 
-
-
 # Whilst default summary header keys have been extract from LDPred, it is possible they are not the ones within the
 # summary statistics the end user is using. This allows them to provide a custom set to be used in lue of defaults
 custom_summary_header_keys:
+
   # Chromosomes header, optional
   Chromosome: null
 
