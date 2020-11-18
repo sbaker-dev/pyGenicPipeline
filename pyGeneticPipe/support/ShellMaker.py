@@ -1,3 +1,5 @@
+from pyGeneticPipe.utils import error_codes as ec
+from pyGeneticPipe.utils.misc import terminal_time
 from pyGeneticPipe.core.Input import Input
 from pathlib import Path
 
@@ -53,6 +55,7 @@ class ShellMaker(Input):
         """
         Create an sh file
         """
+        assert Path(self.working_dir).exists(), ec.path_invalid(self.working_dir, "_create_shell_file")
         file = open(Path(self.working_dir, f"{self.operation}.sh"), "w")
         file.write("#!/bin/bash\n\n")
         file.write("# Generate by pyGeneticPipe/support/ShellMaker.py\n\n")
@@ -65,6 +68,7 @@ class ShellMaker(Input):
         """
         self.file.write("# This pyGeneticPipe job takes the following direct args:\n")
         for arg in args_list:
+            assert self.args[arg], ec.missing_arg(self.operation, arg)
             self.file.write(f"{arg}={self.args[arg]}\n")
         self.file.write("\n")
 
