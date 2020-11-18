@@ -56,6 +56,12 @@ def appending_error(project, keys):
            f"True\nWARNING: This will delete ALL data within the h5py file, not just this part"
 
 
+def missing_arg(job, arg):
+    return f"{job} requires {arg} but it was not set!\n" \
+           f"If you want to just write out the args to edit in a text editor, set validated to False"
+
+
+
 def path_invalid(parent_path, operation):
     return f"INVALID Path for {operation}\n" \
            f"{operation} attempt to navigate to a directory or file at {parent_path} but it does not exist"

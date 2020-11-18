@@ -1,0 +1,174 @@
+# This file holds default parameters for input to each function, as well as all the parameters, so that a user can
+# request via ArgMaker the arguments they need to change for a given method to run without having to worry about
+# arguments that will not be required. It can also be used as part of the GUI pipeline, when it comes to validate if the
+# args passed via the GUI have meet the minimum requirements for the method.
+
+
+all_args:
+  ## LOAD ARGUMENTS
+  # During debug mode some additional print statements may occur
+  Debug: null
+
+  # The name of this project, allows for multiple projects stored in one directory as it will be used to name the h5py
+  # file that stores information of subsequent steps
+  Project_Name: null
+
+  # If override is set to True, then the h5py file will be destroyed on run and re-created
+  Override: false
+
+  # Where you want the h5py file or any other files to be written
+  Working_Directory: null
+
+  # The operation to be run, can take a string if the method name or a dict of operations where only one element is true
+  Operation: null
+
+  # Some operations will require a path to a set file
+  Load_File: null
+
+  # Other operations will require a path to a directory, and some may need both hence them being separate
+  Load_Directory: null
+
+  # .bed or .bgen are only valid options. The '.' is required
+  Load_Type: null
+
+  ## SHELL ARGUMENTS
+
+  # Takes the values of slurm, qsub, and null
+  Job_Scheduler: null
+
+  # Partition to use when using slurm
+  Partition: null
+
+  # Number of nodes to use, defaults to 1
+  Nodes: 1
+
+  # Job time via Job_Scheduler
+  Job_Time: null
+
+  # Amount of memory to allocate via Job_Memory, defaults to 100m
+  Job_Memory: "100m"
+
+  # Path to plink on sever, has a default based on bc4 bristol
+  Plink_Path: "apps/plink/2.00"
+
+  # Path to qctoolv2 on sever, has a default based on bc4 bristol
+  QCTool_Path: "apps/qctool/2.0rc4"
+
+
+# For writing new yaml files with human readable comments, here the comments for all args are stored so they can be
+# accessed via keys
+Arg_Descriptions:
+  Debug: During debug mode some additional print statements may occur
+
+  Project_Name: >-
+    The name of this project, allows for multiple projects stored in one directory as it will be used to name the h5py
+    file that stores information of subsequent steps
+
+  Override: If override is set to True, then the h5py file will be destroyed on run and re-created
+
+  Working_Directory: Where you want the h5py file or any other files to be written
+
+  Operation: >-
+    The operation to be run, can take a string if the method name or a dict of operations where only one element is true
+
+  Load_File: Some operations will require a path to a set file
+
+  Load_Directory: >-
+    Other operations will require a path to a directory, and some may need both hence them being separate
+
+  Load_Type: .bed or .bgen are only valid options. The '.' is required
+
+  Job_Scheduler: Takes the values of slurm, qsub, and null
+
+  Partition: Partition to use when using slurm
+
+  Nodes: Number of nodes to use, defaults to 1
+
+  Job_Time: Job time via Job_Scheduler
+
+  Job_Memory: Amount of memory to allocate via Job_Memory, defaults to 100m
+
+  Plink_Path: Path to plink on sever, has a default based on bc4 bristol
+
+  QCTool_Path: Path to qctoolv2 on sever, has a default based on bc4 bristol
+
+Operations:
+
+  # This will generate a shell script using plink to split a bed file into the respective chromosomes
+  split_bed_by_chromosome: false
+
+  # This will read in a validation file for each chromosome, .bed or .bgen, and create a group within the h5py file to
+  # store this information for further runs, such as clean_summary_statistics
+  create_validation_group: false
+
+  # This will create a script to utilise qctoolv2 to convert plink .bed to .bgen files.
+  convert_to_bgen: false
+
+  # This will clean summary statistics using a validation set of snps. create_validation_group required to run before
+  # this
+  clean_summary_statistics: false
+
+
+split_bed_by_chromosome:
+  # Where you want the h5py file or any other files to be written
+  Working_Directory: null
+
+  # Some operations will require a path to a set file
+  Load_File: null
+
+  # The operation to be run, can take a string if the method name or a dict of operations where only one element is true
+  Operation: split_bed_by_chromosome
+
+  # Takes the values of slurm, qsub, and local
+  Job_Scheduler: null
+
+  # Partition to use when using slurm
+  Partition: null
+
+  # Number of nodes to use, defaults to 1
+  Nodes: 1
+
+  # Job time via Job_Scheduler
+  Job_Time: null
+
+  # Amount of memory to allocate via Job_Memory, defaults to 100m
+  Job_Memory: "100m"
+
+  # Path to plink on sever, has a default based on bc4 bristol
+  Plink_Path: "apps/plink/2.00"
+
+
+
+
+# Whilst default summary header keys have been extract from LDPred, it is possible they are not the ones within the
+# summary statistics the end user is using. This allows them to provide a custom set to be used in lue of defaults
+custom_summary_header_keys:
+  # Chromosomes header, optional
+  Chromosome: null
+
+  # snp/variant ID header, Mandatory
+  snp_id: null
+
+  # Effect Allele header, Mandatory
+  Effect_Allele: null
+
+  # Alt Allele header, Mandatory
+  Alt_Allele: null
+
+  # Base-Pair Position header, Mandatory
+  position: null
+
+  # P value header, Mandatory
+  P_Value: null
+
+  # Effect Size header, Mandatory
+  Effect_size: null
+
+  # Minor Allele frequency (MAF) header, Optional
+  Minor_Allele_Freq: None
+
+  # INFO  header, Optional
+  Info: None
+
+  # Standard errors header, Optional
+  Standard_Errors: None
