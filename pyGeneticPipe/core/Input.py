@@ -45,17 +45,19 @@ class Input:
     @staticmethod
     def _set_current_job(operation_dict):
         """
-        Set the current job from a dict of possible jobs
-        :param operation_dict: A dict where each key is a method_call to be done via getattr and the value is a True or
-            False bool. Only one job should be true for each process
+        Set the current job from a dict of possible jobs or a string of the job
+        :param operation_dict: If A dict, each key is a method_call to be done via getattr and the value is a True or
+            False bool. Only one job should be true for each process. If a string, then just the string of method call
         :return: the current job name to be processed via getattr
         """
         if not operation_dict:
             return None
-
-        job = [job_name for job_name, job_status in zip(operation_dict.keys(), operation_dict.values()) if job_status]
-        assert len(job) == 1, ec.job_violation(job)
-        return job[0]
+        elif isinstance(operation_dict, str):
+            return operation_dict
+        else:
+            job = [job_name for job_name, run in zip(operation_dict.keys(), operation_dict.values()) if run]
+            assert len(job) == 1, ec.job_violation(job)
+            return job[0]
 
     @staticmethod
     def _set_ld_ref(ref_path):
