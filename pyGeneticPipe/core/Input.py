@@ -38,7 +38,7 @@ class Input:
             return args
         else:
             yaml_path = Path(args)
-            assert (yaml_path.exists() and yaml_path.suffix == ".yaml"), ec
+            assert (yaml_path.exists() and yaml_path.suffix == ".yaml"), ec.path_invalid(yaml_path, "_set_args")
 
             return mc.load_yaml(yaml_path)
 
