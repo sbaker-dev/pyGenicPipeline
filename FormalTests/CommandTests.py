@@ -75,6 +75,12 @@ class MyTestCase(unittest.TestCase):
             # Check that we only have the snp name once
             self.assertEqual(len(f["Validation"]["Valid_Snps"][0].decode().split(",")), 1)
 
+        # Check the two test outputs have been created, delete them if they have
+        created_file = Path(job_handel.working_dir, job_handel.project_name)
+        assert created_file.exists(), "Failed to write file"
+        print(f"Found {created_file.name}: Deleting")
+        created_file.unlink()
+
 
 if __name__ == '__main__':
     unittest.main()

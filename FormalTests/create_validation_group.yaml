@@ -10,7 +10,7 @@ Project_Name: DEBUG_TEST
 Override: True
 
 # Where you want the h5py file or any other files to be written
-Working_Directory: C:\Users\Samuel\Documents\Genetic_Examples\PolyTutOut\Working
+Working_Directory: C:\Users\Samuel\PycharmProjects\pyGenicPipeline\FormalTests\TestDirectory
 
 # The operation to be run, can take a string if the method name or a dict of operations where only one element is true
 Operation: create_validation_group
