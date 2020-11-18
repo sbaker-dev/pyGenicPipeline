@@ -17,8 +17,12 @@ class Cleaner(Input):
         for this project via accessing the numbers in the files, the second is all the valid snps found across the
         chromosomes for validation against summary statistics
         """
-        # Add meaningful error out if process attempts to repeat itself in append mode
+        # Validate both the project file, load_type and load directory are reachable
         assert self.project_file, ec.missing_arg("create_validation_group", "Project_Name")
+        assert self.load_type, ec.missing_arg("create_validation_group", "Load_Type")
+        assert self.load_directory, ec.missing_arg("create_validation_group", "Load_Directory")
+
+        # Add meaningful error out if process attempts to repeat itself in append mode
         assert self.h5_validation not in self.project_file.keys(), ec.appending_error(self.project_name,
                                                                                       self.h5_validation)
 
