@@ -20,6 +20,8 @@ class Input:
         self.project_name = self.args['Project_Name']
         self.project_file = self._create_project_file()
         self.load_file = self._validate_path(self.args["Load_File"])
+        self.summary_file = self._validate_path(self.args["Summary_Path"])
+        self.hap_map_3_file = self._validate_path(self.args["HapMap3"])
         self.load_directory = self._validate_path(self.args["Load_Directory"])
         self.load_type = self.args["Load_Type"]
 
