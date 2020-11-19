@@ -59,7 +59,7 @@ class Cleaner(Input):
                     valid_snps.append([snp.split(",")[0] for snp in Bgen(string_path).sid])
 
         # Remove duplicates via set
-        return np.array(list(set(mc.flatten(valid_snps))), dtype=self.h5_string_type)
+        return set(mc.flatten(valid_snps))
 
     def _validation_chromosomes(self):
         """
