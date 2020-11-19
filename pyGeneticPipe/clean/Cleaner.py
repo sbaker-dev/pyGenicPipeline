@@ -49,14 +49,29 @@ class Cleaner(Input):
         :return: A list from a set of all the snps that where found across the chromosomes for a given load_type
         :rtype: List
         """
+
+        hap_map_3 = self._load_hap_map_3()
+
         valid_snps = []
         for file in mc.directory_iterator(self.load_directory):
             if Path(self.load_directory, file).suffix == self.load_type:
+
+                # pysnptools doesn't like path so construct a string of it
                 string_path = str(Path(self.load_directory, file).absolute())
+
+                # Load the snps based on load type
                 if self.load_type == ".bed":
-                    valid_snps.append(Bed(string_path, count_A1=True).sid)
+                    snps = Bed(string_path, count_A1=True).sid
                 elif self.load_type == ".bgen":
-                    valid_snps.append([snp.split(",")[0] for snp in Bgen(string_path).sid])
+                    snps = [snp.split(",")[0] for snp in Bgen(string_path).sid]
+                else:
+                    raise Exception("Unknown load type set")
+
+                # If we only want the hap_map_3 snps then check each snp against the set of hap_map_3
+                if hap_map_3:
+                    valid_snps.append([s for s in snps if s in hap_map_3])
+                else:
+                    valid_snps.append(snps)
 
         # Remove duplicates via set
         return set(mc.flatten(valid_snps))
