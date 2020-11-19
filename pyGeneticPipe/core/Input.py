@@ -220,38 +220,6 @@ class Input:
             file.close()
             return headers
 
-    def _set_accepted_chromosomes(self):
-        """
-        Individuals may wish to censure Y or Mitochondrial genes, and can do so via Custom_Chromosome. Else all
-        chromosomes are assumed to be valid
-
-        :return: A list of accept chromosome names
-        """
-        if self.args["Custom_Chromosome"]:
-            return self.args["Custom_Chromosome"]
-        else:
-            return None
-
-    def _set_hap_map_3(self):
-        """
-        Users may wish to limit valid snps to those found within HapMap3. If they do, they need to provide a path to the
-        hapmap3 snp file which will be check that it exists, have the snps extracted and return. Otherwise set to none
-        :return: The valid HapMap3 snps or None
-        """
-
-        if self.args["Only_HapMap3"]:
-            # Construct path as an object and check it exists
-            hap_map_path = Path(self.args["Only_HapMap3"])
-            assert hap_map_path.exists(), ec.path_invalid(hap_map_path, "_set_hap_map_3")
-
-            # If the HapMap3 file exists, then extract the snp ids and return them
-            f = gzip.open(hap_map_path, 'r')
-            hm3_sids = pickle.load(f)
-            f.close()
-            return hm3_sids
-        else:
-            return None
-
     def _set_effect_type(self, effect_type):
         """
         Set the effect type of the betas for GWAS summary stats if set

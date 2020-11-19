@@ -5,6 +5,8 @@ from pysnptools.distreader import Bgen
 from pysnptools.snpreader import Bed
 from pathlib import Path
 import numpy as np
+import pickle
+import gzip
 
 
 class Cleaner(Input):
@@ -81,9 +83,20 @@ class Cleaner(Input):
         valid_chromosomes.sort()
         return valid_chromosomes
 
-    def _common_assert(self):
+    def _load_hap_map_3(self):
         """
-        Multiple Cleaner methods need to have these variables, so we assert them via a common method call.
+        Users may wish to limit valid snps to those found within HapMap3. If they do, they need to provide a path to the
+        hapmap3 snp file which will be check that it exists, have the snps extracted and return. Otherwise set to none
+        :return: The valid HapMap3 snps or None
         """
-        assert self.project_file, ec.missing_arg(self.operation, "Project_Name")
-        assert self.load_type, ec.missing_arg(self.operation, "Load_Type")
+
+        if self.hap_map_3_file:
+            # Construct path as an object and check it exists
+
+            # If the HapMap3 file exists, then extract the snp ids and return them
+            f = gzip.open(self.hap_map_3_file, 'r')
+            hm3_sids = pickle.load(f)
+            f.close()
+            return hm3_sids
+        else:
+            return None
