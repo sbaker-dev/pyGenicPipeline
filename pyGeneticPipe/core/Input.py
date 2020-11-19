@@ -12,14 +12,14 @@ class Input:
         # General operational parameters
         self.args = self._set_args(args)
         self.debug = self.args["Debug"]
-        self.working_dir = self._set_working_directory()
+        self.working_dir = self._validate_path(self.args["Working_Directory"], False)
         self.operation = self._set_current_job(self.args["Operation"])
 
         # The project file for this project
         self.project_name = self.args['Project_Name']
         self.project_file = self._create_project_file()
-        self.load_file = self.args["Load_File"]
-        self.load_directory = self.args["Load_Directory"]
+        self.load_file = self._validate_path(self.args["Load_File"])
+        self.load_directory = self._validate_path(self.args["Load_Directory"])
         self.load_type = self.args["Load_Type"]
 
         # Summary setters
@@ -59,16 +59,29 @@ class Input:
             assert len(job) == 1, ec.job_violation(job)
             return job[0]
 
-    def _set_working_directory(self):
+    @staticmethod
+    def _validate_path(path, allow_none=True):
         """
-        Validate the working directory exists and is not none
+        We have multiple types of files and directories, some may be allow to be None as they will not be required
+        whilst others like the working directory will always be required. This method is a generalisation of individual
+        setters.
 
-        :return: str path to working directory
+        :param path: Path to a directory or file
+        :type path: str
+
+        :param allow_none: Defaults to True, if true if a path is set to none it will just return None. If False, an
+            assertion will be run to validate that it is not none. In both cases, should the file not be None, then the
+            path is validated via Path.exists()
+        :type allow_none: Bool
+
+        :return: Path to the current file or directory if None return is not allowed, otherwise the Path return is
+            optional and the return may be none.
         """
-        assert (self.args["Working_Directory"] and Path(self.args["Working_Directory"]).exists()), ec.path_invalid(
-            self.args["Working_Directory"], "_set_working_directory")
-
-        return Path(self.args["Working_Directory"])
+        if allow_none and not path:
+            return None
+        else:
+            assert path and Path(path).exists(), ec.path_invalid(path, "_validate_path")
+            return Path(path)
 
     @staticmethod
     def _set_ld_ref(ref_path):

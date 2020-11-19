@@ -109,11 +109,6 @@ def ambiguous_header(header, found_headers, match_headers):
            f"Founding {found_headers} indexes for {header} by matching {match_headers}"
 
 
-def invalid_working_directory(working_direction):
-    return f"INVALID WORKING DIRECTORY OF {working_direction} \n" \
-           f"Tried to navigate to working directory but failed"
-
-
 # bed file codes
 def bed_magic_violation(file_name, magic):
     return f"INVALID BED FILE for file at path: {file_name}\n" \
