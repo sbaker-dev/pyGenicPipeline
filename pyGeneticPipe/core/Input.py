@@ -316,53 +316,103 @@ class Input:
 
     @property
     def chromosome(self):
+        """Key used for accessing Chromosome headers, groups or other attributes"""
+        return "Chromosome"
+
+    @property
+    def sum_chromosome(self):
         """Summary stat chromosome header index in GWAS summary file"""
-        return self._summary_headers["Chromosome"]
+        return self._summary_headers[self.chromosome]
 
     @property
     def snp_id(self):
+        """Key used for accessing SNP_ID headers, groups or other attributes"""
+        return "SNP_ID"
+
+    @property
+    def sum_snp_id(self):
         """Snp/variant id header index in GWAS summary file"""
-        return self._summary_headers["SNP_ID"]
+        return self._summary_headers[self.snp_id]
 
     @property
     def effect_allele(self):
+        """Key used for accessing Effect_Allele headers, groups or other attributes"""
+        return "Effect_Allele"
+
+    @property
+    def sum_effect_allele(self):
         """Effect allele header index in GWAS summary file"""
-        return self._summary_headers["Effect_Allele"]
+        return self._summary_headers[self.effect_allele]
 
     @property
     def alt_allele(self):
+        """Key used for accessing Alt_Allele headers, groups or other attributes"""
+        return "Alt_Allele"
+
+    @property
+    def sum_alt_allele(self):
         """Alt allele header index in GWAS summary file"""
-        return self._summary_headers["Alt_Allele"]
+        return self._summary_headers[self.alt_allele]
 
     @property
     def bp_position(self):
+        """Key used for accessing bp_position headers, groups or other attributes"""
+        return "BP_Position"
+
+    @property
+    def sum_bp_position(self):
         """Base pair position header index in GWAS summary file"""
-        return self._summary_headers["Position"]
+        return self._summary_headers[self.bp_position]
 
     @property
     def p_value(self):
+        """Key used for accessing P_Value headers, groups or other attributes"""
+        return "P_Value"
+
+    @property
+    def sum_p_value(self):
         """P value position header index in GWAS summary file"""
-        return self._summary_headers["P_Value"]
+        return self._summary_headers[self.p_value]
 
     @property
     def effect_size(self):
+        """Key used for accessing Effect_size headers, groups or other attributes"""
+        return "Effect_size"
+
+    @property
+    def sum_effect_size(self):
         """Effect size header index in GWAS summary file"""
-        return self._summary_headers["Effect_size"]
+        return self._summary_headers[self.effect_size]
 
     @property
     def minor_allele_freq(self):
+        """Key used for accessing Minor_Allele_Freq headers, groups or other attributes"""
+        return "Minor_Allele_Freq"
+
+    @property
+    def sum_minor_allele_freq(self):
         """Minor allele Frequency header index in GWAS summary file"""
-        return self._summary_headers["Minor_Allele_Freq"]
+        return self._summary_headers[self.minor_allele_freq]
 
     @property
     def info(self):
+        """Key used for accessing Minor_Allele_Freq headers, groups or other attributes"""
+        return "Info"
+
+    @property
+    def sum_info(self):
         """Info score header index in GWAS summary file"""
-        return self._summary_headers["Info"]
+        return self._summary_headers[self.info]
 
     @property
     def standard_errors(self):
+        """Key used for accessing Minor_Allele_Freq headers, groups or other attributes"""
+        return "Standard_Errors"
+
+    @property
+    def sum_standard_errors(self):
         """Standard error header index in GWAS summary file"""
-        return self._summary_headers["Standard_Errors"]
+        return self._summary_headers[self.standard_errors]
 
     @property
     def h5_validation(self):
