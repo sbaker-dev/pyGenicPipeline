@@ -25,11 +25,12 @@ class Input:
         self.load_directory = self._validate_path(self.args["Load_Directory"])
         self.load_type = self.args["Load_Type"]
 
-        # Summary setters
-        self.hap_map_3 = self._set_hap_map_3()
-        self.valid_chromosomes = self._set_accepted_chromosomes()
-        self._mandatory_headers = ["SNP_ID", "Effect_Allele", "Alt_Allele", "Effect_size", "P_Value"]
-        self._effect_types = ["OR", "LINREG", "LOGOR", "BLUP"]
+        # Set summary statistics information if required
+        self.zipped, self.sample_size = self._set_summary_stats()
+        self._summary_headers = self._set_summary_headers()
+        self.frequencies = self.args["Summary_Frequency"]
+        self.effect_type = self._set_effect_type(self.args["Summary_Effect_Type"])
+        self.z_scores = self._set_z_scores(self.args["Z_Scores"])
 
     @staticmethod
     def _set_args(args):
@@ -86,59 +87,26 @@ class Input:
             assert path and Path(path).exists(), ec.path_invalid(path, "_validate_path")
             return Path(path)
 
-    @staticmethod
-    def _set_ld_ref(ref_path):
-        """
-        When cleaning summary statistics we need an ld-reference-genotype file to do so. This method will attempt to
-        load ethier a .bgen file and return it as an object or load a .bed, .bim, and .fam plink file.
-
-        :param ref_path: path to ld_ref_file
-        :type ref_path: None | str
-
-        :return: The mode we are working in (bgen or plink), the bgen object if loaded else None, and the three plink
-            files that where load else None.
-        """
-        # If there was no path for ld_ref, then just return None for all 5 parameters
-        if not ref_path:
-            return None, None, None, None, None
-
-        # Construct path as an object
-        ld_path = Path(ref_path)
-
-        # Check file home directory can be reached
-        assert ld_path.parent.exists(), ec.path_invalid(ld_path.parent, "_set_ld_ref")
-
-        # Check the mode we are running in and return the mode
-        if ld_path.suffix == ".bgen":
-            # return "bgen", ld_path
-            raise NotImplementedError("Reading bgen files not yet implemented")
-        else:
-            return "plink", ld_path
-
-    def _set_summary_stats(self, summary_stats_path):
+    def _set_summary_stats(self):
         """
         If we are reading in the summary statistics file then validate its path, construct a valid set of snps in a set
         and map the chromosome and bp_position to each valid snp in a dict. Validate the type of zipped structure and
         the sample size of the study
-        :param summary_stats_path: Path to the summary stats file or None if we don't need to read one in
-        :type summary_stats_path: str | None
 
         :return: summary_path, snp_pos_map, valid_snp, gz_status, sample_size
         """
 
         # Stop if not required
-        if not summary_stats_path:
-            return None
+        if not self.summary_file:
+            return None, None
 
-        # Construct path as an object and that check it exists and the sample size from this study has been provided
-        summary_path = Path(summary_stats_path)
-        sample_size = self.args["Sample_Size"]
-        assert summary_path.exists(), ec.path_invalid(summary_path, "_set_summary_stats")
+        # Check the sample size from this study has been provided
+        sample_size = self.args["Summary_Sample_Size"]
         assert (sample_size is not None) and (sample_size > 0), ec.sample_size()
 
         # Determine if the summary file is g-zipped
-        gz_status = (summary_path.suffix == ".gz")
-        return summary_path, gz_status, sample_size
+        gz_status = (self.summary_file.suffix == ".gz")
+        return gz_status, sample_size
 
     def validate_chromosomes(self, chromosome_set):
         """
@@ -171,13 +139,13 @@ class Input:
 
         assert len(header_indexes) < 2, ec.ambiguous_header(sum_header, headers, summary_headers[sum_header])
         if len(header_indexes) == 0:
-            assert sum_header not in self._mandatory_headers, ec.mandatory_header(
+            assert sum_header not in self._config["mandatory_headers"], ec.mandatory_header(
                 sum_header, headers, summary_headers[sum_header])
             return None
         else:
             return header_indexes[0]
 
-    def _set_summary_headers(self, header_arg, construct_summary_stats):
+    def _set_summary_headers(self):
         """
         We may have users using custom headers, or they may be using a format we already have covered
 
@@ -188,29 +156,18 @@ class Input:
 
         :return: The headers to validate
         """
-        if not construct_summary_stats:
+        if not self.summary_file:
             return None
 
-        if header_arg:
+        custom_headers = self.args["Custom_Summary_Header"]
+        if custom_headers:
             # Recast so that the values are in a list so they can be checked by the same method as defaults
-            header_sets = {key: [v] for key, v in zip(header_arg.keys(), header_arg.values())}
+            header_sets = {key: [v] for key, v in zip(custom_headers.keys(), custom_headers.values())}
         else:
             # Based on known summary statistics from LDPred sum_stats_parsers.py
-            header_sets = {
-                "Chromosome": ["CHR", "chr", "hg19chrc"],
-                "SNP_ID": ["SNP_ID", "rs", "snpid", "MarkerName", "SNP"],
-                "Effect_Allele": ["REF", "ref", "a1", "A1", "Allele1"],
-                "Alt_Allele": ["ALT", "alt", "a2", "A2", "Allele2"],
-                "Position": ["POS", "pos", "bp", "BP"],
-                "P_Value": ["PVAL", "pval", "p", "P", "P.2gc"],
-                "Effect_size": ["LINREG", "OR"],
-                "Minor_Allele_Freq": ["REF_FRQ", "reffrq", "Freq.Hapmap.Ceu", "Freq.Allele1.HapMapCEU", "MAF"
-                                      "Freq.Hapmap.Ceu"],
-                "Info": ["Info", "info"],
-                "Standard_Errors": ["SE", "se", "SE.2gc"]
-            }
+            header_sets = self._config["header_keys"]
 
-        with mc.open_setter(self.summary_path)(self.summary_path) as file:
+        with mc.open_setter(self.summary_file)(self.summary_file) as file:
 
             # Determine if we have custom headers or not via _loaded_sum_headers
             raw_headers = file.readline()
@@ -225,7 +182,8 @@ class Input:
         Set the effect type of the betas for GWAS summary stats if set
         """
         if effect_type:
-            assert effect_type in self._effect_types, ec.invalid_effect_type(self._effect_types, effect_type)
+            assert effect_type in self._config["effect_types"], ec.invalid_effect_type(
+                self._config["effect_types"], effect_type)
             return effect_type
         else:
             return None
@@ -234,6 +192,7 @@ class Input:
         """
         If the user wants to compute z scores, then standard_errors most be set but otherwise it isn't a mandatory
         header.
+
         :param set_z_scores: A bool of if z scores should be calculated or not
         :type set_z_scores: bool
 
@@ -241,7 +200,7 @@ class Input:
         :rtype: None | bool
         """
         if set_z_scores:
-            assert self.standard_errors is not None, ec.z_scores_with_standard_errors
+            assert self.sum_standard_errors is not None, ec.z_scores_with_standard_errors
             return True
         else:
             return None
