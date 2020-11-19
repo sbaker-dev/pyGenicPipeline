@@ -19,12 +19,8 @@ class Cleaner(Input):
         for this project via accessing the numbers in the files, the second is all the valid snps found across the
         chromosomes for validation against summary statistics
         """
-        # Check parameters and add meaningful error out if process attempts to repeat itself in append mode
-        assert self.project_file, ec.missing_arg(self.operation, "Project_Name")
-        assert self.load_type, ec.missing_arg(self.operation, "Load_Type")
-        assert self.load_directory, ec.missing_arg(self.operation, "Load_Directory")
-        assert self.h5_validation not in self.project_file.keys(), ec.appending_error(self.project_name,
-                                                                                      self.h5_validation)
+        # Check for input arguments
+        self._assert_create_validation_group()
 
         # Create the validation group
         validation_group = self.project_file.create_group(self.h5_validation)
@@ -38,12 +34,17 @@ class Cleaner(Input):
         print(f"Create Validation snps and chromosomes: {mc.terminal_time()}")
 
     def clean_summary_statistics(self):
-        # Check parameters, validate that validation has been run, and that clean summary has not.
-        assert self.project_file, ec.missing_arg(self.operation, "Project_Name")
-        assert self.h5_validation in self.project_file.keys(), ec.process_not_run(self.operation, self.project_name,
-                                                                                  "create_validation_group")
-        assert self.h5_summary not in self.project_file.keys(), ec.appending_error(self.project_name, self.h5_summary)
-        assert self.summary_file, ec.missing_arg(self.operation, "Summary_Path")
+
+        # Check for input arguments
+        self._assert_clean_summary_statistics()
+
+        with mc.open_setter(self.summary_file)(self.summary_file) as file:
+            # Skip header row
+            a = file.readline()
+            print(a)
+            file.close()
+
+        return
 
     def _validation_snps(self):
         """
@@ -100,3 +101,37 @@ class Cleaner(Input):
             return hm3_sids
         else:
             return None
+
+    def _assert_create_validation_group(self):
+        """
+        create_validation_group requires
+
+        The project file, for writing too
+        The load type, so we know which files to load during directory iteration
+        The load directory, to iterate through each chromosome
+        That the validation has not already been undertaken
+        """
+        # Check parameters and add meaningful error out if process attempts to repeat itself in append mode
+        assert self.project_file, ec.missing_arg(self.operation, "Project_Name")
+        assert self.load_type, ec.missing_arg(self.operation, "Load_Type")
+        assert self.load_directory, ec.missing_arg(self.operation, "Load_Directory")
+        assert self.h5_validation not in self.project_file.keys(), ec.appending_error(self.project_name,
+                                                                                      self.h5_validation)
+
+    def _assert_clean_summary_statistics(self):
+        """
+        clean_summary_statistics requires
+
+        The project file, for writing too
+        That the validation has already been undertaken
+        That the cleaning has not already been undertaken
+        That the summary file path exists
+
+        :return:
+        """
+        # Check parameters, validate that validation has been run, and that clean summary has not.
+        assert self.project_file, ec.missing_arg(self.operation, "Project_Name")
+        assert self.h5_validation in self.project_file.keys(), ec.process_not_run(self.operation, self.project_name,
+                                                                                  "create_validation_group")
+        assert self.h5_summary not in self.project_file.keys(), ec.appending_error(self.project_name, self.h5_summary)
+        assert self.summary_file, ec.missing_arg(self.operation, "Summary_Path")
