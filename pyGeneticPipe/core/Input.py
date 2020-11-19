@@ -68,7 +68,7 @@ class Input:
         assert (self.args["Working_Directory"] and Path(self.args["Working_Directory"]).exists()), ec.path_invalid(
             self.args["Working_Directory"], "_set_working_directory")
 
-        return self.args["Working_Directory"]
+        return Path(self.args["Working_Directory"])
 
     @staticmethod
     def _set_ld_ref(ref_path):
@@ -273,7 +273,6 @@ class Input:
 
         # Construct the path and validate it
         project_file = Path(self.working_dir, self.project_name)
-        assert Path(self.working_dir), ec.invalid_working_directory(self.working_dir)
 
         # Creates file if it doesn't exist, or overrides it, ie for fast debugging iterations, if set.
         if (project_file.exists() and self.args["Override"]) or not project_file.exists():
