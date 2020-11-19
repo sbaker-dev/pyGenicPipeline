@@ -22,15 +22,11 @@ class Cleaner(Input):
         # Check for input arguments
         self._assert_create_validation_group()
 
-        # Create the validation group
-        validation_group = self.project_file.create_group(self.h5_validation)
-
-        # Create a dataset of all the chromosomes we have to work with
-        validation_group.create_dataset(self.h5_valid_chromosome, data=self._validation_chromosomes())
+        # # Create a dataset of all the chromosomes we have to work with
+        np.save(Path(self.working_dir, self.h5_valid_chromosome), self._validation_chromosomes())
 
         # Create a dataset of all the validation snps
-        validation_group.create_dataset(self.h5_valid_snps, data=self._validation_snps())
-        self.project_file.close()
+        np.save(Path(self.working_dir, self.h5_valid_snps), self._validation_snps())
         print(f"Create Validation snps and chromosomes: {mc.terminal_time()}")
 
     def clean_summary_statistics(self):
@@ -106,17 +102,12 @@ class Cleaner(Input):
         """
         create_validation_group requires
 
-        The project file, for writing too
         The load type, so we know which files to load during directory iteration
         The load directory, to iterate through each chromosome
-        That the validation has not already been undertaken
         """
         # Check parameters and add meaningful error out if process attempts to repeat itself in append mode
-        assert self.project_file, ec.missing_arg(self.operation, "Project_Name")
         assert self.load_type, ec.missing_arg(self.operation, "Load_Type")
         assert self.load_directory, ec.missing_arg(self.operation, "Load_Directory")
-        assert self.h5_validation not in self.project_file.keys(), ec.appending_error(self.project_name,
-                                                                                      self.h5_validation)
 
     def _assert_clean_summary_statistics(self):
         """
