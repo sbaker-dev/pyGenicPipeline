@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 import pickle
 import gzip
+import re
 
 
 class Cleaner(Input):
@@ -78,20 +79,17 @@ class Cleaner(Input):
 
     def _validation_chromosomes(self):
         """
-        This will create a dataset of all the chromosomes that we have to work with with our validation group in the
+        This will create a dataset of all the chromosomes that we have to work with our validation group in the
         h5py file
-
-        Note
-        ------
-        This pretty hard coded in how we access the number, should make it clear if people have split via other means
 
         :return: A list of valid chromosomes
         :rtype: list
         """
+
         valid_chromosomes = []
         for file in mc.directory_iterator(self.load_directory):
             if Path(self.load_directory, file).suffix == self.load_type:
-                valid_chromosomes.append(int(Path(self.load_directory, file).stem.split("_")[-1]))
+                valid_chromosomes.append(int(re.sub(r'[\D]', "", Path(self.load_directory, file).stem)))
         valid_chromosomes.sort()
         return valid_chromosomes
 
