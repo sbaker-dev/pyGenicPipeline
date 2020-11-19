@@ -11,6 +11,7 @@ class Input:
     def __init__(self, args):
         # General operational parameters
         self.args = self._set_args(args)
+        self._config = mc.load_yaml(Path(Path(__file__).parent, "Keys.yaml"))
         self.debug = self.args["Debug"]
         self.working_dir = self._validate_path(self.args["Working_Directory"], False)
         self.operation = self._set_current_job(self.args["Operation"])
