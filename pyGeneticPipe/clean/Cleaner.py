@@ -18,7 +18,8 @@ class Cleaner(Input):
         chromosomes for validation against summary statistics
         """
         # Check parameters and add meaningful error out if process attempts to repeat itself in append mode
-        self._common_assert()
+        assert self.project_file, ec.missing_arg(self.operation, "Project_Name")
+        assert self.load_type, ec.missing_arg(self.operation, "Load_Type")
         assert self.load_directory, ec.missing_arg(self.operation, "Load_Directory")
         assert self.h5_validation not in self.project_file.keys(), ec.appending_error(self.project_name,
                                                                                       self.h5_validation)
@@ -36,13 +37,11 @@ class Cleaner(Input):
 
     def clean_summary_statistics(self):
         # Check parameters, validate that validation has been run, and that clean summary has not.
+        assert self.project_file, ec.missing_arg(self.operation, "Project_Name")
         assert self.h5_validation in self.project_file.keys(), ec.process_not_run(self.operation, self.project_name,
                                                                                   "create_validation_group")
         assert self.h5_summary not in self.project_file.keys(), ec.appending_error(self.project_name, self.h5_summary)
-        assert self.load_file, ec.missing_arg(self.operation, "Load_File")
-        self._common_assert()
-
-        return
+        assert self.summary_file, ec.missing_arg(self.operation, "Summary_Path")
 
     def _validation_snps(self):
         """
