@@ -17,12 +17,9 @@ class Cleaner(Input):
         for this project via accessing the numbers in the files, the second is all the valid snps found across the
         chromosomes for validation against summary statistics
         """
-        # Validate both the project file, load_type and load directory are reachable
-        assert self.project_file, ec.missing_arg("create_validation_group", "Project_Name")
-        assert self.load_type, ec.missing_arg("create_validation_group", "Load_Type")
-        assert self.load_directory, ec.missing_arg("create_validation_group", "Load_Directory")
-
-        # Add meaningful error out if process attempts to repeat itself in append mode
+        # Check parameters and add meaningful error out if process attempts to repeat itself in append mode
+        self._common_assert()
+        assert self.load_directory, ec.missing_arg(self.operation, "Load_Directory")
         assert self.h5_validation not in self.project_file.keys(), ec.appending_error(self.project_name,
                                                                                       self.h5_validation)
 
@@ -74,3 +71,10 @@ class Cleaner(Input):
                 valid_chromosomes.append(int(Path(self.load_directory, file).stem.split("_")[-1]))
         valid_chromosomes.sort()
         return valid_chromosomes
+
+    def _common_assert(self):
+        """
+        Multiple Cleaner methods need to have these variables, so we assert them via a common method call.
+        """
+        assert self.project_file, ec.missing_arg(self.operation, "Project_Name")
+        assert self.load_type, ec.missing_arg(self.operation, "Load_Type")
