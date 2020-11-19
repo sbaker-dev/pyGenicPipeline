@@ -356,14 +356,20 @@ class Input:
 
     @property
     def h5_valid_chromosome(self):
-        """Key for accessing valid chromosomes within validation group within the h5py file"""
+        """Key for accessing valid chromosomes within Validation group within the h5py file"""
         return "Valid_Chromosomes"
 
     @property
     def h5_valid_snps(self):
+        """Key for accessing Valid_Snps within Validation group within the h5py file"""
         return "Valid_Snps"
 
     @property
     def h5_string_type(self):
         """strings need to be stored a set type in h5py"""
         return "|S30"
+
+    @property
+    def h5_summary(self):
+        """Header for cleaned but not coordinate summary statistics"""
+        return "Summary_Statistics"

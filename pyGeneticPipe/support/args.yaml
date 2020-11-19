@@ -196,6 +196,24 @@ create_validation_group:
   # .bed or .bgen are only valid options. The '.' is required
   Load_Type: null
 
+clean_summary_statistics:
+  # The name of this project, allows for multiple projects stored in one directory as it will be used to name the h5py
+  # file that stores information of subsequent steps
+  Project_Name: null
+
+  # If override is set to True, then the h5py file will be destroyed on run and re-created
+  Override: false
+
+  # Where you want the h5py file or any other files to be written
+  Working_Directory: null
+
+  # The operation to be run, can take a string if the method name or a dict of operations where only one element is true
+  Operation: clean_summary_statistics
+
+  # Some operations will require a path to a set file
+  Load_File: null
+
+
 
 # Whilst default summary header keys have been extract from LDPred, it is possible they are not the ones within the
 # summary statistics the end user is using. This allows them to provide a custom set to be used in lue of defaults

@@ -72,6 +72,11 @@ class ArgMaker:
         return self._yaml_parameters["create_validation_group"]
 
     @property
+    def clean_summary_statistics(self):
+        """Returns the arguments the user needs to set for clean_summary_statistics """
+        return self._yaml_parameters["clean_summary_statistics"]
+
+    @property
     def _arg_descriptions(self):
         """So we can replicate comments in write file"""
         return self._yaml_parameters["Arg_Descriptions"]

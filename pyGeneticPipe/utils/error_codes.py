@@ -50,6 +50,10 @@ def job_violation(jobs):
            f"be set to run: {jobs}"
 
 
+def process_not_run(job, project, non_process):
+    return f"JOB {job} REQUIRES {non_process} SUBPROCESS BUT IT HAS NOT BEEN PERFORMED FOR {project} "
+
+
 def appending_error(project, keys):
     return f"JOB HAS ALREADY BEEN UNDERTAKEN FOR PROJECT {project}\n" \
            f"The h5py file already contains {keys}, if you want to re-do the project you need to set Override to " \

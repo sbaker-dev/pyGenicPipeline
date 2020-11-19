@@ -34,6 +34,16 @@ class Cleaner(Input):
         self.project_file.close()
         print(f"Create Validation snps and chromosomes: {mc.terminal_time()}")
 
+    def clean_summary_statistics(self):
+        # Check parameters, validate that validation has been run, and that clean summary has not.
+        assert self.h5_validation in self.project_file.keys(), ec.process_not_run(self.operation, self.project_name,
+                                                                                  "create_validation_group")
+        assert self.h5_summary not in self.project_file.keys(), ec.appending_error(self.project_name, self.h5_summary)
+        assert self.load_file, ec.missing_arg(self.operation, "Load_File")
+        self._common_assert()
+
+        return
+
     def _validation_snps(self):
         """
         This will create a dataset for all the valid snps we need for validating summary statistics as an example.
