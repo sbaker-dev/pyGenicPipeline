@@ -1,5 +1,5 @@
-from pyGeneticPipe.utils.misc import directory_iterator, flatten, terminal_time
 from pyGeneticPipe.utils import error_codes as ec
+from pyGeneticPipe.utils import misc as mc
 from pyGeneticPipe.core.Input import Input
 from pysnptools.distreader import Bgen
 from pysnptools.snpreader import Bed
@@ -32,7 +32,7 @@ class Cleaner(Input):
         # Create a dataset of all the validation snps
         validation_group.create_dataset(self.h5_valid_snps, data=self._validation_snps())
         self.project_file.close()
-        print(f"Create Validation snps and chromosomes: {terminal_time()}")
+        print(f"Create Validation snps and chromosomes: {mc.terminal_time()}")
 
     def _validation_snps(self):
         """
@@ -42,7 +42,7 @@ class Cleaner(Input):
         :rtype: List
         """
         valid_snps = []
-        for file in directory_iterator(self.load_directory):
+        for file in mc.directory_iterator(self.load_directory):
             if Path(self.load_directory, file).suffix == self.load_type:
                 string_path = str(Path(self.load_directory, file).absolute())
                 if self.load_type == ".bed":
@@ -51,7 +51,7 @@ class Cleaner(Input):
                     valid_snps.append([snp.split(",")[0] for snp in Bgen(string_path).sid])
 
         # Remove duplicates via set
-        return np.array(list(set(flatten(valid_snps))), dtype=self.h5_string_type)
+        return np.array(list(set(mc.flatten(valid_snps))), dtype=self.h5_string_type)
 
     def _validation_chromosomes(self):
         """
@@ -66,7 +66,7 @@ class Cleaner(Input):
         :rtype: list
         """
         valid_chromosomes = []
-        for file in directory_iterator(self.load_directory):
+        for file in mc.directory_iterator(self.load_directory):
             if Path(self.load_directory, file).suffix == self.load_type:
                 valid_chromosomes.append(int(Path(self.load_directory, file).stem.split("_")[-1]))
         valid_chromosomes.sort()
