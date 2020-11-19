@@ -1,0 +1,20 @@
+mandatory_headers: ["SNP_ID", "Effect_Allele", "Alt_Allele", "Effect_size", "P_Value"]
+
+header_keys:
+  Chromosome: ["CHR", "chr", "hg19chrc"]
+  SNP_ID: ["SNP_ID", "rs", "snpid", "MarkerName", "SNP"]
+  Effect_Allele: ["REF", "ref", "a1", "A1", "Allele1"]
+  Alt_Allele: ["ALT", "alt", "a2", "A2", "Allele2"]
+  BP_Position: ["POS", "pos", "bp", "BP"]
+  P_Value: ["PVAL", "pval", "p", "P", "P.2gc"]
+  Effect_size: ["LINREG", "OR"]
+  Minor_Allele_Freq: ["REF_FRQ", "reffrq", "Freq.Hapmap.Ceu", "Freq.Allele1.HapMapCEU", "MAF", "Freq.Hapmap.Ceu"]
+  Info: ["Info", "info"]
+  Standard_Errors: ["SE", "se", "SE.2gc"]
+
+effect_types: ["OR", "LINREG", "LOGOR", "BLUP"]
+
+# # Snp types
+# self.ambiguous_snps = {('A', 'T'), ('T', 'A'), ('G', 'C'), ('C', 'G')}
+# self.allowed_alleles = {'A', 'T', 'C', 'G'}
+# self.allele_flip = {'A': 'T', 'G': 'C', 'T': 'A', 'C': 'G'}
