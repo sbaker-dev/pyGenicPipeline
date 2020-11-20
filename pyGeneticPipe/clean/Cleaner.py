@@ -1,3 +1,5 @@
+from pyGeneticPipe.geneticParsers.plink.plinkObject import PlinkObject
+from pyGeneticPipe.geneticParsers.bgen.bgenObject import BgenObject
 from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils import misc as mc
 from pyGeneticPipe.core.Input import Input
@@ -22,13 +24,42 @@ class Cleaner(Input):
         # Check for input arguments
         self._assert_clean_summary_statistics()
 
-        with mc.open_setter(self.summary_file)(self.summary_file) as file:
-            # Skip header row
-            a = file.readline()
-            print(a)
-            file.close()
+        valid_chromosomes = self._validation_chromosomes()
 
-        return
+        for chromosome in valid_chromosomes:
+            print(chromosome)
+
+            variants = self._load_variants(chromosome)
+
+            print(variants)
+
+            break
+
+
+    def _select_file(self, chromosome):
+        """
+        For a given chromosome, get the respective file
+        :param chromosome: Current chromosome to be loaded
+        :return: Path to the current file as a Path from pathlib
+        """
+        for file in mc.directory_iterator(self.load_directory):
+            if Path(self.load_directory, file).suffix == self.load_type:
+                if int(re.sub(r'[\D]', "", Path(self.load_directory, file).stem)) == chromosome:
+                    return Path(self.load_directory, file)
+
+        raise Exception(f"Failed to find any relevant file for {chromosome} in {self.load_directory}")
+
+    def _set_chromosome_dict(self):
+        valid_chromosomes = np.load(f"{self.working_dir}/{self.h5_valid_chromosome}.npy", allow_pickle=True).tolist()
+
+        chromosome_dict = {str(chromosome): {self.snp_id: [], self.bp_position: [], self.p_value: [], self.log_odds: [],
+                                             self.beta: [], self.nucleotide: [], self.info: [], self.frequency: []}
+                           for chromosome in valid_chromosomes}
+
+        # Load the valid snps to test the summary stats against
+        valid_snps = np.load(f"{self.working_dir}/{self.h5_valid_snps}.npy", allow_pickle=True).tolist()
+
+        return valid_snps, chromosome_dict
 
     def _validation_snps(self):
         """
@@ -79,6 +110,20 @@ class Cleaner(Input):
                 valid_chromosomes.append(int(re.sub(r'[\D]', "", Path(self.load_directory, file).stem)))
         valid_chromosomes.sort()
         return valid_chromosomes
+
+    def _load_variants(self, chromosome):
+        """
+        Load variants, from bgen or bim. If Bim, standardise the variant to remove the morgan positioning so that the
+        two return times is a dict of variant ID: Variant(obj) rather than having BimVariant(obj) for plink files.
+
+        :param chromosome: Current Chromosome
+        :return: Dict of Variant ID: Variant(Obj)
+        """
+        load_path = self._select_file(chromosome)
+        if self.load_type == ".bgen":
+            return {variant.variant_id: variant for variant in BgenObject(load_path, True).iter_variant_info()}
+        else:
+            return {variant.variant_id: variant.to_variant() for variant in PlinkObject(load_path).bim_object()}
 
     def _load_hap_map_3(self):
         """
