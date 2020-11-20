@@ -170,8 +170,8 @@ class BgenObject:
         # Fetching the results
         results = self.bgen_index.fetchmany(self.iter_array_size)
         while results:
-            for chrom, pos, rsid, a1, a2 in results:
-                yield Variant(rsid, chrom, pos, a1, a2)
+            for chromosome, position, variant_id, a1, a2 in results:
+                yield Variant(chromosome, position, variant_id, a1, a2)
             results = self.bgen_index.fetchmany(self.iter_array_size)
 
     @staticmethod
