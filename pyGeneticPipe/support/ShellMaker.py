@@ -18,15 +18,15 @@ class ShellMaker(Input):
         file.write("# Source: zx8754 - https://www.biostars.org/p/387132/ \n\n")
 
         # Validate the args
-        self._construct_args(file, [self.plink_key, self.load_key])
+        self._construct_args(file, [self._plink_key, self._load_key])
         file.write("# Load shell modules required to run\n")
-        file.write(f"module load ${self.plink_key}\n\n")
+        file.write(f"module load ${self._plink_key}\n\n")
         file.write('# For each chromosome within the file specified create a new file\n')
 
         # Iterate through chromosomes and generate a .bed file for each one
         file.write("for chr in {1..23}; do \\\n")
-        file.write(f"plink2 --bfile ${self.load_key} --chr $chr --make-bed "
-                   f"--out ${{{self.load_key}}}_${{chr}}; \\\n")
+        file.write(f"plink2 --bfile ${self._load_key} --chr $chr --make-bed "
+                   f"--out ${{{self._load_key}}}_${{chr}}; \\\n")
         file.write(f"done\n")
         self._close(file)
 
@@ -41,14 +41,15 @@ class ShellMaker(Input):
                    "https://www.well.ox.ac.uk/~gav/qctool/documentation/examples/converting.html \n\n")
 
         # Validate the args
-        self._construct_args(file, [self.qc_key, self.load_key])
+        self._construct_args(file, [self._qc_key, self._load_key, self._bgenix_key])
         file.write("# Load shell modules required to run\n")
-        file.write(f"module load ${self.qc_key}\n\n")
+        file.write(f"module load ${self._qc_key}\n\n")
         file.write('# For each .bed chromosome file within this directory convert it to .bgen v1.2\n')
 
         # Iterate through chromosomes and create a .bgen file for each one
         file.write("for chr in {1..23}; do \\\n")
-        file.write(f"qctool -g ${{{self.load_key}}}_${{chr}}.bed -og ${{{self.load_key}}}_${{chr}}.bgen; \\\n")
+        file.write(f"qctool -g ${{{self._load_key}}}_${{chr}}.bed -og ${{{self._load_key}}}_${{chr}}.bgen; \\\n")
+        file.write(f"${{BGENIX_Path}} -g ${{{self._load_key}}}_${{chr}}.bgen -index; \\\n")
         file.write(f"done\n")
         self._close(file)
 
@@ -114,7 +115,7 @@ class ShellMaker(Input):
         file.write(f"#SBATCH --mem={self.args['Job_Memory']}\n\n")
 
     @property
-    def qc_key(self):
+    def _qc_key(self):
         """
         Key for qc path from args
         """
