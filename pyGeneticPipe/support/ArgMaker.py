@@ -69,11 +69,6 @@ class ArgMaker:
         return self._yaml_parameters["convert_to_bgen"]
 
     @property
-    def create_validation_group(self):
-        """Returns the arguments the user needs to set for create_validation_group"""
-        return self._yaml_parameters["create_validation_group"]
-
-    @property
     def clean_summary_statistics(self):
         """Returns the arguments the user needs to set for clean_summary_statistics """
         return self._yaml_parameters["clean_summary_statistics"]
