@@ -4,7 +4,9 @@ This is a modified version of the pybgen project available at https://github.com
 
 from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils.misc import bits_to_int
+from pathlib import Path
 import numpy as np
+import sqlite3
 import struct
 import zlib
 import zstd
@@ -28,7 +30,7 @@ class BgenObject:
         self._bgen_binary = open(file_path, "rb")
 
         self.offset, self.headers, self.variant_number, self.sample_number, self.compression, self.layout, \
-            self.sample_identifiers = self.parse_header()
+            self.sample_identifiers, self._variant_start = self.parse_header()
 
         self.probability = probability
         self.bgi_file = self._set_bgi(file_path, bgi_file_path)
@@ -49,6 +51,7 @@ class BgenObject:
         offset = self.unpack("<I", 4)
         headers = self.unpack("<I", 4)
         assert headers <= offset, ec.offset_violation(self._bgen_binary.name, offset, headers)
+        variant_start = offset + 4
 
         # Extract the number of variants and samples
         variant_number = self.unpack("<I", 4)
@@ -63,7 +66,7 @@ class BgenObject:
 
         # Extract the flag, then set compression layout and sample identifiers from it
         compression, layout, sample_identifiers = self._header_flag()
-        return offset, headers, variant_number, sample_number, compression, layout, sample_identifiers
+        return offset, headers, variant_number, sample_number, compression, layout, sample_identifiers, variant_start
 
     def _header_flag(self):
         """
