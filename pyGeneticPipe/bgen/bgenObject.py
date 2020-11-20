@@ -24,6 +24,7 @@ class BgenObject:
         :param probability:
         """
 
+        self.file_path = Path(file_path)
         self._bgen_binary = open(file_path, "rb")
 
         self.offset, self.headers, self.variant_number, self.sample_number, self.compression, self.layout, \
