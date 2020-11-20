@@ -1,9 +1,9 @@
-class BgenVariant:
+class Variant:
     __slots__ = ["chromosome", "bp_position", "variant_id", "a1", "a2"]
 
     def __init__(self, chromosome, bp_position, variant_id, a1, a2):
         """
-        Contains variant information for bgen files
+        Contains variant information for bgen files, unlike Bim does not contain morgan position
         """
         self.chromosome = chromosome
         self.bp_position = bp_position
@@ -33,6 +33,16 @@ class BimVariant:
 
     def __repr__(self):
         return f"Variant {self.variant_id} - {self.chromosome}:{self.bp_position} A1{self.a1}:A2{self.a2}"
+
+    def to_variant(self):
+        """
+        Bgen doesn't use morgan position, and to allow for standard variant operations rather than having optional
+        attributes, this will return the Variant Class containing all the attributes of the bim minus the morgan_pos.
+
+        :return: Variant
+        :rtype: Variant
+        """
+        return Variant(self.chromosome, self.bp_position, self.variant_id, self.a1, self.a2)
 
 
 class BimLoci:
