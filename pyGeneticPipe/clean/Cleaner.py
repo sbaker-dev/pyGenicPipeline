@@ -84,7 +84,9 @@ class Cleaner(Input):
         """
         Users may wish to limit valid snps to those found within HapMap3. If they do, they need to provide a path to the
         hapmap3 snp file which will be check that it exists, have the snps extracted and return. Otherwise set to none
-        :return: The valid HapMap3 snps or None
+
+        :return: The set of the valid HapMap3 snps or None
+        :rtype: set | None
         """
 
         if self.hap_map_3_file:
@@ -103,15 +105,14 @@ class Cleaner(Input):
         clean_summary_statistics requires
 
         The project file, for writing too
-        That the validation has already been undertaken
         That the cleaning has not already been undertaken
         That the summary file path exists
-
-        :return:
+        That the load type for the genetic data exists
+        That the load directory containing the chromosome split data exists
         """
         # Check parameters, validate that validation has been run, and that clean summary has not.
         assert self.project_file, ec.missing_arg(self.operation, "Project_Name")
-        assert self.h5_validation in self.project_file.keys(), ec.process_not_run(self.operation, self.project_name,
-                                                                                  "create_validation_group")
         assert self.h5_summary not in self.project_file.keys(), ec.appending_error(self.project_name, self.h5_summary)
         assert self.summary_file, ec.missing_arg(self.operation, "Summary_Path")
+        assert self.load_type, ec.missing_arg(self.operation, "Load_Type")
+        assert self.load_directory, ec.missing_arg(self.operation, "Load_Directory")
