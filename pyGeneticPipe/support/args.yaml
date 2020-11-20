@@ -55,6 +55,9 @@ all_args:
   # Path to qctoolv2 on sever, has a default based on bc4 bristol
   QCTool_Path: "apps/qctool/2.0rc4"
 
+  # Path to the compiled bgenix folder in build/apps/bgenix
+  BGENIX_Path: null
+
   # A path to summary statistics, which will be handled differently than other files
   Summary_Path: null
 
@@ -115,6 +118,8 @@ Arg_Descriptions:
   Plink_Path: Path to plink on sever, has a default based on bc4 bristol
 
   QCTool_Path: Path to qctoolv2 on sever, has a default based on bc4 bristol
+
+  BGENIX_Path: Path to the compiled bgenix folder in build/apps/bgenix
 
   Summary_Path: Some Operations will require a path to summary statistics, which will be handled differently than other files
 
@@ -179,6 +184,8 @@ convert_to_bgen:
   # Path to qctoolv2 on sever, has a default based on bc4 bristol
   QCTool_Path: "apps/qctool/2.0rc4"
 
+  # Path to the compiled bgenix folder in build/apps/bgenix
+  BGENIX_Path: null
 
 # Mandatory arguments for split_bed_by_chromosome
 split_bed_by_chromosome:

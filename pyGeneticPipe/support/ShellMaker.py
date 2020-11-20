@@ -121,15 +121,22 @@ class ShellMaker(Input):
         return "QCTool_Path"
 
     @property
-    def load_key(self):
+    def _load_key(self):
         """
         Key for Load_File from args
         """
         return "Load_File"
 
     @property
-    def plink_key(self):
+    def _plink_key(self):
         """
         Key for plink_key from args
         """
         return "Plink_Path"
+
+    @property
+    def _bgenix_key(self):
+        """
+        Key for working with bgenix
+        """
+        return "BGENIX_Path"
