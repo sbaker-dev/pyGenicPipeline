@@ -1,3 +1,6 @@
+import sys
+
+
 class BimLoci:
     def __init__(self, bim_line):
         """
@@ -25,17 +28,20 @@ class BimLoci:
 
 
 class BimByChromosome:
-    def __init__(self, chromosome, sids, indexes, pos, nts):
+    def __init__(self, chromosome, variant_ids, indexes, bp_positions, nucleotides):
         """
         Sometimes we may need to have bim information by chromosome, this will contain all the information required from
         the bim files, but for a given chromosome.
         """
         self.chromosome = chromosome
-        self.snps = sids
+        self.snps = variant_ids  # Will still need this as we want to check for common snps across types
         self.indexes = indexes
-        self.positions = pos
-        self.nucleotides = nts
+        self.positions = bp_positions
+        self.nucleotides = nucleotides
         self.indexed_snps = {snp_id: index for snp_id, index in zip(self.snps, self.indexes)}
+
+        self.snp_information = {sids: SNPIndex(sids, i, position, nts)
+                                for sids, i, position, nts in zip(variant_ids, indexes, bp_positions, nucleotides)}
 
     def __repr__(self):
         """
@@ -43,6 +49,27 @@ class BimByChromosome:
         :return: Just the chromosome number
         """
         return f"BimByChromosome {self.chromosome}"
+
+    def extract_snp(self, variant):
+        """
+        Return a snp from snp information
+
+        :param variant: A snp, such as rs3131962
+        :return: A SNPIndex containing the information for that snp
+        """
+        return self.snp_information[variant]
+
+
+class SNPIndex:
+    def __init__(self, sids, index, bp_position, nts):
+
+        self.snp = sids
+        self.index = index
+        self.bp_position = bp_position
+        self.nucleotide = Nucleotide(nts)
+
+    def __repr__(self):
+        return f"{self.snp}: Index: {self.index} BP_Position: {self.bp_position} Nucleotide: {self.nucleotide}"
 
 
 class Nucleotide:
