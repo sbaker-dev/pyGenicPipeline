@@ -2,8 +2,8 @@
 This is a modified version of pandas plink found at https://github.com/limix/pandas-plink to act more like plinkio
 available at https://github.com/mfranberg/libplinkio
 """
-from pyGeneticPipe.plink.supportObjects import BimLoci, BimByChromosome
-from pyGeneticPipe.plink.bedObject import BedObject
+from pyGeneticPipe.geneticParsers.plink.supportObjects import BimLoci, BimByChromosome
+from pyGeneticPipe.geneticParsers.plink.bedObject import BedObject
 from pyGeneticPipe.utils import error_codes as ec
 from pathlib import Path
 import numpy as np
