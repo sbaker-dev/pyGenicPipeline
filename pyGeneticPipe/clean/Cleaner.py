@@ -14,21 +14,8 @@ class Cleaner(Input):
     def __init__(self, args):
         super().__init__(args)
 
-    def create_validation_group(self):
-        """
-        This will create a group which will contain two sets of data. The first one contains all the valid chromosomes
-        for this project via accessing the numbers in the files, the second is all the valid snps found across the
-        chromosomes for validation against summary statistics
-        """
-        # Check for input arguments
-        self._assert_create_validation_group()
-
-        # # Create a dataset of all the chromosomes we have to work with
-        np.save(Path(self.working_dir, self.h5_valid_chromosome), self._validation_chromosomes())
-
-        # Create a dataset of all the validation snps
-        np.save(Path(self.working_dir, self.h5_valid_snps), self._validation_snps())
-        print(f"Create Validation snps and chromosomes: {mc.terminal_time()}")
+        self._error_dict = {"Invalid_Snps": [], "Chromosome": {}, "Position": {}, "Effect_Size": {}, "P_Value": {},
+                            "Standard_Errors": {}, "Duplicate_Position": {}}
 
     def clean_summary_statistics(self):
 
@@ -110,17 +97,6 @@ class Cleaner(Input):
             return hm3_sids
         else:
             return None
-
-    def _assert_create_validation_group(self):
-        """
-        create_validation_group requires
-
-        The load type, so we know which files to load during directory iteration
-        The load directory, to iterate through each chromosome
-        """
-        # Check parameters and add meaningful error out if process attempts to repeat itself in append mode
-        assert self.load_type, ec.missing_arg(self.operation, "Load_Type")
-        assert self.load_directory, ec.missing_arg(self.operation, "Load_Directory")
 
     def _assert_clean_summary_statistics(self):
         """
