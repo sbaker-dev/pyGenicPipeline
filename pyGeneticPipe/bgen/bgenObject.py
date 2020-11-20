@@ -14,14 +14,14 @@ import os
 
 
 class BgenObject:
-    def __init__(self, file_path, bgi_file_path=False, probability=None):
+    def __init__(self, file_path, bgi_file=False, probability=None):
         """
 
         :param file_path:
 
-        :param bgi_file_path: Takes a value of True if the .bgi is in the same directory and named file_path.bgi
+        :param bgi_file: Takes a value of True if the .bgi is in the same directory and named file_path.bgi
             otherwise can ec passed as a path if it is in a different directory.
-        :type bgi_file_path: bool | str
+        :type bgi_file: bool | str
 
         :param probability:
         """
@@ -33,10 +33,10 @@ class BgenObject:
             self.sample_identifiers, self._variant_start = self.parse_header()
 
         self.probability = probability
-        self.bgi_file = self._set_bgi(file_path, bgi_file_path)
 
-        print(self.offset, self.headers, self.variant_number, self.sample_number, self.compression, self.layout,
-              self.sample_identifiers)
+        self.bgi_file = self._set_bgi(file_path, bgi_file)
+        if self.bgi_file:
+            self.bgen_file, self.bgen_index, self.last_variant_block = self._connect_index
 
     def parse_header(self):
         """
@@ -130,6 +130,36 @@ class BgenObject:
         else:
             return struct.unpack(struct_format, self._bgen_binary.read(size))[0]
 
+    @property
+    def _connect_index(self):
+        """Connect to the index (which is an SQLITE database)."""
+
+        bgen_file = sqlite3.connect(str(self.file_path.absolute()) + ".bgi")
+        bgen_index = bgen_file.cursor()
+
+        # Fetching the number of variants and the first and last seek position
+        bgen_index.execute(
+            "SELECT COUNT (rsid), "
+            "       MIN (file_start_position), "
+            "       MAX (file_start_position) "
+            "FROM Variant"
+        )
+        nb_markers, first_variant_block, last_variant_block = bgen_index.fetchone()
+
+        # Check the number of markers are the same across bgen and bgi, and that they start in the same block
+        assert nb_markers == self.variant_number, ec
+        assert first_variant_block == self._variant_start
+
+        # Checking the number of markers
+        if nb_markers != self.variant_number:
+            raise ValueError("Number of markers different between headers of bgen and bgi")
+
+        # Checking the first variant seek position
+        if first_variant_block != self._variant_start:
+            raise ValueError(f"{self.file_path.name}: invalid index")
+
+        return bgen_file, bgen_index, last_variant_block
+
     @staticmethod
     def _set_bgi(bgen_path, bgi_file_path):
         """
@@ -145,12 +175,12 @@ class BgenObject:
             if not os.path.isfile(f"{bgen_path}.bgi"):
                 raise IOError(f"{bgen_path}.bgi was not found")
             else:
-                pass  # This is where we set the .bgi file
+                return True
         elif isinstance(bgi_file_path, str):
             if not os.path.isfile(f"{bgi_file_path}"):
                 raise IOError(f"{bgi_file_path} was not found")
             else:
-                pass  # This is where we set the .bgi file
+                return True
         else:
             raise TypeError(ec.bgi_path_violation(bgi_file_path))
 
