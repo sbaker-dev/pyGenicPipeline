@@ -2,7 +2,7 @@
 This is a modified version of pandas plink found at https://github.com/limix/pandas-plink to act more like plinkio
 available at https://github.com/mfranberg/libplinkio
 """
-from pyGeneticPipe.geneticParsers.supportObjects import BimLoci, BimByChromosome
+from pyGeneticPipe.geneticParsers.supportObjects import BimVariant, BimByChromosome
 from pyGeneticPipe.geneticParsers.plink.bedObject import BedObject
 from pyGeneticPipe.utils import error_codes as ec
 from pathlib import Path
@@ -26,7 +26,8 @@ class PlinkObject:
         :return: A BimObject for each line in the bim file
         """
         with open(self.bim_path) as f:
-            return [BimLoci(line) for line in f]
+            return [BimVariant(chromosome, variant_id, morgan_pos, bp_position, a1, a2)
+                    for chromosome, variant_id, morgan_pos, bp_position, a1, a2 in f]
 
     def bim_by_chromosome(self):
         """
@@ -77,8 +78,8 @@ class PlinkObject:
         valid_chromosomes = set()
 
         with open(self.bim_path) as f:
-            for line in f:
-                bim = BimLoci(line)
+            for chromosome, variant_id, morgan_pos, bp_position, a1, a2 in f:
+                bim = BimVariant(chromosome, variant_id, morgan_pos, bp_position, a1, a2)
                 # If the user has specified certain chromosomes check that this snps chromosome is in accepted_list
                 if accepted_chromosomes and (bim.chromosome not in accepted_chromosomes):
                     continue

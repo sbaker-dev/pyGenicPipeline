@@ -45,32 +45,6 @@ class BimVariant:
         return Variant(self.chromosome, self.bp_position, self.variant_id, self.a1, self.a2)
 
 
-class BimLoci:
-    def __init__(self, bim_line):
-        """
-        Holds information of a bim file in Object notation. Bim files contain a set 6 categories. Full specification:
-
-        https://www.cog-genomics.org/plink2/formats#bim
-
-        """
-        chromosome, variant_id, morgan_pos, bp_position, a1, a2 = bim_line.split()
-
-        self.chromosome = chromosome
-        self.variant_id = variant_id
-        self.morgan_pos = float(morgan_pos)
-        self.bp_position = int(bp_position)
-        self.a1 = str(a1)
-        self.a2 = str(a2)
-
-    def __repr__(self):
-        """
-        Allow for human readable printing
-
-        :return: Each column in order printed as a string warped in square brackets
-        """
-        return f"[{self.chromosome}, {self.variant_id}, {self.morgan_pos}, {self.bp_position}, {self.a1}, {self.a2}]"
-
-
 class BimByChromosome:
     def __init__(self, chromosome, variant_ids, indexes, bp_positions, nucleotides):
         """
