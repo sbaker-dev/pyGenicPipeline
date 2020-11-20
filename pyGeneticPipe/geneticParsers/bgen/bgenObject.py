@@ -1,7 +1,7 @@
 """
 This is a modified version of the pybgen project available at https://github.com/lemieuxl/pybgen
 """
-
+from pyGeneticPipe.geneticParsers.supportObjects import Variant
 from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils.misc import bits_to_int
 from pathlib import Path
@@ -14,7 +14,7 @@ import os
 
 
 class BgenObject:
-    def __init__(self, file_path, bgi_file=False, probability=None):
+    def __init__(self, file_path, bgi_file=False, probability=None, iter_array_size=1000):
         """
 
         :param file_path:
@@ -33,6 +33,7 @@ class BgenObject:
             self.sample_identifiers, self._variant_start = self.parse_header()
 
         self.probability = probability
+        self.iter_array_size = iter_array_size
 
         self.bgi_file = self._set_bgi(file_path, bgi_file)
         if self.bgi_file:
@@ -159,6 +160,19 @@ class BgenObject:
             raise ValueError(f"{self.file_path.name}: invalid index")
 
         return bgen_file, bgen_index, last_variant_block
+
+    def iter_variant_info(self):
+        """Iterate over marker information."""
+        self.bgen_index.execute(
+            "SELECT chromosome, position, rsid, allele1, allele2 FROM Variant",
+        )
+
+        # Fetching the results
+        results = self.bgen_index.fetchmany(self.iter_array_size)
+        while results:
+            for chrom, pos, rsid, a1, a2 in results:
+                yield Variant(rsid, chrom, pos, a1, a2)
+            results = self.bgen_index.fetchmany(self.iter_array_size)
 
     @staticmethod
     def _set_bgi(bgen_path, bgi_file_path):
