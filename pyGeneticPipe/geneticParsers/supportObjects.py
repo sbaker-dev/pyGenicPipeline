@@ -1,4 +1,38 @@
-import sys
+class BgenVariant:
+    __slots__ = ["chromosome", "bp_position", "variant_id", "a1", "a2"]
+
+    def __init__(self, chromosome, bp_position, variant_id, a1, a2):
+        """
+        Contains variant information for bgen files
+        """
+        self.chromosome = chromosome
+        self.bp_position = bp_position
+        self.variant_id = variant_id
+        self.a1 = a1
+        self.a2 = a2
+
+    def __repr__(self):
+        return f"Variant {self.variant_id} - {self.chromosome}:{self.bp_position} A1{self.a1}:A2{self.a2}"
+
+
+class BimVariant:
+    __slots__ = ["chromosome", "variant_id", "morgan_pos", "bp_position", "a1", "a2"]
+
+    def __init__(self, chromosome, variant_id, morgan_pos, bp_position, a1, a2):
+        """
+        Holds information of a bim file in Object notation. Bim files contain a set 6 categories. Full specification:
+
+        https://www.cog-genomics.org/plink2/formats#bim
+        """
+        self.chromosome = chromosome
+        self.variant_id = variant_id
+        self.morgan_pos = morgan_pos
+        self.bp_position = bp_position
+        self.a1 = a1
+        self.a2 = a2
+
+    def __repr__(self):
+        return f"Variant {self.variant_id} - {self.chromosome}:{self.bp_position} A1{self.a1}:A2{self.a2}"
 
 
 class BimLoci:
