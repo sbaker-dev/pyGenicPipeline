@@ -32,6 +32,8 @@ class ArgMaker:
             else:
                 file.write(f"{key}: null\n\n")
 
+        # todo need to allow for option args
+
         # Not Required for this job but will need to set via Input
         file.write("# NOT REQUIRED ARGUMENTS ##########################################################################"
                    "#####################\n")

@@ -55,6 +55,28 @@ all_args:
   # Path to qctoolv2 on sever, has a default based on bc4 bristol
   QCTool_Path: "apps/qctool/2.0rc4"
 
+  # A path to summary statistics, which will be handled differently than other files
+  Summary_Path: null
+
+  # The number of samples in the summary statistics
+  Summary_Sample_Size: null
+
+  # If the user has summary header information not within our own testing list, then they can add it here
+  Custom_Summary_Header: null
+
+  # If the user has frequencies within the summary staistics file
+  Summary_Frequency: null
+
+  # The effect type within the summary statistics file
+  Summary_Effect_Type: null
+
+  # If the user wants to compute z scores from summary file
+  Z_Scores: null
+
+  # If the user wants to only use HapMap3 snps then they need to provide a file to those snps
+  HapMap3: null
+
+
 
 # For writing new yaml files with human readable comments, here the comments for all args are stored so they can be
 # accessed via keys
@@ -94,6 +116,20 @@ Arg_Descriptions:
 
   QCTool_Path: Path to qctoolv2 on sever, has a default based on bc4 bristol
 
+  Summary_Path: Some Operations will require a path to summary statistics, which will be handled differently than other files
+
+  Summary_Sample_Size: The number of samples in the summary statistics
+
+  Custom_Summary_Header: >-
+    If the user has summary header information not within our own testing list, then they can add it here
+
+  Summary_Frequency: If the user has frequencies within the summary staistics file
+
+  Summary_Effect_Type: The effect type within the summary statistics file
+
+  Z_Scores: If the user wants to compute z scores from summary file
+
+  HapMap3: If the user wants to only use HapMap3 snps then they need to provide a file to those snps
 
 # Valid operations
 Operations:
@@ -210,8 +246,26 @@ clean_summary_statistics:
   # The operation to be run, can take a string if the method name or a dict of operations where only one element is true
   Operation: clean_summary_statistics
 
-  # Some operations will require a path to a set file
-  Load_File: null
+  # A path to summary statistics, which will be handled differently than other files
+  Summary_Path: null
+
+  # The number of samples in the summary statistics
+  Summary_Sample_Size: null
+
+  # If the user has summary header information not within our own testing list, then they can add it here
+  Custom_Summary_Header: null
+
+  # If the user has frequencies within the summary staistics file
+  Summary_Frequency: null
+
+  # The effect type within the summary statistics file
+  Summary_Effect_Type: null
+
+  # If the user wants to compute z scores from summary file
+  Z_Scores: null
+
+  # If the user wants to only use HapMap3 snps then they need to provide a file to those snps
+  HapMap3: null
 
 
 
