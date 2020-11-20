@@ -26,8 +26,13 @@ class PlinkObject:
         :return: A BimObject for each line in the bim file
         """
         with open(self.bim_path) as f:
-            return [BimVariant(chromosome, variant_id, morgan_pos, bp_position, a1, a2)
-                    for chromosome, variant_id, morgan_pos, bp_position, a1, a2 in f]
+
+            bim_variant_list = []
+            for line in f:
+                chromosome, variant_id, morgan_pos, bp_position, a1, a2 = line.split()
+                bim_variant_list.append(BimVariant(chromosome, variant_id, morgan_pos, bp_position, a1, a2))
+
+            return bim_variant_list
 
     def bim_by_chromosome(self):
         """

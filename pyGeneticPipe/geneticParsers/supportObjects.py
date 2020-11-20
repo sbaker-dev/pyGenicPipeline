@@ -32,7 +32,8 @@ class BimVariant:
         self.a2 = a2
 
     def __repr__(self):
-        return f"Variant {self.variant_id} - {self.chromosome}:{self.bp_position} A1{self.a1}:A2{self.a2}"
+        return f"{self.variant_id} - CHR{self.chromosome} - BP:{self.bp_position}/MP:{self.morgan_pos} - " \
+               f"A1-{self.a1}:A2-{self.a2}"
 
     def to_variant(self):
         """
