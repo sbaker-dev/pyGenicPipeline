@@ -1,6 +1,6 @@
+from pyGeneticPipe.geneticParsers.supportObjects import Variant, Nucleotide
 from pyGeneticPipe.geneticParsers.plink.plinkObject import PlinkObject
 from pyGeneticPipe.geneticParsers.bgen.bgenObject import BgenObject
-from pyGeneticPipe.geneticParsers.supportObjects import Variant
 from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils import misc as mc
 from pyGeneticPipe.core.Input import Input
@@ -19,7 +19,8 @@ class Cleaner(Input):
         super().__init__(args)
 
         self._error_dict = {"Invalid_Snps": 0, "Chromosome": 0, "Position": 0, "Effect_Size": 0, "P_Value": 0,
-                            "Standard_Errors": 0, "Duplicate_Position": 0}
+                            "Standard_Errors": 0, "Duplicate_Position": 0, "Ambiguous_SNP": 0, "Non_Matching": 0,
+                            "Non_Allowed_Allele": 0}
 
     def clean_summary_statistics(self):
 
@@ -191,7 +192,11 @@ class Cleaner(Input):
             return indexer.get_variant(index_dict[variant_id], True)
 
     def _validate_summary_line(self, line, variant):
+        """
+        This will validate a given line in the summary statistics for all the possible headers that it could contain
+        against a validation
 
+        """
         # If we have chromosomes in our summary statistics check the chromosome of the snp against the validation
         if self.sm_chromosome and line[self.sm_chromosome] != variant.chromosome:
             self._error_dict["Chromosome"] += 1
@@ -207,7 +212,6 @@ class Cleaner(Input):
         if not np.isfinite(beta):
             self._error_dict["Effect_Size"] += 1
             return None
-
         # Set p value as long as it is not zero or a non finite number
         p_value = float(line[self.sm_p_value])
         if not np.isfinite(p_value) or p_value == 0:
@@ -217,7 +221,42 @@ class Cleaner(Input):
         # calculate the beta and beta odds
         beta, beta_odds = self._calculate_beta(beta, line, p_value)
         if not beta or not beta_odds:
+            self._error_dict["Standard_Errors"] += 1
             return None
+
+        # Construct a summary nucleotide to check against our genetic validation
+        sm_nucleotide = Nucleotide(line[self.sm_effect_allele], line[self.sm_alt_allele])
+
+        # Check to see if the nucleotide is within the ambiguous snp set
+        if (variant.nucleotide() in self.ambiguous_snps) or (sm_nucleotide.to_tuple() in self.ambiguous_snps):
+            self._error_dict["Ambiguous_SNP"] += 1
+            return None
+
+        # Check if the nucleotides are sane (Ie it is only a t c and g)
+        if (variant.a1 not in self.allowed_alleles) or (variant.a2 not in self.allowed_alleles) or \
+                (sm_nucleotide.a1 not in self.allowed_alleles) or (sm_nucleotide.a2 not in self.allowed_alleles):
+            self._error_dict["Non_Allowed_Allele"] += 1
+            return None
+
+        # Check if nucleotides need to be flipped
+        beta, beta_odds = self.flip_nucleotide(variant, sm_nucleotide, beta, beta_odds)
+        if not beta or not beta_odds:
+            self._error_dict["Non_Matching"] += 1
+            return None
+
+        # If we have the info, then add this
+        info = -1
+        if self.sm_info:
+            info = float(line[self.sm_info])
+
+        # If we have frequency, then extract it
+        frequency = -1
+        if self.frequencies:
+            frequency = self._sum_stats_frequencies()
+
+        # todo look up the dosages and what they are actually used for in the next step
+
+        print("HH")
 
     def _calculate_beta(self, beta, line, p_value):
         """
@@ -246,7 +285,6 @@ class Cleaner(Input):
         elif self.z_scores:
             se = float(line[self.sm_standard_errors])
             if not np.isfinite(se) or se == 0:
-                self._error_dict["Standard_Errors"] += 1
                 return None, None
             else:
                 return self._beta_from_se(beta, beta_odds, se), beta_odds
@@ -271,3 +309,32 @@ class Cleaner(Input):
             return np.log(beta)
         else:
             return beta
+
+    def flip_nucleotide(self, variant, sm_nucleotide, beta, beta_odds):
+        """
+        Checks to see if the summary stats requires flipping by comparing it to the genetic variant from our sample and
+        the flipped variant.
+
+        If not flipping is required, returns beta and beta odds as is
+        If flipping is required, returns flipped beta and beta odds
+        If flipping is required but failed, returns None, None
+        """
+
+        # Construct the opposite strand for the genetic variant to see if the summary can match the flipped, vs implying
+        # that flipping is required
+        gen_flipped = Nucleotide(self.allele_flip[variant.a1], self.allele_flip[variant.a2])
+
+        if not (np.all(variant.nucleotide(True) == sm_nucleotide.to_list())) or \
+                (np.all(gen_flipped.to_list() == sm_nucleotide.to_list())):
+
+            flip_nts = (variant.a2 == sm_nucleotide.a1 and variant.a1 == sm_nucleotide.a2) or (
+                    gen_flipped.a2 == sm_nucleotide.a1 and gen_flipped.a1 == sm_nucleotide.a2)
+            if flip_nts:
+                return -beta, -beta_odds
+            else:
+                return None, None
+        else:
+            return beta, beta_odds
+
+    def _sum_stats_frequencies(self):
+        raise NotImplementedError("Frequencies are not yet implemented")
