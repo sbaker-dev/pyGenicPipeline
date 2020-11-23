@@ -97,6 +97,11 @@ def sample_size():
            f"is required."
 
 
+def validation_size_invalid(size):
+    return f"INVALID SAMPLE SIZE {size}\n" \
+           f"Validation_Size must be between 0 and 1 inclusively"
+
+
 def mandatory_header(header, found_headers, match_headers):
     return f"MANDATORY HEADER {header} NOT SET\n" \
            f"When reading in summary statistics {header} is required yet\n" \

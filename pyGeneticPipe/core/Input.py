@@ -24,6 +24,8 @@ class Input:
         self.hap_map_3_file = self._validate_path(self.args["HapMap3"])
         self.load_directory = self._validate_path(self.args["Load_Directory"])
         self.load_type = self.args["Load_Type"]
+        self.validation_size = self._set_validation_size(self.args["Validation_Size"])
+
 
         # Set summary statistics information if required
         self.zipped, self.sample_size = self._set_summary_stats()
@@ -176,6 +178,24 @@ class Input:
 
             file.close()
             return headers
+
+    @staticmethod
+    def _set_validation_size(validation_size):
+        """
+        If Validation_Size is set, validate it is between 0 and 1 and then return it, otherwise None.
+
+        :param validation_size: The size of the validation group
+        :type validation_size: None | float
+
+        :return: A None or a float
+        :rtype: None | float
+        """
+
+        if not validation_size:
+            return None
+        else:
+            assert 0 <= float(validation_size) <= 1, ec.validation_size_invalid(validation_size)
+            return float(validation_size)
 
     def _set_effect_type(self, effect_type):
         """
