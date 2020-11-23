@@ -133,6 +133,21 @@ class BgenObject:
         else:
             return struct.unpack(struct_format, self._bgen_binary.read(size))[0]
 
+    def _read_bgen(self, struct_format, size):
+        """
+        Sometimes we need to read the number of bytes read via unpack
+
+        :param struct_format: The string representation of the format to use in struct format. See struct formatting for
+            a list of example codes.
+        :type struct_format: str
+
+        :param size: The byte size
+        :type size: int
+
+        :return: Decoded bytes that where read
+        """
+        return self._bgen_binary.read(self.unpack(struct_format, size)).decode()
+
     @property
     def _connect_index(self):
         """Connect to the index (which is an SQLITE database)."""
@@ -178,17 +193,72 @@ class BgenObject:
                 yield Variant(chromosome, position, variant_id, a1, a2)
             results = self.bgen_index.fetchmany(self.iter_array_size)
 
-    def get_variant(self, name):
+    def _iter_seeks(self, seeks, dosage):
+        """Iterate over seek positions."""
+        for seek in seeks:
+            self._bgen_binary.seek(seek)
+            yield self._read_current_variant(dosage)
+
+    def _read_current_variant(self, dosage):
+        """Reads the current variant."""
+        # Getting the variant's information
+        variant = self._get_curr_variant_info()
+
+        if dosage:
+            # will return variant and dosage
+            raise NotImplementedError("Dosage Not yet implemented")
+        else:
+            return variant
+
+    def _get_curr_variant_info(self):
+        """Gets the current variant's information."""
+
+        if self.layout == 1:
+            assert self.unpack("<I", 4) == self.sample_number, ec
+
+        # Reading the variant id (may be in form chr1:8045045:A:G or just a duplicate of rsid and not used currently)
+        self._read_bgen("<H", 2)
+
+        # Reading the variant rsid
+        rs_id = self._read_bgen("<H", 2)
+
+        # Reading the chromosome
+        chromosome = self._read_bgen("<H", 2)
+
+        # Reading the position
+        pos = self.unpack("<I", 4)
+
+        # Getting the alleles
+        alleles = [self._read_bgen("<I", 4) for _ in range(self._set_number_of_alleles())]
+
+        # Return the Variant - currently only supports first two alleles
+        return Variant(chromosome, pos, rs_id, alleles[0], alleles[1])
+
+    def get_variant(self, name, dosage=False):
         assert self.bgen_index, ec.bgen_index_violation("get_variant")
 
-
         # Fetching the variant
-        a = self.bgen_index.execute("SELECT file_start_position FROM Variant WHERE rsid = ?", (name,))
+        self.bgen_index.execute("SELECT file_start_position FROM Variant WHERE rsid = ?", (name,))
 
-        print(a)
+        # Fetching all the seek positions
+        seek_positions = [index[0] for index in self.bgen_index.fetchall()]
 
+        # Constructing the results
+        results = list(self._iter_seeks(seek_positions, dosage))[0]
+        assert results, ec
+        return results
 
-
+    def _set_number_of_alleles(self):
+        """
+        Bgen version 2 can allow for more than 2 alleles, so if it is version 2 then unpack the number stored else
+        return 2
+        :return: number of alleles for this snp
+        :rtype: int
+        """
+        if self.layout == 2:
+            return self.unpack("<H", 2)
+        else:
+            return 2
 
     @staticmethod
     def _set_bgi(bgen_path, bgi_file_path):
