@@ -21,7 +21,7 @@ class BimObject:
         self._bim_file.close()
         return indexer
 
-    def extract_loci(self, seek, as_variant=False):
+    def get_variant(self, seek, as_variant=False):
         """
         Extract a given variants loci based on the seek index from construct_index
         :param seek: The seek index
