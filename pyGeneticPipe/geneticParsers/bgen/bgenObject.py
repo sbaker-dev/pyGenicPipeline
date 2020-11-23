@@ -38,6 +38,8 @@ class BgenObject:
         self.bgi_file = self._set_bgi(file_path, bgi_file)
         if self.bgi_file:
             self.bgen_file, self.bgen_index, self.last_variant_block = self._connect_index
+        else:
+            self.bgen_file, self.bgen_index, self.last_variant_block = None, None, None
 
     def parse_header(self):
         """
