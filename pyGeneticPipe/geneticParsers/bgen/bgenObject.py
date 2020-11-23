@@ -14,7 +14,7 @@ import os
 
 
 class BgenObject:
-    def __init__(self, file_path, bgi_file=False, probability=None, iter_array_size=1000):
+    def __init__(self, file_path, bgi_file=True, probability=None, iter_array_size=1000):
         """
 
         :param file_path:
