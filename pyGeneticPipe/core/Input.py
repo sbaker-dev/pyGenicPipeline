@@ -2,8 +2,6 @@ from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils import misc as mc
 from pathlib import Path
 import numpy as np
-import pickle
-import gzip
 import h5py
 
 
@@ -19,7 +17,6 @@ class Input:
         # The project file for this project
         self.project_name = self.args['Project_Name']
         self.project_file = self._create_project_file()
-        self.load_file = self._validate_path(self.args["Load_File"])
         self.summary_file = self._validate_path(self.args["Summary_Path"])
         self.hap_map_3_file = self._validate_path(self.args["HapMap3"])
         self.load_directory = self._validate_path(self.args["Load_Directory"])
@@ -360,6 +357,26 @@ class Input:
     def sum_standard_errors(self):
         """Standard error header index in GWAS summary file"""
         return self._summary_headers[self.standard_errors]
+
+    @property
+    def log_odds(self):
+        """Key used for accessing Log_Odds headers, groups or other attributes"""
+        return "Log_Odds"
+
+    @property
+    def beta(self):
+        """Key used for accessing Beta headers, groups or other attributes"""
+        return "Beta"
+
+    @property
+    def nucleotide(self):
+        """Key used for accessing Nucleotide headers, groups or other attributes"""
+        return "Nucleotide"
+
+    @property
+    def frequency(self):
+        """Key used for accessing Frequency headers, groups or other attributes"""
+        return "Frequency"
 
     @property
     def h5_validation(self):
