@@ -13,5 +13,3 @@ class Main(ShellMaker, Cleaner, Input):
         super().__init__(args)
         print(f"Starting {self.operation}: {terminal_time()}")
         getattr(Main, self.operation)(self)
-
-
