@@ -117,7 +117,7 @@ class PlinkObject:
         assert ld_path.parent.exists(), ec.path_invalid(ld_path.parent, "_set_ld_ref")
 
         # If a file has a plink suffix take the stem of the name otherwise just take the name
-        if ld_path.suffix == (".bed" or ".bim" or ".fam"):
+        if (ld_path.suffix == ".bed") or (ld_path.suffix == ".bim") or (ld_path == ".fam"):
             bed = Path(f"{str(ld_path.parent)}/{ld_path.stem}.bed")
             bim = Path(f"{str(ld_path.parent)}/{ld_path.stem}.bim")
             fam = Path(f"{str(ld_path.parent)}/{ld_path.stem}.fam")
