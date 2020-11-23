@@ -14,6 +14,13 @@ class Variant:
     def __repr__(self):
         return f"{self.variant_id} - CHR{self.chromosome} - POS{self.bp_position} - A1-{self.a1}:A2-{self.a2}"
 
+    def nucleotide(self, as_list=False):
+        """Return a tuple of a1 a2 as the nucleotide"""
+        if as_list:
+            return [self.a1, self.a2]
+        else:
+            return self.a1, self.a2
+
 
 class BimVariant:
     __slots__ = ["chromosome", "variant_id", "morgan_pos", "bp_position", "a1", "a2"]
