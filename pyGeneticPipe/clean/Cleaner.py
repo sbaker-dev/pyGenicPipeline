@@ -101,8 +101,7 @@ class Cleaner(Input):
             validation_size = self._set_validation_sample_size(Bed(load_path, count_A1=True).iid_count)
             validation = Bed(load_path, count_A1=True)[:validation_size, :].sid
             core = Bed(load_path, count_A1=True)[validation_size:, :].sid
-            indexer = None
-            raise NotImplementedError("No indexer set for .bed yet")
+            indexer = [PlinkObject(load_path).bim_index(), PlinkObject(load_path).bim_object()]
 
         elif self.load_type == ".bgen":
             # Bgen files store [variant id, rsid], we just want the rsid hence the [1]; see https://bit.ly/2J0C1kC
@@ -186,8 +185,9 @@ class Cleaner(Input):
         if self.load_type == ".bgen":
             return indexer.get_variant(variant_id)
         else:
-            raise NotImplementedError(".bed not yet implemented")
+            index_dict, indexer = indexer
+            return indexer.get_variant(index_dict[variant_id], True)
 
     def _validate_summary_line(self, line, variant):
         print(f"Hello {line}")
-
+        print(variant)
