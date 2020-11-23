@@ -29,7 +29,18 @@ class Cleaner(Input):
         for chromosome in valid_chromosomes:
             print(chromosome)
 
-            validation, core = self._load_variants(chromosome)
+            load_path = str(self._select_file(chromosome))
+
+            validation, core = self._load_variants(load_path)
+
+            with mc.open_setter(self.summary_file)(self.summary_file) as file:
+                # Skip header row
+                file.readline()
+
+                # For each line in the GWAS Summary file
+                for index, line in enumerate(file):
+                    if index % 10000 == 0 and self.debug:
+                        print(f"{index}")
 
             break
 
@@ -75,20 +86,19 @@ class Cleaner(Input):
         valid_chromosomes.sort()
         return valid_chromosomes
 
-    def _load_variants(self, chromosome):
+    def _load_variants(self, load_path):
         """
-        Load variants, from bgen or bim. If Bim, standardise the variant to remove the morgan positioning so that the
-        two return times is a dict of variant ID: Variant(obj) rather than having BimVariant(obj) for plink files.
+        Load variants, for .bgen or plink files, as a set of snps that exist within the current chromosome. Uses the
+        validation percentage to construct a validation group, and returns the set of snps for each group. If hap_map_3
+        is enabled, it will strip out snps not in hap_map_3
 
-        :param chromosome: Current Chromosome
-        :return: Dict of Variant ID: Variant(Obj)
+        :param load_path: Current Chromosome file
+        :return: Set of the validation and core set
         """
-        load_path = str(self._select_file(chromosome))
         hap_map_3 = self._load_hap_map_3()
 
-        # Load the snps based on load type
+        #  Set validation and core sets of sids based on the load type
         if self.load_type == ".bed":
-            # Set validation and core sets of sids
             validation_size = self._set_validation_sample_size(Bed(load_path, count_A1=True).iid_count)
             validation = Bed(load_path, count_A1=True)[:validation_size, :].sid
             core = Bed(load_path, count_A1=True)[validation_size:, :].sid
@@ -96,8 +106,8 @@ class Cleaner(Input):
         elif self.load_type == ".bgen":
             # Set Validation and core sets of sids
             validation_size = self._set_validation_sample_size(Bgen(load_path).iid_count)
-            validation = [snp.split(",")[0] for snp in Bgen(load_path)[:validation_size, :].sid]
-            core = [snp.split(",")[0] for snp in Bgen(load_path)[validation_size:, :].sid]
+            validation = [snp.split(",")[1] for snp in Bgen(load_path)[:validation_size, :].sid]
+            core = [snp.split(",")[1] for snp in Bgen(load_path)[validation_size:, :].sid]
 
         else:
             raise Exception("Unknown load type set")
