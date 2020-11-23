@@ -10,14 +10,13 @@ class BimObject:
         Bim files need to be index via seek, so we can extract a given snp loci wihout having to store all of this of
         then in memory
         """
-        cumulative_seek = 0
         indexer = {}
-        for _ in self._bim_file:
-            line = self._bim_file.readline()
-            if len(line) > 0:
-                _, rs_id, _, _, _, _ = line.split()
-                indexer[rs_id] = cumulative_seek
-                cumulative_seek += len(line)
+        cumulative_seek = 0
+        for line in self._bim_file:
+            chromosome, variant_id, morgan_pos, bp_position, a1, a2 = line.split()
+            indexer[variant_id] = cumulative_seek
+            cumulative_seek += len(line)
+
         self._bim_file.close()
         return indexer
 
