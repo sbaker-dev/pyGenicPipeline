@@ -235,6 +235,10 @@ class BgenObject:
         return Variant(chromosome, pos, rs_id, alleles[0], alleles[1])
 
     def get_variant(self, name, dosage=False):
+        """
+        Gets the values of a variant called name. If dosage is set, extract the dosage information
+        """
+
         assert self.bgen_index, ec.bgen_index_violation("get_variant")
 
         # Fetching the variant
@@ -245,7 +249,7 @@ class BgenObject:
 
         # Constructing the results
         results = list(self._iter_seeks(seek_positions, dosage))[0]
-        assert results, ec
+        assert results, ec.bgen_no_variant_found(name)
         return results
 
     def _set_number_of_alleles(self):
@@ -286,4 +290,5 @@ class BgenObject:
 
     @staticmethod
     def _no_decompress(data):
+        """Don't decompress"""
         return data

@@ -42,6 +42,16 @@ def bgi_path_violation(bgi_path):
            f"BGI path type: {type(bgi_path)}"
 
 
+def bgen_index_violation(operation):
+    return f"NO INDEX HAS BEEN SET\n" \
+           f"Operation {operation} requires you to have a .bgi file made via bgenix which acts as a sql database in " \
+           f"which BgenObject will use"
+
+
+def bgen_no_variant_found(variant_name):
+    return f"NO VARIANT NAMED {variant_name} FOUND"
+
+
 # Input error codes
 def job_violation(jobs):
     return f"TO MANY JOBS SPECIFIED\n" \
@@ -124,3 +134,6 @@ def bed_matrix_order(file_name, order):
     return f"INVALID BED FILE ORDER for bed file at path: {file_name}\n" \
            f"Bed files have the third byte relate to the order, a 00 relating to sample and 01 variant yet found " \
            f"BED file matrix order {order}"
+
+
+
