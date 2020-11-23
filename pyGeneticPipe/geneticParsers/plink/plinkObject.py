@@ -2,6 +2,7 @@
 This is a modified version of pandas plink found at https://github.com/limix/pandas-plink to act more like plinkio
 available at https://github.com/mfranberg/libplinkio
 """
+from pyGeneticPipe.geneticParsers.plink.bimObject import BimObject
 from pyGeneticPipe.geneticParsers.supportObjects import BimVariant, BimByChromosome
 from pyGeneticPipe.geneticParsers.plink.bedObject import BedObject
 from pyGeneticPipe.utils import error_codes as ec
@@ -15,93 +16,14 @@ class PlinkObject:
         self.bed_path, self.bim_path, self.fam_path = self.validate_paths()
 
     def bed_object(self):
+        """Bed Object"""
         print("Starting bed")
         variant_number, sample_number = self.get_dimensions()
-        BedObject(self.bed_path, variant_number, sample_number)
+        return BedObject(self.bed_path, variant_number, sample_number)
 
     def bim_object(self):
-        """
-        Turns the bim file into a set of objects to be called.
-
-        :return: A BimObject for each line in the bim file
-        """
-        with open(self.bim_path) as f:
-
-            bim_variant_list = []
-            for line in f:
-                chromosome, variant_id, morgan_pos, bp_position, a1, a2 = line.split()
-                bim_variant_list.append(BimVariant(chromosome, variant_id, morgan_pos, bp_position, a1, a2))
-
-            return bim_variant_list
-
-    def bim_by_chromosome(self):
-        """
-        When validating, we may need to cross compare by chromosome. THis will take the bim information and reformat it
-        into a by chromosome rather than by snp.
-        """
-
-        # Extract the loci from the bim file
-        bim_loci = self.bim_object()
-
-        # Extract the unique sorted chromosomes
-        valid_chromosomes = np.unique([int(loci.chromosome) for loci in bim_loci])
-        valid_chromosomes.sort()
-
-        # Create a dict, where each key is chromosome with its snps ids, indexes of those ids, base pair positions of
-        # those ids and the nucleotides of those ids
-        chr_dict = {}
-        for chromosome in valid_chromosomes:
-            chr_dict[str(chromosome)] = {'sids': [], 'snp_indices': [], 'positions': [], 'nts': []}
-
-        # For everything found within the loci via bim, append it to the sub dict within the master dict
-        for i, loci in enumerate(bim_loci):
-            chr_dict[loci.chromosome]['sids'].append(loci.variant_id)
-            chr_dict[loci.chromosome]['snp_indices'].append(i)
-            chr_dict[loci.chromosome]['positions'].append(loci.bp_position)
-            chr_dict[loci.chromosome]['nts'].append([loci.a1, loci.a2])
-
-        # Return a ChromosomeBimObj for each chromosome
-        return [BimByChromosome(chromosome, values["sids"], values["snp_indices"], values["positions"], values["nts"])
-                for chromosome, values in zip(chr_dict.keys(), chr_dict.values())]
-
-    def validation_snps(self, accepted_chromosomes, hap_map_3):
-        """
-        Create a set of valid snps and a position map to them via plink or bgen with option censuring of chromosome and
-        snps via HapMap3
-
-        :param accepted_chromosomes: Allowed chromosomes, if a chromosome is found for a given snp that is not in this
-         list then this snp will be skipped
-
-        :param hap_map_3: If you only want to use hap_map_3 snps then you need to provide a path to that file
-
-        :return: A dict of snps where each snp has a key of base pair position (Position) and Chromosome AND
-                 A set of all the valid snps AND
-                 A set of all the valid chromosomes
-        """
-        snp_pos_map = {}
-        valid_snp = set()
-        valid_chromosomes = set()
-
-        with open(self.bim_path) as f:
-            for chromosome, variant_id, morgan_pos, bp_position, a1, a2 in f:
-                bim = BimVariant(chromosome, variant_id, morgan_pos, bp_position, a1, a2)
-                # If the user has specified certain chromosomes check that this snps chromosome is in accepted_list
-                if accepted_chromosomes and (bim.chromosome not in accepted_chromosomes):
-                    continue
-
-                # If the user has specified only to use snp id's from HapMap3 then check this condition
-                if hap_map_3 and (bim.variant_id in hap_map_3):
-                    valid_snp.add(bim.variant_id)
-                    snp_pos_map[bim.variant_id] = {"Position": int(bim.bp_position), "Chromosome": bim.chromosome}
-                    valid_chromosomes.add(bim.chromosome)
-
-                # Otherwise add to valid snps / snp_pos_map
-                else:
-                    valid_snp.add(bim.variant_id)
-                    snp_pos_map[bim.variant_id] = {"Position": int(bim.bp_position), "Chromosome": bim.chromosome}
-                    valid_chromosomes.add(bim.chromosome)
-
-        return snp_pos_map, valid_snp, valid_chromosomes
+        """Bim Object"""
+        return BimObject(self.bim_path)
 
     def validate_paths(self):
         """
