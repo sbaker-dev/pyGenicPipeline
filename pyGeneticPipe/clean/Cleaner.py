@@ -7,6 +7,8 @@ from pyGeneticPipe.core.Input import Input
 from pysnptools.distreader import Bgen
 from pysnptools.snpreader import Bed
 from pathlib import Path
+from scipy import stats
+import numpy as np
 import pickle
 import gzip
 import re
@@ -16,8 +18,8 @@ class Cleaner(Input):
     def __init__(self, args):
         super().__init__(args)
 
-        self._error_dict = {"Invalid_Snps": [], "Chromosome": {}, "Position": {}, "Effect_Size": {}, "P_Value": {},
-                            "Standard_Errors": {}, "Duplicate_Position": {}}
+        self._error_dict = {"Invalid_Snps": 0, "Chromosome": 0, "Position": 0, "Effect_Size": 0, "P_Value": 0,
+                            "Standard_Errors": 0, "Duplicate_Position": 0}
 
     def clean_summary_statistics(self):
 
@@ -47,7 +49,7 @@ class Cleaner(Input):
                     if (snp_id in validation) and (snp_id in core):
                         self._validate_summary_line(line, self._set_variant(snp_id, indexer))
                     else:
-                        self._error_dict["Invalid_Snps"].append(snp_id)
+                        self._error_dict["Invalid_Snps"] += 1
 
                     file.close()
                     break
@@ -189,5 +191,83 @@ class Cleaner(Input):
             return indexer.get_variant(index_dict[variant_id], True)
 
     def _validate_summary_line(self, line, variant):
-        print(f"Hello {line}")
-        print(variant)
+
+        # If we have chromosomes in our summary statistics check the chromosome of the snp against the validation
+        if self.sm_chromosome and line[self.sm_chromosome] != variant.chromosome:
+            self._error_dict["Chromosome"] += 1
+            return None
+
+        # If we have base pair position in our summary then validate the base pair
+        if self.sm_bp_position and int(line[self.sm_bp_position]) != variant.bp_position:
+            self._error_dict["Position"] += 1
+            return None
+
+        # Set beta unless it is not a finite number
+        beta = float(line[self.sm_effect_size])
+        if not np.isfinite(beta):
+            self._error_dict["Effect_Size"] += 1
+            return None
+
+        # Set p value as long as it is not zero or a non finite number
+        p_value = float(line[self.sm_p_value])
+        if not np.isfinite(p_value) or p_value == 0:
+            self._error_dict["P_Value"] += 1
+            return None
+
+        # calculate the beta and beta odds
+        beta, beta_odds = self._calculate_beta(beta, line, p_value)
+        if not beta or not beta_odds:
+            return None
+
+    def _calculate_beta(self, beta, line, p_value):
+        """
+        Calculate both the beta, and the beta odds depending on the effect_type and if the user wants to constructed a
+        standardised z score or not
+
+        :param beta: beta from summary stats
+        :type beta: float
+
+        :param line: The line of the current file
+        :type line: list
+
+        :param p_value: p value from summary stats
+        :type p_value: float
+
+        :return: If successful, return the beta and beta odds otherwise None and None
+        """
+
+        beta_odds = self._beta_by_type(beta)
+
+        # If effect type is Best linear unbiased prediction (BLUP) return beta
+        if self.effect_type == "BLUP":
+            return beta, beta_odds
+
+        # If we want to compute z scores, compute them as long as standard errors are valid
+        elif self.z_scores:
+            se = float(line[self.sm_standard_errors])
+            if not np.isfinite(se) or se == 0:
+                self._error_dict["Standard_Errors"] += 1
+                return None, None
+            else:
+                return self._beta_from_se(beta, beta_odds, se), beta_odds
+
+        # Otherwise compute beta from p values
+        else:
+            return np.sign(beta) * (stats.norm.ppf(p_value / 2.0) / np.sqrt(self.sample_size)), beta_odds
+
+    def _beta_from_se(self, beta, beta_typed, se):
+        """Calculate z score with standard error"""
+        if self.effect_type == "OR":
+            abs_beta = np.absolute(1 - beta) / se
+        else:
+            abs_beta = np.absolute(beta) / se
+        return np.sign(beta_typed) * (abs_beta / np.sqrt(self.sample_size))
+
+    def _beta_by_type(self, beta):
+        """
+        If we are working with ods rations we need to take the log of the read beta
+        """
+        if self.effect_type == "OR":
+            return np.log(beta)
+        else:
+            return beta
