@@ -3,11 +3,9 @@ This is a modified version of pandas plink found at https://github.com/limix/pan
 available at https://github.com/mfranberg/libplinkio
 """
 from pyGeneticPipe.geneticParsers.plink.bimObject import BimObject
-from pyGeneticPipe.geneticParsers.supportObjects import BimVariant, BimByChromosome
 from pyGeneticPipe.geneticParsers.plink.bedObject import BedObject
 from pyGeneticPipe.utils import error_codes as ec
 from pathlib import Path
-import numpy as np
 
 
 class PlinkObject:
@@ -24,6 +22,10 @@ class PlinkObject:
     def bim_object(self):
         """Bim Object"""
         return BimObject(self.bim_path)
+
+    def bim_index(self):
+        """Index of Bim files"""
+        return BimObject(self.bim_path).construct_index()
 
     def validate_paths(self):
         """
