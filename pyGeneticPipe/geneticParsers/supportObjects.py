@@ -6,7 +6,7 @@ class Variant:
         Contains variant information for bgen files, unlike Bim does not contain morgan position
         """
         self.chromosome = chromosome
-        self.bp_position = bp_position
+        self.bp_position = int(bp_position)
         self.variant_id = variant_id
         self.a1 = a1
         self.a2 = a2
@@ -26,8 +26,8 @@ class BimVariant:
         """
         self.chromosome = chromosome
         self.variant_id = variant_id
-        self.morgan_pos = morgan_pos
-        self.bp_position = bp_position
+        self.morgan_pos = float(morgan_pos)
+        self.bp_position = int(bp_position)
         self.a1 = a1
         self.a2 = a2
 
