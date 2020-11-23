@@ -30,8 +30,7 @@ class Cleaner(Input):
             print(chromosome)
 
             load_path = str(self._select_file(chromosome))
-
-            validation, core = self._load_variants(load_path)
+            validation, core, indexer = self._load_variants(load_path)
 
             with mc.open_setter(self.summary_file)(self.summary_file) as file:
                 # Skip header row
@@ -90,7 +89,9 @@ class Cleaner(Input):
         """
         Load variants, for .bgen or plink files, as a set of snps that exist within the current chromosome. Uses the
         validation percentage to construct a validation group, and returns the set of snps for each group. If hap_map_3
-        is enabled, it will strip out snps not in hap_map_3
+        is enabled, it will strip out snps not in hap_map_3.
+
+        We will also need a way to index out the variant information, so we set the indexer according to the load type
 
         :param load_path: Current Chromosome file
         :return: Set of the validation and core set
@@ -102,12 +103,15 @@ class Cleaner(Input):
             validation_size = self._set_validation_sample_size(Bed(load_path, count_A1=True).iid_count)
             validation = Bed(load_path, count_A1=True)[:validation_size, :].sid
             core = Bed(load_path, count_A1=True)[validation_size:, :].sid
+            indexer = None
+            raise NotImplementedError("No indexer set for .bed yet")
 
         elif self.load_type == ".bgen":
-            # Set Validation and core sets of sids
+            # Bgen files store [variant id, rsid], we just want the rsid hence the [1]; see https://bit.ly/2J0C1kC
             validation_size = self._set_validation_sample_size(Bgen(load_path).iid_count)
             validation = [snp.split(",")[1] for snp in Bgen(load_path)[:validation_size, :].sid]
             core = [snp.split(",")[1] for snp in Bgen(load_path)[validation_size:, :].sid]
+            indexer = BgenObject(load_path)
 
         else:
             raise Exception("Unknown load type set")
@@ -117,7 +121,7 @@ class Cleaner(Input):
             validation = [snp for snp in validation if snp in hap_map_3]
             core = [snp for snp in core if snp in hap_map_3]
 
-        return set(validation), set(core)
+        return set(validation), set(core), indexer
 
     def _load_hap_map_3(self):
         """
