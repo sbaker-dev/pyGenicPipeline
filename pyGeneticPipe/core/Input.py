@@ -23,7 +23,6 @@ class Input:
         self.load_type = self.args["Load_Type"]
         self.validation_size = self._set_validation_size(self.args["Validation_Size"])
 
-
         # Set summary statistics information if required
         self.zipped, self.sample_size = self._set_summary_stats()
         self._summary_headers = self._set_summary_headers()
@@ -217,7 +216,7 @@ class Input:
         :rtype: None | bool
         """
         if set_z_scores:
-            assert self.sum_standard_errors is not None, ec.z_scores_with_standard_errors
+            assert self.sm_standard_errors is not None, ec.z_scores_with_standard_errors
             return True
         else:
             return None
@@ -264,7 +263,7 @@ class Input:
         return "Chromosome"
 
     @property
-    def sum_chromosome(self):
+    def sm_chromosome(self):
         """Summary stat chromosome header index in GWAS summary file"""
         return self._summary_headers[self.chromosome]
 
@@ -274,7 +273,7 @@ class Input:
         return "SNP_ID"
 
     @property
-    def sum_snp_id(self):
+    def sm_snp_id(self):
         """Snp/variant id header index in GWAS summary file"""
         return self._summary_headers[self.snp_id]
 
@@ -284,7 +283,7 @@ class Input:
         return "Effect_Allele"
 
     @property
-    def sum_effect_allele(self):
+    def sm_effect_allele(self):
         """Effect allele header index in GWAS summary file"""
         return self._summary_headers[self.effect_allele]
 
@@ -294,7 +293,7 @@ class Input:
         return "Alt_Allele"
 
     @property
-    def sum_alt_allele(self):
+    def sm_alt_allele(self):
         """Alt allele header index in GWAS summary file"""
         return self._summary_headers[self.alt_allele]
 
@@ -304,7 +303,7 @@ class Input:
         return "BP_Position"
 
     @property
-    def sum_bp_position(self):
+    def sm_bp_position(self):
         """Base pair position header index in GWAS summary file"""
         return self._summary_headers[self.bp_position]
 
@@ -314,7 +313,7 @@ class Input:
         return "P_Value"
 
     @property
-    def sum_p_value(self):
+    def sm_p_value(self):
         """P value position header index in GWAS summary file"""
         return self._summary_headers[self.p_value]
 
@@ -324,7 +323,7 @@ class Input:
         return "Effect_size"
 
     @property
-    def sum_effect_size(self):
+    def sm_effect_size(self):
         """Effect size header index in GWAS summary file"""
         return self._summary_headers[self.effect_size]
 
@@ -334,7 +333,7 @@ class Input:
         return "Minor_Allele_Freq"
 
     @property
-    def sum_minor_allele_freq(self):
+    def sm_minor_allele_freq(self):
         """Minor allele Frequency header index in GWAS summary file"""
         return self._summary_headers[self.minor_allele_freq]
 
@@ -344,7 +343,7 @@ class Input:
         return "Info"
 
     @property
-    def sum_info(self):
+    def sm_info(self):
         """Info score header index in GWAS summary file"""
         return self._summary_headers[self.info]
 
@@ -354,7 +353,7 @@ class Input:
         return "Standard_Errors"
 
     @property
-    def sum_standard_errors(self):
+    def sm_standard_errors(self):
         """Standard error header index in GWAS summary file"""
         return self._summary_headers[self.standard_errors]
 
