@@ -14,7 +14,11 @@ header_keys:
 
 effect_types: ["OR", "LINREG", "LOGOR", "BLUP"]
 
-# # Snp types
-# self.ambiguous_snps = {('A', 'T'), ('T', 'A'), ('G', 'C'), ('C', 'G')}
-# self.allowed_alleles = {'A', 'T', 'C', 'G'}
-# self.allele_flip = {'A': 'T', 'G': 'C', 'T': 'A', 'C': 'G'}
+# Snp types
+ambiguous_snps: [['A', 'T'], ['T', 'A'], ['G', 'C'], ['C', 'G']]
+allowed_alleles: ['A', 'T', 'C', 'G']
+allele_flip:
+  'A': 'T'
+  'G': 'C'
+  'T': 'A'
+  'C': 'G'

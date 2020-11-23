@@ -29,6 +29,7 @@ class Input:
         self.frequencies = self.args["Summary_Frequency"]
         self.effect_type = self._set_effect_type(self.args["Summary_Effect_Type"])
         self.z_scores = self._set_z_scores(self.args["Z_Scores"])
+        self.ambiguous_snps, self.allowed_alleles, self.allele_flip = self._configure_alleles()
 
     @staticmethod
     def _set_args(args):
@@ -84,6 +85,14 @@ class Input:
         else:
             assert path and Path(path).exists(), ec.path_invalid(path, "_validate_path")
             return Path(path)
+
+    def _configure_alleles(self):
+        """
+        Yaml storage of tuples/ sets didn't work so this configures a list of lists into a set of tuples for ambiguous,
+        sets a set of allow alleles, and also returns the dict of allele_flip
+        """
+        ambiguous = set(tuple(ambiguous) for ambiguous in self._config["ambiguous_snps"])
+        return ambiguous, set(self._config["allowed_alleles"]), self._config["allele_flip"]
 
     def _set_summary_stats(self):
         """
