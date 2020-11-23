@@ -92,21 +92,20 @@ class SNPIndex:
         self.snp = sids
         self.index = index
         self.bp_position = bp_position
-        self.nucleotide = Nucleotide(nts)
+        self.nucleotide = Nucleotide(nts[0], nts[1])
 
     def __repr__(self):
         return f"{self.snp}: Index: {self.index} BP_Position: {self.bp_position} Nucleotide: {self.nucleotide}"
 
 
 class Nucleotide:
-    def __init__(self, nucleotide):
+    def __init__(self, a1, a2):
         """
-        Sometimes we need to work with saved nucleotides, so we can construct an object that allows us to extract the
-        first and second alleles based on what they written as; for example effect allele alt allele.
-        :param nucleotide:
+        Nucleotides, so we can construct an object that allows us to extract the first and second alleles based on what
+        they written as; for example effect allele alt allele.
         """
-        self.a1 = nucleotide[0]
-        self.a2 = nucleotide[1]
+        self.a1 = a1
+        self.a2 = a2
 
     def __repr__(self):
         """
