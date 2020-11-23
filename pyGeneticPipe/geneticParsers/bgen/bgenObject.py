@@ -165,6 +165,8 @@ class BgenObject:
 
     def iter_variant_info(self):
         """Iterate over marker information."""
+        assert self.bgen_index, ec.bgen_index_violation("iter_variant_info")
+
         self.bgen_index.execute(
             "SELECT chromosome, position, rsid, allele1, allele2 FROM Variant",
         )
@@ -175,6 +177,18 @@ class BgenObject:
             for chromosome, position, variant_id, a1, a2 in results:
                 yield Variant(chromosome, position, variant_id, a1, a2)
             results = self.bgen_index.fetchmany(self.iter_array_size)
+
+    def get_variant(self, name):
+        assert self.bgen_index, ec.bgen_index_violation("get_variant")
+
+
+        # Fetching the variant
+        a = self.bgen_index.execute("SELECT file_start_position FROM Variant WHERE rsid = ?", (name,))
+
+        print(a)
+
+
+
 
     @staticmethod
     def _set_bgi(bgen_path, bgi_file_path):
