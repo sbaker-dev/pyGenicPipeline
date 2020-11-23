@@ -1,12 +1,12 @@
 from pyGeneticPipe.geneticParsers.plink.plinkObject import PlinkObject
 from pyGeneticPipe.geneticParsers.bgen.bgenObject import BgenObject
+from pyGeneticPipe.geneticParsers.supportObjects import Variant
 from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils import misc as mc
 from pyGeneticPipe.core.Input import Input
 from pysnptools.distreader import Bgen
 from pysnptools.snpreader import Bed
 from pathlib import Path
-import numpy as np
 import pickle
 import gzip
 import re
@@ -41,8 +41,18 @@ class Cleaner(Input):
                     if index % 10000 == 0 and self.debug:
                         print(f"{index}")
 
-            break
+                    # Decode the line and extract the snp_id
+                    line = mc.decode_line(line, self.zipped)
+                    snp_id = line[self.sm_snp_id]
+                    if (snp_id in validation) and (snp_id in core):
+                        self._validate_summary_line(line, self._set_variant(snp_id, indexer))
+                    else:
+                        self._error_dict["Invalid_Snps"].append(snp_id)
 
+                    file.close()
+                    break
+
+            return
 
     def _select_file(self, chromosome):
         """
@@ -56,18 +66,6 @@ class Cleaner(Input):
                     return Path(self.load_directory, file)
 
         raise Exception(f"Failed to find any relevant file for {chromosome} in {self.load_directory}")
-
-    def _set_chromosome_dict(self):
-        valid_chromosomes = np.load(f"{self.working_dir}/{self.h5_valid_chromosome}.npy", allow_pickle=True).tolist()
-
-        chromosome_dict = {str(chromosome): {self.snp_id: [], self.bp_position: [], self.p_value: [], self.log_odds: [],
-                                             self.beta: [], self.nucleotide: [], self.info: [], self.frequency: []}
-                           for chromosome in valid_chromosomes}
-
-        # Load the valid snps to test the summary stats against
-        valid_snps = np.load(f"{self.working_dir}/{self.h5_valid_snps}.npy", allow_pickle=True).tolist()
-
-        return valid_snps, chromosome_dict
 
     def _validation_chromosomes(self):
         """
@@ -176,5 +174,20 @@ class Cleaner(Input):
         """
         return int(full_sample_size * self.validation_size)
 
-    def _validate_summary_line(self):
-        pass
+    def _set_variant(self, variant_id, indexer):
+        """
+        Get the variant id from genetic information based on load type
+        :param variant_id: Current snp name to extract
+        :param indexer: Indexer to extract from
+
+        :return: Variant
+        :rtype: Variant
+        """
+        if self.load_type == ".bgen":
+            return indexer.get_variant(variant_id)
+        else:
+            raise NotImplementedError(".bed not yet implemented")
+
+    def _validate_summary_line(self, line, variant):
+        print(f"Hello {line}")
+
