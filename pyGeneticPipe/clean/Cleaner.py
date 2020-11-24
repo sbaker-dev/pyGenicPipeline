@@ -132,7 +132,7 @@ class Cleaner(Input):
             validation_size = self._set_validation_sample_size(Bgen(load_path).iid_count)
             validation = [snp.split(",")[1] for snp in Bgen(load_path)[:validation_size, :].sid]
             core = [snp.split(",")[1] for snp in Bgen(load_path)[validation_size:, :].sid]
-            indexer = BgenObject(load_path)
+            indexer = [BgenObject(load_path).index_of_snps(),  BgenObject(load_path)]
 
         else:
             raise Exception("Unknown load type set")
@@ -206,10 +206,11 @@ class Cleaner(Input):
         :return: Variant
         :rtype: Variant
         """
+        index_dict, indexer = indexer
+
         if self.load_type == ".bgen":
-            return indexer.get_variant(variant_id)
+            return indexer.get_variant(index_dict[variant_id])
         else:
-            index_dict, indexer = indexer
             return indexer.get_variant(index_dict[variant_id], True)
 
     def _validate_summary_line(self, line, variant):
