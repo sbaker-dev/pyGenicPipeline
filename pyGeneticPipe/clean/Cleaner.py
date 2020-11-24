@@ -37,10 +37,11 @@ class Cleaner(Input):
 
             # Load the validation and core samples, as well as the indexer
             load_path = str(self._select_file(chromosome))
-            validation, core, indexer = self._load_variants(load_path)
+
+            validation, core = self._construct_validation(load_path)
 
             # Clean the summary statistics
-            sm_variants = self._clean_summary_stats(validation, core, indexer)
+            sm_variants = self._clean_summary_stats(load_path, validation, core)
             print(f"\nCleaned summary statistics for chromosome: {chromosome}\n{self._error_dict}")
 
             common_snps = self._common_snps(sm_variants)
@@ -48,11 +49,13 @@ class Cleaner(Input):
 
             return
 
-    def _clean_summary_stats(self, validation, core, indexer):
+    def _clean_summary_stats(self, load_path, validation, core):
         """
         This will take the validation and core sample of snps, and check the snp against both sets. If the snp exists in
         the validation files, then it will go to cleaning the summary statistics for this chromosome line by line.
         """
+
+        validation_snps, core_snps, indexer = self._load_variants(load_path, validation, core)
 
         sm_variants = []
         with mc.open_setter(self.summary_file)(self.summary_file) as file:
@@ -69,7 +72,7 @@ class Cleaner(Input):
                 snp_id = line[self.sm_snp_id]
 
                 # If the snp exists in both the validation and core snp samples then clean this line, else skip.
-                if (snp_id in validation) and (snp_id in core):
+                if (snp_id in validation_snps) and (snp_id in core_snps):
                     sm_variant = self._validate_summary_line(line, self._set_variant(snp_id, indexer))
                     if sm_variant:
                         sm_variants.append(sm_variant)
@@ -77,12 +80,10 @@ class Cleaner(Input):
                 else:
                     self._error_dict["Invalid_Snps"] += 1
 
-        # todo: we may not need indexing after this and if not it should be constructed here so we don't hold onto the
-        #  memory
-
-        # Given we have only accepted snps that are within the validation, we should never have more snps in summary
-        # than within the validation. If we do, something has gone critically wrong.
-        assert len(sm_variants) <= len(validation), ec.snp_overflow(len(sm_variants), len(validation))
+        # Given we have only accepted snps that are within the validation / core, we should never have more snps in
+        # summary than within the validation. If we do, something has gone critically wrong.
+        assert len(sm_variants) <= len(validation_snps), ec.snp_overflow(len(sm_variants), len(validation_snps))
+        assert len(sm_variants) <= len(core_snps), ec.snp_overflow(len(sm_variants), len(core_snps))
         return sm_variants
 
     def _select_file(self, chromosome):
@@ -114,7 +115,34 @@ class Cleaner(Input):
         valid_chromosomes.sort()
         return valid_chromosomes
 
-    def _load_variants(self, load_path):
+    def _construct_validation(self, load_path):
+        """
+        We need to construct a validation sample from the percentage the user provided and the iid_count, this then
+        returns this slice of the sample from the start up to this percentage (Uses int so may be slightly above or
+        below the percentage provided based on rounding / floating point errors), and then the rest of the sample of the
+        core set
+
+        :param load_path: Path to the relevant load file
+        :return: The validation and core sample class holders
+        """
+        #  Set validation and core sets of sids based on the load type
+        if self.load_type == ".bed":
+            validation_size = self._set_validation_sample_size(Bed(load_path, count_A1=True).iid_count)
+            validation = Bed(load_path, count_A1=True)[:validation_size, :]
+            core = Bed(load_path, count_A1=True)[validation_size:, :]
+            return validation, core
+
+        elif self.load_type == ".bgen":
+            # Bgen files store [variant id, rsid], we just want the rsid hence the [1]; see https://bit.ly/2J0C1kC
+            validation_size = self._set_validation_sample_size(Bgen(load_path).iid_count)
+            validation = Bgen(load_path)[:validation_size, :]
+            core = Bgen(load_path)[validation_size:, :]
+            return validation, core
+
+        else:
+            raise Exception("Unknown load type set")
+
+    def _load_variants(self, load_path, validation, core):
         """
         Load variants, for .bgen or plink files, as a set of snps that exist within the current chromosome. Uses the
         validation percentage to construct a validation group, and returns the set of snps for each group. If hap_map_3
@@ -129,16 +157,14 @@ class Cleaner(Input):
 
         #  Set validation and core sets of sids based on the load type
         if self.load_type == ".bed":
-            validation_size = self._set_validation_sample_size(Bed(load_path, count_A1=True).iid_count)
-            validation = Bed(load_path, count_A1=True)[:validation_size, :].sid
-            core = Bed(load_path, count_A1=True)[validation_size:, :].sid
+            validation = validation.sid
+            core = core.sid
             indexer = [PlinkObject(load_path).bim_index(), PlinkObject(load_path).bim_object()]
 
         elif self.load_type == ".bgen":
             # Bgen files store [variant id, rsid], we just want the rsid hence the [1]; see https://bit.ly/2J0C1kC
-            validation_size = self._set_validation_sample_size(Bgen(load_path).iid_count)
-            validation = [snp.split(",")[1] for snp in Bgen(load_path)[:validation_size, :].sid]
-            core = [snp.split(",")[1] for snp in Bgen(load_path)[validation_size:, :].sid]
+            validation = [snp.split(",")[1] for snp in validation.sid]
+            core = [snp.split(",")[1] for snp in core.sid]
             indexer = [BgenObject(load_path).index_of_snps(),  BgenObject(load_path)]
 
         else:
