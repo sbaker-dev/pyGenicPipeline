@@ -1,4 +1,4 @@
-from pyGeneticPipe.geneticParsers.supportObjects import Variant, Nucleotide
+from pyGeneticPipe.geneticParsers.supportObjects import Variant, Nucleotide, SMVariant
 from pyGeneticPipe.geneticParsers.plink.plinkObject import PlinkObject
 from pyGeneticPipe.geneticParsers.bgen.bgenObject import BgenObject
 from pyGeneticPipe.utils import error_codes as ec
@@ -56,6 +56,37 @@ class Cleaner(Input):
                     break
 
             return
+
+    def _clean_summary_stats(self, validation, core, indexer):
+        """
+        This will take the validation and core sample of snps, and check the snp against both sets. If the snp exists in
+        the validation files, then it will go to cleaning the summary statistics for this chromosome line by line.
+        """
+
+        sm_variants = []
+        with mc.open_setter(self.summary_file)(self.summary_file) as file:
+            # Skip header row
+            file.readline()
+
+            # For each line in the GWAS Summary file
+            for index, line in enumerate(file):
+                if index % 10000 == 0 and self.debug:
+                    print(f"{index}")
+
+                # Decode the line and extract the snp_id
+                line = mc.decode_line(line, self.zipped)
+                snp_id = line[self.sm_snp_id]
+
+                # If the snp exists in both the validation and core snp samples then clean this line, else skip.
+                if (snp_id in validation) and (snp_id in core):
+                    sm_variant = self._validate_summary_line(line, self._set_variant(snp_id, indexer))
+                    if sm_variant:
+                        sm_variants.append(sm_variant)
+
+                else:
+                    self._error_dict["Invalid_Snps"] += 1
+
+        return sm_variants
 
     def _select_file(self, chromosome):
         """
@@ -239,7 +270,7 @@ class Cleaner(Input):
             return None
 
         # Check if nucleotides need to be flipped
-        beta, beta_odds = self.flip_nucleotide(variant, sm_nucleotide, beta, beta_odds)
+        beta, beta_odds = self._flip_nucleotide(variant, sm_nucleotide, beta, beta_odds)
         if not beta or not beta_odds:
             self._error_dict["Non_Matching"] += 1
             return None
@@ -254,9 +285,9 @@ class Cleaner(Input):
         if self.frequencies:
             frequency = self._sum_stats_frequencies()
 
-        # todo look up the dosages and what they are actually used for in the next step
-
-        print("HH")
+        # Return a object with all this information if all the checks pass
+        return SMVariant(variant.chromosome, variant.variant_id, variant.bp_position, variant.a1, variant.a2, beta,
+                         beta_odds, p_value, info, frequency)
 
     def _calculate_beta(self, beta, line, p_value):
         """
@@ -310,7 +341,7 @@ class Cleaner(Input):
         else:
             return beta
 
-    def flip_nucleotide(self, variant, sm_nucleotide, beta, beta_odds):
+    def _flip_nucleotide(self, variant, sm_nucleotide, beta, beta_odds):
         """
         Checks to see if the summary stats requires flipping by comparing it to the genetic variant from our sample and
         the flipped variant.
