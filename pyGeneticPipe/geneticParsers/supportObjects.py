@@ -76,6 +76,10 @@ class SMVariant:
         self.info = info
         self.frequency = frequency
 
+    def bgen_variant_id(self):
+        """Bgen for pysnptools requires the variant and rs-id but in this case we just submit the same for both"""
+        return f"{self.variant_id},{self.variant_id}"
+
 
 class Nucleotide:
     def __init__(self, a1, a2):
