@@ -21,6 +21,10 @@ class Variant:
         else:
             return self.a1, self.a2
 
+    def bgen_variant_id(self):
+        """Bgen for pysnptools requires the variant and rs-id but in this case we just submit the same for both"""
+        return f"{self.variant_id},{self.variant_id}"
+
 
 class BimVariant:
     __slots__ = ["chromosome", "variant_id", "morgan_pos", "bp_position", "a1", "a2"]
@@ -71,51 +75,6 @@ class SMVariant:
         self.p_value = p_value
         self.info = info
         self.frequency = frequency
-
-
-class BimByChromosome:
-    def __init__(self, chromosome, variant_ids, indexes, bp_positions, nucleotides):
-        """
-        Sometimes we may need to have bim information by chromosome, this will contain all the information required from
-        the bim files, but for a given chromosome.
-        """
-        self.chromosome = chromosome
-        self.snps = variant_ids  # Will still need this as we want to check for common snps across types
-        self.indexes = indexes
-        self.positions = bp_positions
-        self.nucleotides = nucleotides
-        self.indexed_snps = {snp_id: index for snp_id, index in zip(self.snps, self.indexes)}
-
-        self.snp_information = {sids: SNPIndex(sids, i, position, nts)
-                                for sids, i, position, nts in zip(variant_ids, indexes, bp_positions, nucleotides)}
-
-    def __repr__(self):
-        """
-        Human readable printing
-        :return: Just the chromosome number
-        """
-        return f"BimByChromosome {self.chromosome}"
-
-    def extract_snp(self, variant):
-        """
-        Return a snp from snp information
-
-        :param variant: A snp, such as rs3131962
-        :return: A SNPIndex containing the information for that snp
-        """
-        return self.snp_information[variant]
-
-
-class SNPIndex:
-    def __init__(self, sids, index, bp_position, nts):
-
-        self.snp = sids
-        self.index = index
-        self.bp_position = bp_position
-        self.nucleotide = Nucleotide(nts[0], nts[1])
-
-    def __repr__(self):
-        return f"{self.snp}: Index: {self.index} BP_Position: {self.bp_position} Nucleotide: {self.nucleotide}"
 
 
 class Nucleotide:
