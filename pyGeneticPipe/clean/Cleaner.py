@@ -6,6 +6,7 @@ from pyGeneticPipe.utils import misc as mc
 from pyGeneticPipe.core.Input import Input
 from pysnptools.distreader import Bgen
 from pysnptools.snpreader import Bed
+from operator import itemgetter
 from pathlib import Path
 from scipy import stats
 import numpy as np
@@ -42,6 +43,9 @@ class Cleaner(Input):
             sm_variants = self._clean_summary_stats(validation, core, indexer)
             print(f"\nCleaned summary statistics for chromosome: {chromosome}\n{self._error_dict}")
 
+            common_snps = self._common_snps(sm_variants)
+
+
             return
 
     def _clean_summary_stats(self, validation, core, indexer):
@@ -72,6 +76,9 @@ class Cleaner(Input):
 
                 else:
                     self._error_dict["Invalid_Snps"] += 1
+
+        # todo: we may not need indexing after this and if not it should be constructed here so we don't hold onto the
+        #  memory
 
         # Given we have only accepted snps that are within the validation, we should never have more snps in summary
         # than within the validation. If we do, something has gone critically wrong.
@@ -360,6 +367,31 @@ class Cleaner(Input):
                 return None, None
         else:
             return beta, beta_odds
+
+    def _common_snps(self, sm_variants):
+        """
+        Because we require a snp to be within the validation and core samples in order to be accepted, we know that the
+        size of sm_variants will be less than or equal to the number in the genetic samples. As such the common snps,
+        are the snps in the summary statistics after cleaning.
+
+        Given we will be using these snps for dosage, and dosage extraction requires snps to be in a set format, here
+        we construct a list of snps and order them by their base pair position in a format of:
+
+        .bed: ["rs123", "rs124", ... "rsN"]
+        .bgen: ["rs123,rs123", "rs124,rs124", ... "rsN,rsN"]
+
+        :param sm_variants: The variants found in the summary statistics cleaning stage for this chromosome
+        :return: snps order by base pair position in the format of the load type.
+        """
+
+        if self.load_type == ".bed":
+            variant_by_bp = [[variant.variant_id, variant.bp_position] for variant in sm_variants]
+        elif self.load_type == ".bgen":
+            variant_by_bp = [[variant.bgen_variant_id, variant.bp_position] for variant in sm_variants]
+        else:
+            raise Exception(f"Critical Error: Unknown load type {self.load_type} found in _common_snps")
+
+        return [rs_id for rs_id, bp in sorted(variant_by_bp, key=itemgetter(1))]
 
     def _sum_stats_frequencies(self):
         raise NotImplementedError("Frequencies are not yet implemented")
