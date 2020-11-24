@@ -24,36 +24,23 @@ class Cleaner(Input):
 
     def clean_summary_statistics(self):
 
+        # Note - this is basiclly becoming the -main- of prs, so will want to extract the chromosome bit so that it can
+        # run in a multi-core manner
+
         # Check for input arguments
         self._assert_clean_summary_statistics()
-
         valid_chromosomes = self._validation_chromosomes()
 
         for chromosome in valid_chromosomes:
-            print(chromosome)
+            print(f"Starting Chromosome: {chromosome}")
 
+            # Load the validation and core samples, as well as the indexer
             load_path = str(self._select_file(chromosome))
             validation, core, indexer = self._load_variants(load_path)
 
-            with mc.open_setter(self.summary_file)(self.summary_file) as file:
-                # Skip header row
-                file.readline()
-
-                # For each line in the GWAS Summary file
-                for index, line in enumerate(file):
-                    if index % 10000 == 0 and self.debug:
-                        print(f"{index}")
-
-                    # Decode the line and extract the snp_id
-                    line = mc.decode_line(line, self.zipped)
-                    snp_id = line[self.sm_snp_id]
-                    if (snp_id in validation) and (snp_id in core):
-                        self._validate_summary_line(line, self._set_variant(snp_id, indexer))
-                    else:
-                        self._error_dict["Invalid_Snps"] += 1
-
-                    file.close()
-                    break
+            # Clean the summary statistics
+            sm_variants = self._clean_summary_stats(validation, core, indexer)
+            print(f"\nCleaned summary statistics for chromosome: {chromosome}\n{self._error_dict}")
 
             return
 
@@ -355,11 +342,14 @@ class Cleaner(Input):
         # that flipping is required
         gen_flipped = Nucleotide(self.allele_flip[variant.a1], self.allele_flip[variant.a2])
 
+        # If either condition is not meet then we need to try to flip the nucleotide, else return beta and beta odds
         if not (np.all(variant.nucleotide(True) == sm_nucleotide.to_list())) or \
                 (np.all(gen_flipped.to_list() == sm_nucleotide.to_list())):
 
             flip_nts = (variant.a2 == sm_nucleotide.a1 and variant.a1 == sm_nucleotide.a2) or (
                     gen_flipped.a2 == sm_nucleotide.a1 and gen_flipped.a1 == sm_nucleotide.a2)
+
+            # If flip successful then invert beta and beta_odds, else return none
             if flip_nts:
                 return -beta, -beta_odds
             else:
