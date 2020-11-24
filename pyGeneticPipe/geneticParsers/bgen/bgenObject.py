@@ -193,11 +193,12 @@ class BgenObject:
                 yield Variant(chromosome, position, variant_id, a1, a2)
             results = self.bgen_index.fetchmany(self.iter_array_size)
 
-    def _iter_seeks(self, seeks, dosage):
-        """Iterate over seek positions."""
-        for seek in seeks:
-            self._bgen_binary.seek(seek)
-            yield self._read_current_variant(dosage)
+    def get_variant(self, seek, dosage=False):
+        """
+        Use the index of seek to move to the location of the variant in the file, then return the variant as Variant
+        """
+        self._bgen_binary.seek(seek)
+        return self._read_current_variant(dosage)
 
     def _read_current_variant(self, dosage):
         """Reads the current variant."""
@@ -234,23 +235,32 @@ class BgenObject:
         # Return the Variant - currently only supports first two alleles
         return Variant(chromosome, pos, rs_id, alleles[0], alleles[1])
 
-    def get_variant(self, name, dosage=False):
+    def index_from_snps(self, snp_names):
         """
-        Gets the values of a variant called name. If dosage is set, extract the dosage information
+        Construct the seek index for all snps provide as a list or tuple of snp_names
         """
-
         assert self.bgen_index, ec.bgen_index_violation("get_variant")
 
-        # Fetching the variant
-        self.bgen_index.execute("SELECT file_start_position FROM Variant WHERE rsid = ?", (name,))
+        # Select all the variants where the rsid is in the names provided
+        self.bgen_index.execute("SELECT file_start_position FROM Variant WHERE rsid IN {}".format(tuple(snp_names)))
 
         # Fetching all the seek positions
         seek_positions = [index[0] for index in self.bgen_index.fetchall()]
 
-        # Constructing the results
-        results = list(self._iter_seeks(seek_positions, dosage))[0]
-        assert results, ec.bgen_no_variant_found(name)
-        return results
+        # Return a dict of type {Name: seek}
+        return {name: seek for name, seek in zip(snp_names, seek_positions)}
+
+    def index_of_snps(self):
+        """
+        Construct the seek index for all the snps in the file
+        """
+        assert self.bgen_index, ec.bgen_index_violation("get_variant")
+
+        # Fetching all the seek positions
+        self.bgen_index.execute("SELECT file_start_position, rsid FROM Variant")
+
+        # Return a dict of type {Name: seek}
+        return {name: seek for seek, name in self.bgen_index.fetchall()}
 
     def _set_number_of_alleles(self):
         """
