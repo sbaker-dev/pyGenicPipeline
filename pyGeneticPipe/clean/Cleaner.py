@@ -6,6 +6,7 @@ from pyGeneticPipe.utils import misc as mc
 from pyGeneticPipe.core.Input import Input
 from pysnptools.distreader import Bgen
 from pysnptools.snpreader import Bed
+from collections import Counter
 from operator import itemgetter
 from pathlib import Path
 from scipy import stats
@@ -44,8 +45,8 @@ class Cleaner(Input):
             sm_variants = self._clean_summary_stats(load_path, validation, core)
             print(f"\nCleaned summary statistics for chromosome: {chromosome}\n{self._error_dict}")
 
-            common_snps = self._common_snps(sm_variants)
-
+            # Isolate the ordered on bp_position common snps to extract the dosage information on core and validation
+            self._isolate_dosage(validation, core, sm_variants, load_path)
 
             return
 
@@ -394,7 +395,7 @@ class Cleaner(Input):
         else:
             return beta, beta_odds
 
-    def _common_snps(self, sm_variants):
+    def _common_ordered_snps(self, sm_variants):
         """
         Because we require a snp to be within the validation and core samples in order to be accepted, we know that the
         size of sm_variants will be less than or equal to the number in the genetic samples. As such the common snps,
@@ -418,6 +419,60 @@ class Cleaner(Input):
             raise Exception(f"Critical Error: Unknown load type {self.load_type} found in _common_snps")
 
         return [rs_id for rs_id, bp in sorted(variant_by_bp, key=itemgetter(1))]
+
+    def _isolate_dosage(self, validation, core, sm_variants, load_path):
+
+        print(validation)
+        print(core)
+        print(len(sm_variants))
+        if self.load_type == ".bed":
+            validation = Bed(load_path, count_A1=True)
+            ordered_common = validation[:, validation.sid_to_index(self._common_ordered_snps(sm_variants))].read().val
+
+        elif self.load_type == ".bgen":
+            print("Bgen load type, so need to restructure return type ... will take longer!")
+            validation = Bgen(load_path)
+            ordered_common = validation[:, validation.sid_to_index(self._common_ordered_snps(sm_variants))].read().val
+        else:
+            raise Exception(f"Critical Error: Unknown load type {self.load_type} found in _isolate_dosage")
+
+        # LDPred used a system of snps*ids but pysnptools uses ids*snps so we need to invert them
+        dosage = self.flip_list(ordered_common)
+
+        print(dosage[0])
+
+        frequency = np.sum(dosage, 1, dtype='float32') / (2 * float(len(dosage[0])))
+
+        print(frequency)
+
+    def flip_list(self, list_of_lists):
+        """
+        This will take a list of lists, and then flip it. It requires all sub lists to be the same length.
+
+        NOTE: This is very heavy in performance and could use a speed up
+        """
+
+        list_of_keys = Counter([len(sub_list) for sub_list in list_of_lists])
+        sub_key_length = list(list_of_keys.keys())
+
+        value_dict = {0: 2, 1: 1,  2: 0}
+
+        if len(list_of_keys.keys()) == 1:
+            if self.load_type == ".bgen":
+                # Load the dosages for each individual, but it gets loaded as [1, 0, 0] OR [0, 1, 0] OR [0, 0, 1] unlike
+                # the plink file so we have to reorder this for consistency.
+                return [np.array([np.where(sub[i] == 1)[0][0] for sub in list_of_lists])
+                        for i in range(sub_key_length[0])]
+
+            elif self.load_type == ".bed":
+                # returns the operssite of ldpred so we need to remap 0 - 2 and 2 - 0
+                return [np.array([value_dict[int(sub[i])] for sub in list_of_lists], dtype=np.int8)
+                        for i in range(sub_key_length[0])]
+            else:
+                raise Exception(f"Critical Error: Unknown load type {self.load_type} found in _isolate_dosage")
+
+        else:
+            raise Exception(f"Sub lists should be all of the same length yet found lengths {sub_key_length}")
 
     def _sum_stats_frequencies(self):
         raise NotImplementedError("Frequencies are not yet implemented")
