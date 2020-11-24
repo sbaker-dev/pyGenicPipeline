@@ -73,6 +73,9 @@ class Cleaner(Input):
                 else:
                     self._error_dict["Invalid_Snps"] += 1
 
+        # Given we have only accepted snps that are within the validation, we should never have more snps in summary
+        # than within the validation. If we do, something has gone critically wrong.
+        assert len(sm_variants) <= len(validation), ec.snp_overflow(len(sm_variants), len(validation))
         return sm_variants
 
     def _select_file(self, chromosome):

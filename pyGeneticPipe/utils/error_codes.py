@@ -124,6 +124,13 @@ def ambiguous_header(header, found_headers, match_headers):
            f"Founding {found_headers} indexes for {header} by matching {match_headers}"
 
 
+def snp_overflow(summary_length, validation_length):
+    return f"CRITICAL ERROR: MORE SUMMARY SNPS SELECTED THAN EXIST IN VALIDATION\n" \
+           f"Cleaning summary statistics checks if a snp is within the genetic file or not, and only then cleans it" \
+           f".\nTherefore, it should be impossible to have more snps select than the number found in the validation." \
+           f"\nYet Found Summary: {len(summary_length)} Validation: {validation_length}"
+
+
 # bed file codes
 def bed_magic_violation(file_name, magic):
     return f"INVALID BED FILE for file at path: {file_name}\n" \
