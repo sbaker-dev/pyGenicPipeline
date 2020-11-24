@@ -53,6 +53,26 @@ class BimVariant:
         return Variant(self.chromosome, self.bp_position, self.variant_id, self.a1, self.a2)
 
 
+class SMVariant:
+    __slots__ = ["chromosome", "variant_id", "bp_position", "a1", "a2", "beta", "beta_odds", "p_value", "info",
+                 "frequency"]
+
+    def __init__(self, chromosome, variant_id, bp_position, a1, a2, beta, beta_odds, p_value, info, frequency):
+        """
+        Contains Summary variant information
+        """
+        self.chromosome = chromosome
+        self.variant_id = variant_id
+        self.bp_position = bp_position
+        self.a1 = a1
+        self.a2 = a2
+        self.beta = beta
+        self.beta_odds = beta_odds
+        self.p_value = p_value
+        self.info = info
+        self.frequency = frequency
+
+
 class BimByChromosome:
     def __init__(self, chromosome, variant_ids, indexes, bp_positions, nucleotides):
         """
