@@ -413,7 +413,7 @@ class Cleaner(Input):
         if self.load_type == ".bed":
             variant_by_bp = [[variant.variant_id, variant.bp_position] for variant in sm_variants]
         elif self.load_type == ".bgen":
-            variant_by_bp = [[variant.bgen_variant_id, variant.bp_position] for variant in sm_variants]
+            variant_by_bp = [[variant.bgen_variant_id(), variant.bp_position] for variant in sm_variants]
         else:
             raise Exception(f"Critical Error: Unknown load type {self.load_type} found in _common_snps")
 
