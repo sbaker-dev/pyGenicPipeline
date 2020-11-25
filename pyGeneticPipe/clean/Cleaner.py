@@ -439,21 +439,79 @@ class Cleaner(Input):
             print("Bgen load type, so need to restructure return type ... will take longer!")
             validation = Bgen(load_path)
             ordered_common = validation[:, validation.sid_to_index(self._common_ordered_snps(sm_variants))].read().val
+
+            print(len(ordered_common))
+
+            ordered_common = np.array([np.sum(ordered_common.T[i], axis=1) for i in range(len(ordered_common.T))])
+
+            snp_stuff = np.array([self._bgen_alleles(snp) for snp in ordered_common.T])
+
+            print(np.mean(snp_stuff, axis=1))
+
+
         else:
             raise Exception(f"Critical Error: Unknown load type {self.load_type} found in _isolate_dosage")
 
-        # LDPred used a system of snps*ids but pysnptools uses ids*snps so we need to invert them
-        dosage = self.flip_list(ordered_common)
 
-        print(dosage[0])
+        # np.save(r"C:\Users\Samuel\Documents\Genetic_Examples\PolyTutOut\Working\Test_raw2", ordered_common)
 
-        frequency = np.sum(dosage, 1, dtype='float32') / (2 * float(len(dosage[0])))
 
-        print(frequency)
+        # frequency = np.sum([np.sum([snp[i] for individual in ordered_common for snp in individual]) * i for i in range(1, 3)], axis=1)
+        # print(frequency)
+        #
+        #
+        # for snp in self._common_ordered_snps(sm_variants):
+        #     ordered_common = validation[:, validation.sid_to_index([snp])].read().val
+        #
+        #     print(ordered_common[0])
+        #
+        #     np.save(r"C:\Users\Samuel\Documents\Genetic_Examples\PolyTutOut\Working\Test_raw", ordered_common)
+        #
+        #     # LDPred used a system of snps*ids but pysnptools uses ids*snps so we need to invert them
+        #     dosage = self.flip_list(ordered_common)
+        #
+        #     print(dosage[0])
+        #
+        #     print(np.sum(dosage))
+        #     print(np.sum(dosage, 1))
+        #
+        #
+        #     frequency = np.sum(dosage, 1, dtype='float32') / (2 * float(len(dosage[0])))
+        #
+        #     np.save(r"C:\Users\Samuel\Documents\Genetic_Examples\PolyTutOut\Working\Test_array", dosage)
+        #
+        #     print(frequency)
+        #
+        #     break
+
+
+
+
+        print("Set snps")
+
+        # # LDPred used a system of snps*ids but pysnptools uses ids*snps so we need to invert them
+        # dosage = self.flip_list(ordered_common)
+        #
+        # print(dosage[0])
+        #
+        # frequency = np.sum(dosage, 1, dtype='float32') / (2 * float(len(dosage[0])))
+        #
+        # print(frequency)
 
         # todo This is very slow, and looks like it has the potential to be very memeory intensive try access a single
         #  snp at a time and construct a dosage that way, and then we can just hold dosage data for a single snp across
         #  individuals at a time. May also need to better configure flip_lists to take arguments in terms of config
+
+    @staticmethod
+    def _bgen_alleles(snp):
+        """Current holder for numpy construction of alleles"""
+        snp_values = []
+        for i, snp_count in enumerate(snp):
+            empty = np.empty(int(snp_count), dtype=np.int8)
+            empty.fill(i)
+            snp_values.append(empty)
+
+        return np.array(np.concatenate(snp_values))
 
     def flip_list(self, list_of_lists):
         """
