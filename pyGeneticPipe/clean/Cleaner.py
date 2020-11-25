@@ -435,76 +435,48 @@ class Cleaner(Input):
             validation = Bed(load_path, count_A1=True)
             ordered_common = validation[:, validation.sid_to_index(self._common_ordered_snps(sm_variants))].read().val
 
+            # Restructure bed to be snp - individual
+            raw_dosage = np.array([self._bed_alleles(snp) for snp in ordered_common.T])
+
         elif self.load_type == ".bgen":
-            print("Bgen load type, so need to restructure return type ... will take longer!")
+            print("Bgen load type, so need to restructure return type ... will take a bit longer longer!")
             validation = Bgen(load_path)
             ordered_common = validation[:, validation.sid_to_index(self._common_ordered_snps(sm_variants))].read().val
 
-            print(len(ordered_common))
-
+            # Restructure bgen to be allele - snp - individual
             ordered_common = np.array([np.sum(ordered_common.T[i], axis=1) for i in range(len(ordered_common.T))])
 
-            snp_stuff = np.array([self._bgen_alleles(snp) for snp in ordered_common.T])
-
-            print(np.mean(snp_stuff, axis=1))
-
+            raw_dosage = np.array([self._bgen_alleles(snp) for snp in ordered_common.T])
 
         else:
             raise Exception(f"Critical Error: Unknown load type {self.load_type} found in _isolate_dosage")
 
+        print(raw_dosage[0])
+        print(np.mean(raw_dosage, axis=1))
 
-        # np.save(r"C:\Users\Samuel\Documents\Genetic_Examples\PolyTutOut\Working\Test_raw2", ordered_common)
+    @staticmethod
+    def _bed_alleles(snp):
+        """
+        If we have a bed file, then we will have alleles be in the format of snp - id, so we need to get the number of
+        each number [0, 1, 2] for each snp. bed has the reverse to bgen and what ldpred has so they are flipped.
+        """
 
+        allele_number, allele_count = np.unique(snp, return_counts=True)
 
-        # frequency = np.sum([np.sum([snp[i] for individual in ordered_common for snp in individual]) * i for i in range(1, 3)], axis=1)
-        # print(frequency)
-        #
-        #
-        # for snp in self._common_ordered_snps(sm_variants):
-        #     ordered_common = validation[:, validation.sid_to_index([snp])].read().val
-        #
-        #     print(ordered_common[0])
-        #
-        #     np.save(r"C:\Users\Samuel\Documents\Genetic_Examples\PolyTutOut\Working\Test_raw", ordered_common)
-        #
-        #     # LDPred used a system of snps*ids but pysnptools uses ids*snps so we need to invert them
-        #     dosage = self.flip_list(ordered_common)
-        #
-        #     print(dosage[0])
-        #
-        #     print(np.sum(dosage))
-        #     print(np.sum(dosage, 1))
-        #
-        #
-        #     frequency = np.sum(dosage, 1, dtype='float32') / (2 * float(len(dosage[0])))
-        #
-        #     np.save(r"C:\Users\Samuel\Documents\Genetic_Examples\PolyTutOut\Working\Test_array", dosage)
-        #
-        #     print(frequency)
-        #
-        #     break
+        snp_values = []
+        for i, snp_count in zip(allele_number[::-1], allele_count):
+            empty = np.empty(int(snp_count), dtype=np.int8)
+            empty.fill(i)
+            snp_values.append(empty)
 
-
-
-
-        print("Set snps")
-
-        # # LDPred used a system of snps*ids but pysnptools uses ids*snps so we need to invert them
-        # dosage = self.flip_list(ordered_common)
-        #
-        # print(dosage[0])
-        #
-        # frequency = np.sum(dosage, 1, dtype='float32') / (2 * float(len(dosage[0])))
-        #
-        # print(frequency)
-
-        # todo This is very slow, and looks like it has the potential to be very memeory intensive try access a single
-        #  snp at a time and construct a dosage that way, and then we can just hold dosage data for a single snp across
-        #  individuals at a time. May also need to better configure flip_lists to take arguments in terms of config
+        return np.array(np.concatenate(snp_values))
 
     @staticmethod
     def _bgen_alleles(snp):
-        """Current holder for numpy construction of alleles"""
+        """
+        Bgen has snps as a [1, 0, 0][0, 1, 0][0, 0, 1] format to record for snps as 0, 1, and 2. We have counted
+        these so that now we have counts of 0, 1, and 2. This means we can use indexing for the actual values
+        """
         snp_values = []
         for i, snp_count in enumerate(snp):
             empty = np.empty(int(snp_count), dtype=np.int8)
