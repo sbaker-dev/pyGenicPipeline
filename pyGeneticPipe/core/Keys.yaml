@@ -22,3 +22,6 @@ allele_flip:
   'G': 'C'
   'T': 'A'
   'C': 'G'
+
+
+min_maf: 0.01

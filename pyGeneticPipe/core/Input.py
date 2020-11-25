@@ -30,6 +30,7 @@ class Input:
         self.effect_type = self._set_effect_type(self.args["Summary_Effect_Type"])
         self.z_scores = self._set_z_scores(self.args["Z_Scores"])
         self.ambiguous_snps, self.allowed_alleles, self.allele_flip = self._configure_alleles()
+        self.maf_min = self._config["min_maf"]
 
     @staticmethod
     def _set_args(args):
