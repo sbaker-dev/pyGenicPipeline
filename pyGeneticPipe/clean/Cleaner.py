@@ -44,12 +44,7 @@ class Cleaner(Input):
             sm_variants = self._clean_summary_stats(load_path, validation, core)
             print(f"\nCleaned summary statistics for chromosome: {chromosome}\n{self._error_dict}")
 
-            # testing validation for comparision TEMP
-            validation = Bgen(load_path)
-
-            # for each core / validation we need to do _isoalte dosage
-            validation_raw_snps = self._isolate_raw_snps(validation, sm_variants)
-            print(np.mean(validation_raw_snps, axis=1))
+            self._filter_snps(load_path, sm_variants)
 
             return
 
@@ -443,6 +438,41 @@ class Cleaner(Input):
             return [variant.bgen_variant_id() for variant in sm_variants]
         else:
             raise Exception(f"Critical Error: Unknown load type {self.load_type} found in _isolate_dosage")
+
+    def _filter_snps(self, load_path, sm_variants):
+        # testing validation for comparision TEMP
+        validation = Bed(load_path, count_A1=True)
+
+        # for each core / validation we need to do _isoalte dosage
+        validation_raw_snps = self._isolate_raw_snps(validation, sm_variants)
+        print(np.mean(validation_raw_snps, axis=1))
+
+        freqs = np.sum(validation_raw_snps, 1, dtype='float32') / (2 * float(validation.iid_count))
+
+        if self.frequencies:
+            # Filter out anything that fails frequencys
+            raise NotImplementedError("Frequencies are not yet implemented")
+
+        if self.maf_min > 0:
+            maf_filter = (freqs > self.maf_min) * (freqs < (1 - self.maf_min))
+            maf_filtered_snps = len(maf_filter)-np.sum(maf_filter)
+            assert maf_filtered_snps > 0
+            print(f"{maf_filtered_snps} snps removed for low maf")
+
+            # Filter out anything that fails maf
+            sm_variants = sm_variants[maf_filter]
+            validation_raw_snps = validation_raw_snps[maf_filter]
+            freqs = freqs[maf_filter]
+
+        # Do the same for std
+        stds = np.std(validation_raw_snps, 1, dtype='float32')
+        monomorphic_filter = stds > 0
+        assert len(monomorphic_filter) > 0
+        sm_variants = sm_variants[monomorphic_filter]
+        validation_raw_snps = validation_raw_snps[monomorphic_filter]
+        freqs = freqs[monomorphic_filter]
+
+
 
     def _sum_stats_frequencies(self):
         raise NotImplementedError("Frequencies are not yet implemented")
