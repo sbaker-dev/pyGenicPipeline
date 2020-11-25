@@ -6,7 +6,6 @@ from pyGeneticPipe.utils import misc as mc
 from pyGeneticPipe.core.Input import Input
 from pysnptools.distreader import Bgen
 from pysnptools.snpreader import Bed
-from collections import Counter
 from operator import itemgetter
 from pathlib import Path
 from scipy import stats
@@ -26,7 +25,7 @@ class Cleaner(Input):
 
     def clean_summary_statistics(self):
 
-        # Note - this is basiclly becoming the -main- of prs, so will want to extract the chromosome bit so that it can
+        # Note - this is basically becoming the -main- of prs, so will want to extract the chromosome bit so that it can
         # run in a multi-core manner
 
         # Check for input arguments
@@ -45,8 +44,12 @@ class Cleaner(Input):
             sm_variants = self._clean_summary_stats(load_path, validation, core)
             print(f"\nCleaned summary statistics for chromosome: {chromosome}\n{self._error_dict}")
 
-            # Isolate the ordered on bp_position common snps to extract the dosage information on core and validation
-            self._isolate_dosage(validation, core, sm_variants, load_path)
+            # testing validation for comparision TEMP
+            validation = Bgen(load_path)
+
+            # for each core / validation we need to do _isoalte dosage
+            validation_raw_snps = self._isolate_raw_snps(validation, sm_variants)
+            print(np.mean(validation_raw_snps, axis=1))
 
             return
 
@@ -85,7 +88,10 @@ class Cleaner(Input):
         # summary than within the validation. If we do, something has gone critically wrong.
         assert len(sm_variants) <= len(validation_snps), ec.snp_overflow(len(sm_variants), len(validation_snps))
         assert len(sm_variants) <= len(core_snps), ec.snp_overflow(len(sm_variants), len(core_snps))
-        return sm_variants
+
+        # We then need to order the snps on the base pair position
+        variant_by_bp = [[variant, variant.bp_position] for variant in sm_variants]
+        return [variant for variant, bp in sorted(variant_by_bp, key=itemgetter(1))]
 
     def _select_file(self, chromosome):
         """
@@ -397,122 +403,46 @@ class Cleaner(Input):
         else:
             return beta, beta_odds
 
-    def _common_ordered_snps(self, sm_variants):
+    def _isolate_raw_snps(self, gen_file, sm_variants):
         """
-        Because we require a snp to be within the validation and core samples in order to be accepted, we know that the
-        size of sm_variants will be less than or equal to the number in the genetic samples. As such the common snps,
-        are the snps in the summary statistics after cleaning.
+        This will isolate the raw snps for a given bed or bgen file
 
-        Given we will be using these snps for dosage, and dosage extraction requires snps to be in a set format, here
-        we construct a list of snps and order them by their base pair position in a format of:
-
-        .bed: ["rs123", "rs124", ... "rsN"]
-        .bgen: ["rs123,rs123", "rs124,rs124", ... "rsN,rsN"]
-
-        :param sm_variants: The variants found in the summary statistics cleaning stage for this chromosome
-        :return: snps order by base pair position in the format of the load type.
+        :param gen_file: Genetic file you wish to load from
+        :param sm_variants: summary statistics variants
+        :return: raw snps
         """
+        ordered_common = gen_file[:, gen_file.sid_to_index(self._extract_variant_name(sm_variants))].read().val
 
+        # bed returns 2, 1, 0 rather than 0, 1, 2 although it says its 0, 1, 2; so this inverts it
         if self.load_type == ".bed":
-            variant_by_bp = [[variant.variant_id, variant.bp_position] for variant in sm_variants]
+            return np.array([abs(snp - 2) for snp in ordered_common.T])
+
+        # We have a [1, 0, 0], [0, 1, 0], [0, 0, 1] array return for 0, 1, 2 respectively. So if we multiple the arrays
+        # by their index position and then sum them we get [0, 1, 2]
         elif self.load_type == ".bgen":
-            variant_by_bp = [[variant.bgen_variant_id(), variant.bp_position] for variant in sm_variants]
-        else:
-            raise Exception(f"Critical Error: Unknown load type {self.load_type} found in _common_snps")
-
-        return [rs_id for rs_id, bp in sorted(variant_by_bp, key=itemgetter(1))]
-
-    def _isolate_dosage(self, validation, core, sm_variants, load_path):
-
-        print(validation)
-        print(core)
-        print(len(sm_variants))
-
-        # todo Currently we are in the validation stage, so we still need load path but this should be removed when
-        #  ready
-
-        if self.load_type == ".bed":
-            validation = Bed(load_path, count_A1=True)
-            ordered_common = validation[:, validation.sid_to_index(self._common_ordered_snps(sm_variants))].read().val
-
-            # Restructure bed to be snp - individual
-            raw_dosage = np.array([self._bed_alleles(snp) for snp in ordered_common.T])
-
-        elif self.load_type == ".bgen":
-            print("Bgen load type, so need to restructure return type ... will take a bit longer longer!")
-            validation = Bgen(load_path)
-            ordered_common = validation[:, validation.sid_to_index(self._common_ordered_snps(sm_variants))].read().val
-
-            # Restructure bgen to be allele - snp - individual
-            ordered_common = np.array([np.sum(ordered_common.T[i], axis=1) for i in range(len(ordered_common.T))])
-
-            raw_dosage = np.array([self._bgen_alleles(snp) for snp in ordered_common.T])
+            return sum(np.array([snp * i for i, snp in enumerate(ordered_common.T)]))
 
         else:
             raise Exception(f"Critical Error: Unknown load type {self.load_type} found in _isolate_dosage")
 
-        print(raw_dosage[0])
-        print(np.mean(raw_dosage, axis=1))
-
-    @staticmethod
-    def _bed_alleles(snp):
+    def _extract_variant_name(self, sm_variants):
         """
-        If we have a bed file, then we will have alleles be in the format of snp - id, so we need to get the number of
-        each number [0, 1, 2] for each snp. bed has the reverse to bgen and what ldpred has so they are flipped.
+        Different file types have different naming standards.
+
+        .bed: ["rs123", "rs124", ... "rsN"]
+        .bgen: ["rs123,rs123", "rs124,rs124", ... "rsN,rsN"]
+
+        This will standardise the names to be a list of type equivalent to bed
+        :param sm_variants: list of SMVariant
+        :return: list of snp names
         """
-
-        allele_number, allele_count = np.unique(snp, return_counts=True)
-
-        snp_values = []
-        for i, snp_count in zip(allele_number[::-1], allele_count):
-            empty = np.empty(int(snp_count), dtype=np.int8)
-            empty.fill(i)
-            snp_values.append(empty)
-
-        return np.array(np.concatenate(snp_values))
-
-    @staticmethod
-    def _bgen_alleles(snp):
-        """
-        Bgen has snps as a [1, 0, 0][0, 1, 0][0, 0, 1] format to record for snps as 0, 1, and 2. We have counted
-        these so that now we have counts of 0, 1, and 2. This means we can use indexing for the actual values
-        """
-        snp_values = []
-        for i, snp_count in enumerate(snp):
-            empty = np.empty(int(snp_count), dtype=np.int8)
-            empty.fill(i)
-            snp_values.append(empty)
-
-        return np.array(np.concatenate(snp_values))
-
-    def flip_list(self, list_of_lists):
-        """
-        This will take a list of lists, and then flip it. It requires all sub lists to be the same length.
-
-        NOTE: This is very heavy in performance and could use a speed up
-        """
-
-        list_of_keys = Counter([len(sub_list) for sub_list in list_of_lists])
-        sub_key_length = list(list_of_keys.keys())
-
-        value_dict = {0: 2, 1: 1,  2: 0}
-
-        if len(list_of_keys.keys()) == 1:
-            if self.load_type == ".bgen":
-                # Load the dosages for each individual, but it gets loaded as [1, 0, 0] OR [0, 1, 0] OR [0, 0, 1] unlike
-                # the plink file so we have to reorder this for consistency.
-                return [np.array([np.where(sub[i] == 1)[0][0] for sub in list_of_lists])
-                        for i in range(sub_key_length[0])]
-
-            elif self.load_type == ".bed":
-                # returns the operssite of ldpred so we need to remap 0 - 2 and 2 - 0
-                return [np.array([value_dict[int(sub[i])] for sub in list_of_lists], dtype=np.int8)
-                        for i in range(sub_key_length[0])]
-            else:
-                raise Exception(f"Critical Error: Unknown load type {self.load_type} found in _isolate_dosage")
-
+        if self.load_type == ".bed":
+            return [variant.variant_id for variant in sm_variants]
+        elif self.load_type == ".bgen":
+            print("Bgen load type, so need to restructure return type ... will take a bit longer longer!")
+            return [variant.bgen_variant_id() for variant in sm_variants]
         else:
-            raise Exception(f"Sub lists should be all of the same length yet found lengths {sub_key_length}")
+            raise Exception(f"Critical Error: Unknown load type {self.load_type} found in _isolate_dosage")
 
     def _sum_stats_frequencies(self):
         raise NotImplementedError("Frequencies are not yet implemented")
