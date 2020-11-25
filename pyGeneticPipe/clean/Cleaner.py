@@ -126,7 +126,9 @@ class Cleaner(Input):
         :param load_path: Path to the relevant load file
         :return: The validation and core sample class holders
         """
-        #  Set validation and core sets of sids based on the load type
+
+        # todo Before spliting in to validation and core, allow a sample size modifier to remove people out (ie for ukb)
+        # Set validation and core sets of sids based on the load type
         if self.load_type == ".bed":
             validation_size = self._set_validation_sample_size(Bed(load_path, count_A1=True).iid_count)
             validation = Bed(load_path, count_A1=True)[:validation_size, :]
@@ -425,6 +427,10 @@ class Cleaner(Input):
         print(validation)
         print(core)
         print(len(sm_variants))
+
+        # todo Currently we are in the validation stage, so we still need load path but this should be removed when
+        #  ready
+
         if self.load_type == ".bed":
             validation = Bed(load_path, count_A1=True)
             ordered_common = validation[:, validation.sid_to_index(self._common_ordered_snps(sm_variants))].read().val
@@ -444,6 +450,10 @@ class Cleaner(Input):
         frequency = np.sum(dosage, 1, dtype='float32') / (2 * float(len(dosage[0])))
 
         print(frequency)
+
+        # todo This is very slow, and looks like it has the potential to be very memeory intensive try access a single
+        #  snp at a time and construct a dosage that way, and then we can just hold dosage data for a single snp across
+        #  individuals at a time. May also need to better configure flip_lists to take arguments in terms of config
 
     def flip_list(self, list_of_lists):
         """
