@@ -91,7 +91,7 @@ class Cleaner(Input):
 
         # We then need to order the snps on the base pair position
         variant_by_bp = [[variant, variant.bp_position] for variant in sm_variants]
-        return [variant for variant, bp in sorted(variant_by_bp, key=itemgetter(1))]
+        return np.array([variant for variant, bp in sorted(variant_by_bp, key=itemgetter(1))])
 
     def _select_file(self, chromosome):
         """
