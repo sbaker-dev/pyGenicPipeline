@@ -254,6 +254,15 @@ class Cleaner(Input):
         for key, value in zip(dict_to_filter.keys(), dict_to_filter.values()):
             dict_to_filter[key] = value[array_filter]
 
+    def _validate_info(self, sm_line):
+        """Construct infos if they exist in the summary stats else return an array of length of summary dict"""
+        if self.sm_info is not None:
+            infos = self._line_array(self.sm_info, sm_line, float)
+        else:
+            infos = np.empty(len(sm_line))
+            infos.fill(-1)
+        return infos
+
     def _validation_equality(self, line_index, variant_key, summary_dict, line_type=None):
         """
         Not all summary statistics may have chromosome or bp indexes and in this case information can be returned from
