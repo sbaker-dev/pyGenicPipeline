@@ -23,7 +23,8 @@ class Cleaner(Input):
         super().__init__(args)
 
         self._error_dict = {"Removal case": "Count", "Invalid_Snps": 0, self.chromosome: 0, self.bp_position: 0,
-                            self.effect_size: 0, self.p_value: 0, self.standard_errors: 0, "Filtered_Frequency": 0,
+                            self.effect_size: 0, self.p_value: 0, self.standard_errors: 0, "Ambiguous_SNP": 0,
+                            "Non_Allowed_Allele": 0, "Non_Matching": 0, "Filtered_Frequency": 0,
                             "Filtered_MAF": 0, "Monomorphic": 0, "Accepted_Snps": 0}
         self._summary_last_position = 0
 
@@ -198,6 +199,43 @@ class Cleaner(Input):
         # We then need to order the snps on the base pair position
         variant_by_bp = [[variant, variant.bp_position] for variant in sm_variants]
         return np.array([variant for variant, bp in sorted(variant_by_bp, key=itemgetter(1))])
+
+    def _validate_summary_lines(self, sm_dict):
+        """This will load in each possible header, and clean our dict of values by filtering"""
+
+        # If we have chromosomes in our summary statistics check the chromosome of the snps against the validation
+        if self.sm_chromosome is not None:
+            self._validation_equality(self.sm_chromosome, self.chromosome, sm_dict)
+
+        # If we have base pair position in our summary then validate the base pair
+        if self.bp_position is not None:
+            self._validation_equality(self.sm_bp_position, self.bp_position, sm_dict, int)
+
+        # Clean the summary stats effect sizes for calculation of beta later
+        self._validation_finite(sm_dict, self.sm_effect_size, self.effect_size)
+
+        # Clean the P values
+        self._validation_finite(sm_dict, self.sm_p_value, self.p_value)
+
+        # If we are using z scores we need to load and clean the standard errors column
+        if self.z_scores:
+            self._validation_finite(sm_dict, self.sm_standard_errors, self.standard_errors)
+
+        # Use the raw beta, standard errors, and p value if required to construct beta and beta_odds
+        self._validation_betas(sm_dict)
+
+        # Check that the nucleotides are sane and flip them if required
+        self._validate_nucleotides(sm_dict)
+
+        # Calculate the frequencies and set info if it exists
+        frequencies = np.array([self._sum_stats_frequencies(line) for line in sm_dict[self.sm_lines]])
+        info = self._validate_info(sm_dict[self.sm_lines])
+
+        return np.array([SMVariant(variant.chromosome, variant.variant_id, variant.bp_position, variant.a1,
+                                   variant.a2, beta, beta_odds, p, i, freq)
+                         for variant, beta, beta_odds, p, i, freq in zip(
+                sm_dict[self.sm_variants], sm_dict[self.beta], sm_dict[self.log_odds], sm_dict[self.p_value],
+                info, frequencies)])
 
     @staticmethod
     def _line_array(line_key, line_array, type_np=None):
