@@ -309,6 +309,56 @@ class Cleaner(Input):
             sm_dict[self.beta] = np.array([np.sign(beta) * (pdf / np.sqrt(self.sample_size))
                                            for beta, pdf in zip(sm_dict[self.effect_size], pdf)])
 
+    def _validate_nucleotides(self, sm_dict):
+        """
+        This wil validate the nucleotides against ambiguous snps, invalid snps, and flip the snps if possible whilst
+        removing them if flipping fails.
+
+        :param sm_dict: The summary dictionary to hold information so that we can filter it
+        :type sm_dict: dict
+
+        :return: Nothing, filter the arrays if required and flip betas if the allele is flipped
+        """
+
+        # Ambiguous
+        # Construct the summary nucleotide
+        effected_allele = self._line_array(self.sm_effect_allele, sm_dict[self.sm_lines])
+        alt_allele = self._line_array(self.sm_alt_allele, sm_dict[self.sm_lines])
+        sm_dict[self.nucleotide] = np.array([Nucleotide(e, a) for e, a in zip(effected_allele, alt_allele)])
+
+        # Filter out any snps where the summery or variant Nucleotide is ambiguous
+        filter_ambiguous = [False if (sm_nuc.to_tuple() in self.ambiguous_snps) or
+                                     ((var_nuc.a1, var_nuc.a2) in self.ambiguous_snps)
+                            else True
+                            for sm_nuc, var_nuc in zip(sm_dict[self.nucleotide], sm_dict[self.sm_variants])]
+        self._error_dict["Ambiguous_SNP"] = len(filter_ambiguous) - np.sum(filter_ambiguous)
+        self._filter_array(sm_dict, filter_ambiguous)
+
+        # Sainity Check
+        # Filter out any snps that do not pass a sanity check (Only a t c and g)
+        allowed_filter = [False if (sm_nuc.a1 not in self.allowed_alleles) or
+                                   (sm_nuc.a2 not in self.allowed_alleles) or
+                                   (var_nuc.a1 not in self.allowed_alleles) or
+                                   (var_nuc.a2 not in self.allowed_alleles)
+                          else True
+                          for sm_nuc, var_nuc in zip(sm_dict[self.nucleotide], sm_dict[self.sm_variants])]
+        self._error_dict["Non_Allowed_Allele"] = len(allowed_filter) - np.sum(allowed_filter)
+        self._filter_array(sm_dict, allowed_filter)
+
+        # Determine Flipping
+        # Construct a flip status of 1, 0, -1 for No flipping, failed flipping, and flipped successfully which we can
+        # multiple our betas by
+        sm_dict["Flip"] = np.array([self._flip_nucleotide(var_nuc, sm_nuc) for var_nuc, sm_nuc in
+                                    zip(sm_dict[self.sm_variants], sm_dict[self.nucleotide])])
+        filter_flipped = np.array([False if flipped == 0 else True for flipped in sm_dict["Flip"]])
+        self._error_dict["Non_Matching"] = len(filter_flipped) - np.sum(filter_flipped)
+        self._filter_array(sm_dict, filter_flipped)
+
+        # Now we have filtered away any errors, multiple the dicts beta and log_odds elements by 1 or -1 based on no
+        # flipping or requiring flipping
+        sm_dict[self.beta] = sm_dict[self.beta] * sm_dict["Flip"]
+        sm_dict[self.log_odds] = sm_dict[self.log_odds] * sm_dict["Flip"]
+
     def _clean_summary_stats(self, load_path, validation, core, chromosome):
         """
         This will take the validation and core sample of snps, and check the snp against both sets. If the snp exists in
