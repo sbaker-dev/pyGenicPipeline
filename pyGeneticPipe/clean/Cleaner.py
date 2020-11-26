@@ -217,6 +217,35 @@ class Cleaner(Input):
         for key, value in zip(dict_to_filter.keys(), dict_to_filter.values()):
             dict_to_filter[key] = value[array_filter]
 
+    def _validation_equality(self, line_index, variant_key, summary_dict, line_type=None):
+        """
+        Not all summary statistics may have chromosome or bp indexes and in this case information can be returned from
+        the genetic variant. However if the information does exist, then we cross check to make sure it is equal in the
+        summary and genetic files. If it is not, we filter out this snp. This is the generalised method which can also
+        be used for other equalitys
+
+        :param line_index: The index for the summary line to construct an array from the
+        :type line_index: int
+
+        :param line_type: The type of the summary line to be return as, defaults to none which will return a string
+        :type line_type: None | type
+
+        :param variant_key: Key to access Variant via getitem and set error dict
+        :type variant_key: str
+
+        :param summary_dict: The summary dictionary to hold information so that we can filter it
+        :type summary_dict: dict
+
+        :return: Nothing, construct and use the filter on summary_dict then stop
+        """
+        # Construct an array of summary and genetic chromosomes
+        summary_array = self._line_array(line_index, summary_dict[self.sm_lines], line_type)
+        variant_array = self._variant_array(variant_key.lower(), summary_dict[self.sm_variants])
+
+        # Filter of True if the variant and summary match, else False which will remove this snp
+        obj_filter = summary_array == variant_array
+        self._error_dict[variant_key] = len(obj_filter) - np.sum(obj_filter)
+        self._filter_array(summary_dict, obj_filter)
 
     def _clean_summary_stats(self, load_path, validation, core, chromosome):
         """
