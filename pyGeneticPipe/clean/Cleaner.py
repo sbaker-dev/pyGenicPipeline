@@ -263,12 +263,12 @@ class Cleaner(Input):
 
         """
         # If we have chromosomes in our summary statistics check the chromosome of the snp against the validation
-        if self.sm_chromosome and line[self.sm_chromosome] != variant.chromosome:
+        if (self.sm_chromosome is not None) and line[self.sm_chromosome] != variant.chromosome:
             self._error_dict["Chromosome"] += 1
             return None
 
         # If we have base pair position in our summary then validate the base pair
-        if self.sm_bp_position and int(line[self.sm_bp_position]) != variant.bp_position:
+        if (self.sm_bp_position is not None) and int(line[self.sm_bp_position]) != variant.bp_position:
             self._error_dict["Position"] += 1
             return None
 
@@ -277,6 +277,7 @@ class Cleaner(Input):
         if not np.isfinite(beta):
             self._error_dict["Effect_Size"] += 1
             return None
+
         # Set p value as long as it is not zero or a non finite number
         p_value = float(line[self.sm_p_value])
         if not np.isfinite(p_value) or p_value == 0:
@@ -311,7 +312,7 @@ class Cleaner(Input):
 
         # If we have the info, then add this
         info = -1
-        if self.sm_info:
+        if self.sm_info is not None:
             info = float(line[self.sm_info])
 
         # If we have frequency, then extract it
@@ -455,9 +456,9 @@ class Cleaner(Input):
 
         freqs = np.sum(validation_raw_snps, 1, dtype='float32') / (2 * float(validation.iid_count))
 
-        if self.frequencies:
-            # Filter out anything that fails frequencys
-            raise NotImplementedError("Frequencies are not yet implemented")
+        # if self._frequency_op:
+        #     # Filter out anything that fails frequencys
+        #     raise NotImplementedError("Frequencies are not yet implemented")
 
         if self.maf_min > 0:
             maf_filter = (freqs > self.maf_min) * (freqs < (1 - self.maf_min))
