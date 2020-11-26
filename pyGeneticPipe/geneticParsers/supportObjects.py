@@ -12,7 +12,12 @@ class Variant:
         self.a2 = a2
 
     def __repr__(self):
+        """Human Readable print"""
         return f"{self.variant_id} - CHR{self.chromosome} - POS{self.bp_position} - A1-{self.a1}:A2-{self.a2}"
+
+    def __getitem__(self, item):
+        """Get an item from Variant"""
+        return getattr(self, item)
 
     def nucleotide(self, as_list=False):
         """Return a tuple of a1 a2 as the nucleotide"""
