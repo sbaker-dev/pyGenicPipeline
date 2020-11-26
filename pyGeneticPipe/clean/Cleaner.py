@@ -48,6 +48,10 @@ class Cleaner(Input):
 
             # Filter the summary stats
             self._filter_snps(load_path, sm_variants)
+
+            # Log to terminal what has been filtered / removed
+            self._error_dict_to_terminal(chromosome)
+
             return
 
     def _clean_summary_stats(self, load_path, validation, core, chromosome):
@@ -549,3 +553,18 @@ class Cleaner(Input):
         # If we have no frequency information just return -1
         else:
             return -1
+
+    def _error_dict_to_terminal(self, chromosome):
+        """Print the error dict for this chromosome then reset the initialised to default 0"""
+        print(f"\nCleaned summary statistics for chromosome: {chromosome}")
+        for index, (k, v) in enumerate(zip(self._error_dict.keys(), self._error_dict.values())):
+            if index == 0:
+                print(Fore.LIGHTCYAN_EX + "{:<25} {}".format(k, v))
+                print(Fore.LIGHTCYAN_EX + "----------------------------------------")
+            else:
+                print("{:<25} {}".format(k, v))
+
+        # Reset values to 0
+        for k, v in zip(self._error_dict.keys(), self._error_dict.values()):
+            if isinstance(v, int):
+                self._error_dict[k] = 0
