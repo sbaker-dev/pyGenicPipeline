@@ -22,8 +22,8 @@ class Cleaner(Input):
     def __init__(self, args):
         super().__init__(args)
 
-        self._error_dict = {"Removal case": "Count", "Invalid_Snps": 0, "Chromosome": 0, "Position": 0,
-                            "Effect_Size": 0, "P_Value": 0, "Standard_Errors": 0, "Duplicate_Position": 0,
+        self._error_dict = {"Removal case": "Count", "Invalid_Snps": 0, self.chromosome: 0, self.bp_position: 0,
+                            self.effect_size: 0, "P_Value": 0, "Standard_Errors": 0, "Duplicate_Position": 0,
                             "Ambiguous_SNP": 0, "Non_Matching": 0, "Non_Allowed_Allele": 0, "Filtered_Frequency": 0,
                             "Filtered_MAF": 0, "Monomorphic": 0, "Accepted_Snps": 0}
         self._summary_last_position = 0
@@ -222,7 +222,7 @@ class Cleaner(Input):
         Not all summary statistics may have chromosome or bp indexes and in this case information can be returned from
         the genetic variant. However if the information does exist, then we cross check to make sure it is equal in the
         summary and genetic files. If it is not, we filter out this snp. This is the generalised method which can also
-        be used for other equalitys
+        be used for other equality
 
         :param line_index: The index for the summary line to construct an array from the
         :type line_index: int
@@ -245,6 +245,31 @@ class Cleaner(Input):
         # Filter of True if the variant and summary match, else False which will remove this snp
         obj_filter = summary_array == variant_array
         self._error_dict[variant_key] = len(obj_filter) - np.sum(obj_filter)
+        self._filter_array(summary_dict, obj_filter)
+
+    def _validation_finite(self, summary_dict, line_index, summary_key):
+        """
+        Numeric columns need to screened for values being finite and not equal to zero. Unlike _validation_equality this
+        method also appended the information to summary_dict as it has created new information not within the genetic
+        variants rather than just screening pre-existing information
+
+        :param line_index: The index for the summary line to construct an array from the
+        :type line_index: int
+
+        :param summary_key: A string key that is used for accessing this attribute
+        :type summary_key: str
+
+        :param summary_dict: The summary dictionary to hold information so that we can filter it
+        :type summary_dict: dict
+
+        :return: Nothing, construct the filter and then filter all attributes within the summary dict
+        """
+        # Construct an array for this numeric summary_key and add it to summary dict under the name of summary_key
+        summary_dict[summary_key] = self._line_array(line_index, summary_dict[self.sm_lines], float)
+
+        # Filter out anything that is not finite or is equal to zero
+        obj_filter = np.array([True if np.isfinite(obj) and obj != 0 else False for obj in summary_dict[summary_key]])
+        self._error_dict[summary_key] = len(obj_filter) - np.sum(obj_filter)
         self._filter_array(summary_dict, obj_filter)
 
     def _clean_summary_stats(self, load_path, validation, core, chromosome):
