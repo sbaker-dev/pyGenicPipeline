@@ -22,6 +22,7 @@ class Cleaner(Input):
         self._error_dict = {"Invalid_Snps": 0, "Chromosome": 0, "Position": 0, "Effect_Size": 0, "P_Value": 0,
                             "Standard_Errors": 0, "Duplicate_Position": 0, "Ambiguous_SNP": 0, "Non_Matching": 0,
                             "Non_Allowed_Allele": 0}
+        self._summary_last_position = 0
 
     def clean_summary_statistics(self):
 
@@ -41,14 +42,14 @@ class Cleaner(Input):
             validation, core = self._construct_validation(load_path)
 
             # Clean the summary statistics
-            sm_variants = self._clean_summary_stats(load_path, validation, core)
-            print(f"\nCleaned summary statistics for chromosome: {chromosome}\n{self._error_dict}")
+            sm_variants = self._clean_summary_stats(load_path, validation, core, chromosome)
+            print(f"\nCleaned summary statistics for chromosome: {chromosome} finding {len(sm_variants)} valid snps\n"
+                  f"And the following errors {self._error_dict}")
 
             self._filter_snps(load_path, sm_variants)
-
             return
 
-    def _clean_summary_stats(self, load_path, validation, core):
+    def _clean_summary_stats(self, load_path, validation, core, chromosome):
         """
         This will take the validation and core sample of snps, and check the snp against both sets. If the snp exists in
         the validation files, then it will go to cleaning the summary statistics for this chromosome line by line.
@@ -58,26 +59,32 @@ class Cleaner(Input):
 
         sm_variants = []
         with mc.open_setter(self.summary_file)(self.summary_file) as file:
-            # Skip header row
-            file.readline()
+            self._seek_to_start(chromosome, file)
 
             # For each line in the GWAS Summary file
-            for index, line in enumerate(file):
+            for index, line_byte in enumerate(file):
                 if index % 10000 == 0 and self.debug:
                     print(f"{index}")
 
                 # Decode the line and extract the snp_id
-                line = mc.decode_line(line, self.zipped)
+                line = mc.decode_line(line_byte, self.zipped)
                 snp_id = line[self.sm_snp_id]
 
                 # If the snp exists in both the validation and core snp samples then clean this line, else skip.
                 if (snp_id in validation_snps) and (snp_id in core_snps):
-                    sm_variant = self._validate_summary_line(line, self._set_variant(snp_id, indexer))
+                    sm_variant = self._validate_summary_line(line,  self._set_variant(snp_id, indexer))
                     if sm_variant:
                         sm_variants.append(sm_variant)
 
                 else:
-                    self._error_dict["Invalid_Snps"] += 1
+                    # If the chromosomes exist in summary statistics we can terminate this for loop when we are no
+                    # longer in the right zone and set tell to seek to this position for the next chromosome
+                    if (self.sm_chromosome is not None) and (int(line[self.sm_chromosome]) > chromosome):
+                        self._summary_last_position = file.tell() - len(line_byte)
+                        file.close()
+                        break
+                    else:
+                        self._error_dict["Invalid_Snps"] += 1
 
         # Given we have only accepted snps that are within the validation / core, we should never have more snps in
         # summary than within the validation. If we do, something has gone critically wrong.
@@ -169,7 +176,7 @@ class Cleaner(Input):
             # Bgen files store [variant id, rsid], we just want the rsid hence the [1]; see https://bit.ly/2J0C1kC
             validation = [snp.split(",")[1] for snp in validation.sid]
             core = [snp.split(",")[1] for snp in core.sid]
-            indexer = [BgenObject(load_path).index_of_snps(),  BgenObject(load_path)]
+            indexer = [BgenObject(load_path).index_of_snps(), BgenObject(load_path)]
 
         else:
             raise Exception("Unknown load type set")
@@ -215,7 +222,6 @@ class Cleaner(Input):
         """
         # Check parameters, validate that validation has been run, and that clean summary has not.
         assert self.project_file, ec.missing_arg(self.operation, "Project_Name")
-        assert self.h5_summary not in self.project_file.keys(), ec.appending_error(self.project_name, self.h5_summary)
         assert self.summary_file, ec.missing_arg(self.operation, "Summary_Path")
         assert self.load_type, ec.missing_arg(self.operation, "Load_Type")
         assert self.load_directory, ec.missing_arg(self.operation, "Load_Directory")
@@ -455,7 +461,7 @@ class Cleaner(Input):
 
         if self.maf_min > 0:
             maf_filter = (freqs > self.maf_min) * (freqs < (1 - self.maf_min))
-            maf_filtered_snps = len(maf_filter)-np.sum(maf_filter)
+            maf_filtered_snps = len(maf_filter) - np.sum(maf_filter)
             assert maf_filtered_snps > 0
             print(f"{maf_filtered_snps} snps removed for low maf")
 
@@ -472,7 +478,18 @@ class Cleaner(Input):
         validation_raw_snps = validation_raw_snps[monomorphic_filter]
         freqs = freqs[monomorphic_filter]
 
+        print(sm_variants, validation_raw_snps, freqs)
 
+    def _seek_to_start(self, chromosome, file):
+        """
+        Seek to the start position of the summary file for this chromosome if chromosomes where in the summary file
+        otherwise it will just skip the header
+        """
+        if chromosome == 1:
+            start_line = file.readline()
+            self._summary_last_position = len(start_line)
+        else:
+            file.seek(self._summary_last_position)
 
     def _sum_stats_frequencies(self):
         raise NotImplementedError("Frequencies are not yet implemented")
