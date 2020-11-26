@@ -15,8 +15,6 @@ import pickle
 import gzip
 import re
 
-import sys
-
 
 class Cleaner(Input):
     def __init__(self, args):
@@ -45,23 +43,19 @@ class Cleaner(Input):
 
             validation, core = self._construct_validation(load_path)
 
-            sm_variants = self._clean_ss_2(load_path, validation, core, chromosome)
+            # Clean the summary statistics
+            sm_variants = self._clean_summary_stats(load_path, validation, core, chromosome)
 
-            # # Clean the summary statistics
-            # sm_variants = self._clean_summary_stats(load_path, validation, core, chromosome)
-            #
-            # c = [variant.beta for variant in sm_variants]
-            # print(c)
-            #
             # Filter the summary stats
             self._filter_snps(load_path, sm_variants)
             #
             # Log to terminal what has been filtered / removed
             self._error_dict_to_terminal(chromosome)
 
-            return
+            if chromosome == 22:
+                return
 
-    def _clean_ss_2(self, load_path, validation, core, chromosome):
+    def _clean_summary_stats(self, load_path, validation, core, chromosome):
         """
         This will take the validation and core sample of snps, and check the snp against both sets. If the snp exists in
         the validation files, then it will go to cleaning the summary statistics for this chromosome line by line.
@@ -97,99 +91,8 @@ class Cleaner(Input):
                     else:
                         self._error_dict["Invalid_Snps"] += 1
 
-        sm_line = np.array(sm_line)
-        sm_variants = np.array(sm_variants)
-
         sm_dict = {self.sm_lines: np.array(sm_line), self.sm_variants: np.array(sm_variants)}
-
-        if self.sm_chromosome is not None:
-            line_chr = self._line_array(self.sm_chromosome, sm_dict[self.sm_lines])
-            variant_chr = self._variant_array(self.chromosome.lower(), sm_dict[self.sm_variants])
-            chr_filter = line_chr == variant_chr
-            self._error_dict["Chromosome"] = len(chr_filter) - np.sum(chr_filter)
-            self._filter_array(sm_dict, chr_filter)
-
-        if self.bp_position is not None:
-            line_bp_pos = self._line_array(self.sm_bp_position, sm_line, int)
-            variant_bp_pos = self._variant_array(self.bp_position.lower(), sm_dict[self.sm_variants])
-            bp_pos_filter = line_bp_pos == variant_bp_pos
-            self._error_dict["Position"] = len(bp_pos_filter) - np.sum(bp_pos_filter)
-            self._filter_array(sm_dict, bp_pos_filter)
-
-        # Calculate within a 'beta method'
-        sm_dict[self.beta] = self._line_array(self.sm_effect_size, sm_line, float)
-        filter_beta = np.array([True if np.isfinite(beta) else False for beta in sm_dict[self.beta]])
-        self._error_dict["Effect_Size"] = len(filter_beta) - np.sum(filter_beta)
-        self._filter_array(sm_dict, filter_beta)
-
-        # P values
-        sm_dict[self.qc_p] = self._line_array(self.sm_p_value, sm_line, float)
-        filter_p = np.array([True if np.isfinite(p) and p != 0 else False for p in sm_dict[self.qc_p]])
-        self._error_dict["P_Value"] = len(filter_p) - np.sum(filter_p)
-        self._filter_array(sm_dict, filter_beta)
-
-        if self.effect_type == "BLUP":
-            betas = sm_dict[self.beta].copy()
-            betas_odds = sm_dict[self.beta].copy()
-
-        elif self.z_scores:
-            sm_dict[self.qc_std] = self._line_array(self.sm_standard_errors, sm_line, float)
-            filter_std = np.array([True if np.isfinite(std) and std != 0 else False for std in sm_dict[self.qc_std]])
-            self._error_dict["Standard_Errors"] = len(filter_std) - np.sum(filter_std)
-            self._filter_array(sm_dict, filter_std)
-
-            if self.effect_type == "OR":
-                abs_beta = np.array([np.absolute(1 - beta) / se for beta, se in zip(sm_dict[self.beta], sm_dict[self.qc_std])])
-                betas_odds = np.array([np.log(beta) for beta in sm_dict[self.beta]])
-            else:
-                abs_beta = np.array([np.absolute(beta) / se for beta, se in zip(sm_dict[self.beta], sm_dict[self.qc_std])])
-                betas_odds = sm_dict[self.beta].copy()
-
-            betas = np.array([np.sign(beta_t) * (ab / np.sqrt(self.sample_size)) for beta_t, ab in zip(betas_odds, abs_beta)])
-
-        else:
-            if self.effect_type == "OR":
-                betas_odds = np.array([np.log(beta) for beta in sm_dict[self.beta]])
-            else:
-                betas_odds = sm_dict[self.beta].copy()
-
-            # probability density function
-            pdfs = stats.norm.ppf(sm_dict[self.qc_p] / 2.0)
-            betas = np.array([np.sign(beta) * (pdf / np.sqrt(self.sample_size)) for beta, pdf in zip(sm_dict[self.beta], pdfs)])
-
-        ###############################################################################################################
-
-        e_allele = self._line_array(self.sm_effect_allele, sm_line)
-        a_allele = self._line_array(self.sm_alt_allele, sm_line)
-        sm_dict[self.qc_nuc] = np.array([Nucleotide(e, a) for e, a in zip(e_allele, a_allele)])
-
-        filter_ambiguous = [False if (smn.to_tuple() in self.ambiguous_snps) or ((varn.a1, varn.a2) in self.ambiguous_snps) else True
-                            for smn, varn in zip(sm_dict[self.qc_nuc], sm_dict[self.sm_variants])]
-        self._error_dict["Ambiguous_SNP"] = len(filter_ambiguous) - np.sum(filter_ambiguous)
-        self._filter_array(sm_dict, filter_ambiguous)
-
-        allowed_filter = [False if (smn.a1 not in self.allowed_alleles) or (smn.a2 not in self.allowed_alleles) or (varn.a1 not in self.allowed_alleles) or (varn.a2 not in self.allowed_alleles)
-                          else True for smn, varn in zip(sm_dict[self.qc_nuc], sm_dict[self.sm_variants])]
-        self._error_dict["Non_Allowed_Allele"] = len(allowed_filter) - np.sum(allowed_filter)
-
-        # todo These two could be made faster by splinting out the methods and running all processes at once like beta
-        cleaned_betas = np.array([self._flip_nucleotide(varn, smn, b, bo) for varn, smn, b, bo in zip(sm_dict[self.sm_variants], sm_dict[self.qc_nuc], betas, betas_odds)])
-        freqss = np.array([self._sum_stats_frequencies(line) for line in sm_line])
-
-        if self.sm_info is not None:
-            infos = self._line_array(self.sm_info, sm_line, float)
-        else:
-            infos = np.empty(len(sm_line))
-            infos.fill(-1)
-
-        sm_variants = []
-        for variant, (b, bl), p, i, fe in zip(sm_dict[self.sm_variants], cleaned_betas, sm_dict[self.qc_p], infos, freqss):
-
-            if (b is not None) and (bl is not None):
-                sm_variants.append(SMVariant(variant.chromosome, variant.variant_id, variant.bp_position, variant.a1,
-                                             variant.a2, b, bl, p, i, fe))
-            else:
-                self._error_dict["Non_Matching"] += 1
+        sm_variants = self._validate_summary_lines(sm_dict)
 
         # Given we have only accepted snps that are within the validation / core, we should never have more snps in
         # summary than within the validation. If we do, something has gone critically wrong.
@@ -231,6 +134,7 @@ class Cleaner(Input):
         frequencies = np.array([self._sum_stats_frequencies(line) for line in sm_dict[self.sm_lines]])
         info = self._validate_info(sm_dict[self.sm_lines])
 
+        # Return a SMVariant array
         return np.array([SMVariant(variant.chromosome, variant.variant_id, variant.bp_position, variant.a1,
                                    variant.a2, beta, beta_odds, p, i, freq)
                          for variant, beta, beta_odds, p, i, freq in zip(
@@ -238,14 +142,16 @@ class Cleaner(Input):
                 info, frequencies)])
 
     @staticmethod
-    def _line_array(line_key, line_array, type_np=None):
+    def _line_array(line_index, line_array, type_np=None):
+        """Construct an array of a single line index form line_array considering the type"""
         if type_np:
-            return np.array([line[line_key] for line in line_array], dtype=type_np)
+            return np.array([line[line_index] for line in line_array], dtype=type_np)
         else:
-            return np.array([line[line_key] for line in line_array])
+            return np.array([line[line_index] for line in line_array])
 
     @staticmethod
     def _variant_array(variant_key, variant_array):
+        """Construct an array of a single variant_array's item using getitem via variant key"""
         return np.array([variant[variant_key] for variant in variant_array])
 
     @staticmethod
@@ -405,52 +311,6 @@ class Cleaner(Input):
         # flipping or requiring flipping
         sm_dict[self.beta] = sm_dict[self.beta] * sm_dict["Flip"]
         sm_dict[self.log_odds] = sm_dict[self.log_odds] * sm_dict["Flip"]
-
-    def _clean_summary_stats(self, load_path, validation, core, chromosome):
-        """
-        This will take the validation and core sample of snps, and check the snp against both sets. If the snp exists in
-        the validation files, then it will go to cleaning the summary statistics for this chromosome line by line.
-        """
-
-        validation_snps, core_snps, indexer = self._load_variants(load_path, validation, core)
-
-        sm_variants = []
-        with mc.open_setter(self.summary_file)(self.summary_file) as file:
-            self._seek_to_start(chromosome, file)
-
-            # For each line in the GWAS Summary file
-            for index, line_byte in enumerate(file):
-                if index % 10000 == 0 and self.debug:
-                    print(f"{index}")
-
-                # Decode the line and extract the snp_id
-                line = mc.decode_line(line_byte, self.zipped)
-                snp_id = line[self.sm_snp_id]
-
-                # If the snp exists in both the validation and core snp samples then clean this line, else skip.
-                if (snp_id in validation_snps) and (snp_id in core_snps):
-                    sm_variant = self._validate_summary_line(line, self._set_variant(snp_id, indexer))
-                    if sm_variant:
-                        sm_variants.append(sm_variant)
-
-                else:
-                    # If the chromosomes exist in summary statistics we can terminate this for loop when we are no
-                    # longer in the right zone and set tell to seek to this position for the next chromosome
-                    if (self.sm_chromosome is not None) and (int(line[self.sm_chromosome]) > chromosome):
-                        self._summary_last_position = file.tell() - len(line_byte)
-                        file.close()
-                        break
-                    else:
-                        self._error_dict["Invalid_Snps"] += 1
-
-        # Given we have only accepted snps that are within the validation / core, we should never have more snps in
-        # summary than within the validation. If we do, something has gone critically wrong.
-        assert len(sm_variants) <= len(validation_snps), ec.snp_overflow(len(sm_variants), len(validation_snps))
-        assert len(sm_variants) <= len(core_snps), ec.snp_overflow(len(sm_variants), len(core_snps))
-
-        # We then need to order the snps on the base pair position
-        variant_by_bp = [[variant, variant.bp_position] for variant in sm_variants]
-        return np.array([variant for variant, bp in sorted(variant_by_bp, key=itemgetter(1))])
 
     def _select_file(self, chromosome):
         """
@@ -613,125 +473,16 @@ class Cleaner(Input):
         else:
             return indexer.get_variant(index_dict[variant_id], True)
 
-    def _validate_summary_line(self, line, variant):
+    def _beta_by_type(self, sm_dict):
         """
-        This will validate a given line in the summary statistics for all the possible headers that it could contain
-        against a validation
-
-        """
-        # If we have chromosomes in our summary statistics check the chromosome of the snp against the validation
-        if (self.sm_chromosome is not None) and line[self.sm_chromosome] != variant.chromosome:
-            self._error_dict["Chromosome"] += 1
-            return None
-
-        # If we have base pair position in our summary then validate the base pair
-        if (self.sm_bp_position is not None) and int(line[self.sm_bp_position]) != variant.bp_position:
-            self._error_dict["Position"] += 1
-            return None
-
-        # Set beta unless it is not a finite number
-        beta = float(line[self.sm_effect_size])
-        if not np.isfinite(beta):
-            self._error_dict["Effect_Size"] += 1
-            return None
-
-        # Set p value as long as it is not zero or a non finite number
-        p_value = float(line[self.sm_p_value])
-        if not np.isfinite(p_value) or p_value == 0:
-            self._error_dict["P_Value"] += 1
-            return None
-
-        # calculate the beta and beta odds
-        beta, beta_odds = self._calculate_beta(beta, line, p_value)
-        if not beta or not beta_odds:
-            self._error_dict["Standard_Errors"] += 1
-            return None
-
-        # Construct a summary nucleotide to check against our genetic validation
-        sm_nucleotide = Nucleotide(line[self.sm_effect_allele], line[self.sm_alt_allele])
-
-        # Check to see if the nucleotide is within the ambiguous snp set
-        if (variant.nucleotide() in self.ambiguous_snps) or (sm_nucleotide.to_tuple() in self.ambiguous_snps):
-            self._error_dict["Ambiguous_SNP"] += 1
-            return None
-
-        # Check if the nucleotides are sane (Ie it is only a t c and g)
-        if (variant.a1 not in self.allowed_alleles) or (variant.a2 not in self.allowed_alleles) or \
-                (sm_nucleotide.a1 not in self.allowed_alleles) or (sm_nucleotide.a2 not in self.allowed_alleles):
-            self._error_dict["Non_Allowed_Allele"] += 1
-            return None
-
-        # Check if nucleotides need to be flipped
-        beta, beta_odds = self._flip_nucleotide(variant, sm_nucleotide, beta, beta_odds)
-        if not beta or not beta_odds:
-            self._error_dict["Non_Matching"] += 1
-            return None
-
-        # If we have the info, then add this
-        info = -1
-        if self.sm_info is not None:
-            info = float(line[self.sm_info])
-
-        # If we have frequency, then extract it
-        frequency = self._sum_stats_frequencies(line)
-
-        # Return a object with all this information if all the checks pass
-        return SMVariant(variant.chromosome, variant.variant_id, variant.bp_position, variant.a1, variant.a2, beta,
-                         beta_odds, p_value, info, frequency)
-
-    def _calculate_beta(self, beta, line, p_value):
-        """
-        Calculate both the beta, and the beta odds depending on the effect_type and if the user wants to constructed a
-        standardised z score or not
-
-        :param beta: beta from summary stats
-        :type beta: float
-
-        :param line: The line of the current file
-        :type line: list
-
-        :param p_value: p value from summary stats
-        :type p_value: float
-
-        :return: If successful, return the beta and beta odds otherwise None and None
-        """
-
-        beta_odds = self._beta_by_type(beta)
-
-        # If effect type is Best linear unbiased prediction (BLUP) return beta
-        if self.effect_type == "BLUP":
-            return beta, beta_odds
-
-        # If we want to compute z scores, compute them as long as standard errors are valid
-        elif self.z_scores:
-            se = float(line[self.sm_standard_errors])
-            if not np.isfinite(se) or se == 0:
-                return None, None
-            else:
-                return self._beta_from_se(beta, beta_odds, se), beta_odds
-
-        # Otherwise compute beta from p values
-        else:
-            return np.sign(beta) * (stats.norm.ppf(p_value / 2.0) / np.sqrt(self.sample_size)), beta_odds
-
-    def _beta_from_se(self, beta, beta_typed, se):
-        """Calculate z score with standard error"""
-        if self.effect_type == "OR":
-            abs_beta = np.absolute(1 - beta) / se
-        else:
-            abs_beta = np.absolute(beta) / se
-        return np.sign(beta_typed) * (abs_beta / np.sqrt(self.sample_size))
-
-    def _beta_by_type(self, beta):
-        """
-        If we are working with ods rations we need to take the log of the read beta
+        If we are working with Odds ratios we need to take the log of the read beta
         """
         if self.effect_type == "OR":
-            return np.log(beta)
+            return np.array([np.log(beta) for beta in sm_dict[self.effect_size]])
         else:
-            return beta
+            return sm_dict[self.effect_size].copy()
 
-    def _flip_nucleotide(self, variant, sm_nucleotide, beta, beta_odds):
+    def _flip_nucleotide(self, variant, sm_nucleotide):
         """
         Checks to see if the summary stats requires flipping by comparing it to the genetic variant from our sample and
         the flipped variant.
@@ -754,11 +505,11 @@ class Cleaner(Input):
 
             # If flip successful then invert beta and beta_odds, else return none
             if flip_nts:
-                return -beta, -beta_odds
+                return -1
             else:
-                return None, None
+                return 0
         else:
-            return beta, beta_odds
+            return 1
 
     def _isolate_raw_snps(self, gen_file, sm_variants):
         """
@@ -810,9 +561,6 @@ class Cleaner(Input):
         # print(np.mean(validation_raw_snps, axis=1))
 
         freqs = np.sum(validation_raw_snps, 1, dtype='float32') / (2 * float(validation.iid_count))
-
-        print("PRE FILTER")
-        print(len(sm_variants), len(validation_raw_snps), len(freqs))
 
         # If the frequencies in the summary stats are not just a list of -1 errors then screen genetic snp frequencies
         summary_freqs = np.array([variant.frequency for variant in sm_variants])
