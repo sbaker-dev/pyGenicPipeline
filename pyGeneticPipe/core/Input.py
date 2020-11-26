@@ -30,6 +30,7 @@ class Input:
         self.z_scores = self._set_z_scores(self.args["Z_Scores"])
         self.ambiguous_snps, self.allowed_alleles, self.allele_flip = self._configure_alleles()
         self.maf_min = self._config["min_maf"]
+        self.freq_discrepancy = self._config["max_freq_discrepancy"]
 
         if (self.sm_case_freq is not None) or (self.sm_control_n is not None):
             print("WARNING!: Psychiatric Genomics Consortium Summary stats are untested - code from LDPred!")

@@ -27,5 +27,6 @@ allele_flip:
   'T': 'A'
   'C': 'G'
 
-
+#todo These should be in args not config
 min_maf: 0.01
+max_freq_discrepancy: 0.15
