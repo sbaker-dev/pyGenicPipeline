@@ -371,26 +371,6 @@ class Input:
         return self._summary_headers[self.standard_errors]
 
     @property
-    def log_odds(self):
-        """Key used for accessing Log_Odds headers, groups or other attributes"""
-        return "Log_Odds"
-
-    @property
-    def beta(self):
-        """Key used for accessing Beta headers, groups or other attributes"""
-        return "Beta"
-
-    @property
-    def nucleotide(self):
-        """Key used for accessing Nucleotide headers, groups or other attributes"""
-        return "Nucleotide"
-
-    @property
-    def frequency(self):
-        """Key used for accessing Frequency headers, groups or other attributes"""
-        return "Frequency"
-
-    @property
     def case_freq(self):
         """Key used for accessing Case_Freq headers, groups or other attributes"""
         return "Case_Freq"
@@ -429,3 +409,43 @@ class Input:
     def sm_control_n(self):
         """Control_N header index in GWAS summary file"""
         return self._summary_headers[self.case_freq]
+
+    @property
+    def sm_lines(self):
+        return "sm_lines"
+
+    @property
+    def sm_variants(self):
+        return "sm_variants"
+
+    @property
+    def beta(self):
+        """Key used for accessing Beta headers, groups or other attributes"""
+        return "Beta"
+
+    @property
+    def log_odds(self):
+        """Key used for accessing Log_Odds headers, groups or other attributes"""
+        return "Log_Odds"
+
+    @property
+    def nucleotide(self):
+        """Key used for accessing Nucleotide headers, groups or other attributes"""
+        return "Nucleotide"
+
+    @property
+    def frequency(self):
+        """Key used for accessing Frequency headers, groups or other attributes"""
+        return "Frequency"
+
+    @property
+    def qc_p(self):
+        return "qc_p"
+
+    @property
+    def qc_std(self):
+        return "qc_std"
+
+    @property
+    def qc_nuc(self):
+        return "qc_nuc"
