@@ -23,8 +23,7 @@ class Cleaner(Input):
         super().__init__(args)
 
         self._error_dict = {"Removal case": "Count", "Invalid_Snps": 0, self.chromosome: 0, self.bp_position: 0,
-                            self.effect_size: 0, "P_Value": 0, "Standard_Errors": 0, "Duplicate_Position": 0,
-                            "Ambiguous_SNP": 0, "Non_Matching": 0, "Non_Allowed_Allele": 0, "Filtered_Frequency": 0,
+                            self.effect_size: 0, self.p_value: 0, self.standard_errors: 0, "Filtered_Frequency": 0,
                             "Filtered_MAF": 0, "Monomorphic": 0, "Accepted_Snps": 0}
         self._summary_last_position = 0
 
@@ -271,6 +270,44 @@ class Cleaner(Input):
         obj_filter = np.array([True if np.isfinite(obj) and obj != 0 else False for obj in summary_dict[summary_key]])
         self._error_dict[summary_key] = len(obj_filter) - np.sum(obj_filter)
         self._filter_array(summary_dict, obj_filter)
+
+    def _validation_betas(self, sm_dict):
+        """
+        Calculate both the beta, and the beta odds depending on the effect_type and if the user wants to constructed a
+        standardised z score or not
+
+        :param sm_dict: Summary dict of values to read from and write too
+        :type sm_dict: dict
+
+        :return: Nothing, append values to dicts when constructed
+        """
+
+        # Construct the log_odds based on the effect_type
+        sm_dict[self.log_odds] = self._beta_by_type(sm_dict)
+
+        # If effect type is Best linear unbiased prediction (BLUP) return effect size column as beta
+        if self.effect_type == "BLUP":
+            sm_dict[self.beta] = sm_dict[self.effect_size].copy()
+
+        # If we want to compute z scores, compute them as long as standard errors are valid
+        elif self.z_scores:
+            # The betas need to be altered for z scores
+            if self.effect_type == "OR":
+                abs_beta = np.array([(np.absolute(1 - beta) / se)
+                                     for beta, se in zip(sm_dict[self.effect_size], sm_dict[self.standard_errors])])
+            else:
+                abs_beta = np.array([(np.absolute(beta) / se)
+                                     for beta, se in zip(sm_dict[self.effect_size], sm_dict[self.standard_errors])])
+
+            sm_dict[self.beta] = np.array([np.sign(beta_t) * (ab / np.sqrt(self.sample_size))
+                                           for beta_t, ab in zip(sm_dict[self.log_odds], abs_beta)])
+
+        # Otherwise compute beta from p values
+        else:
+            # probability density function
+            pdf = stats.norm.ppf(sm_dict[self.p_value] / 2.0)
+            sm_dict[self.beta] = np.array([np.sign(beta) * (pdf / np.sqrt(self.sample_size))
+                                           for beta, pdf in zip(sm_dict[self.effect_size], pdf)])
 
     def _clean_summary_stats(self, load_path, validation, core, chromosome):
         """
