@@ -391,6 +391,7 @@ class Input:
         """Key used for accessing Case_Freq headers, groups or other attributes"""
         return "Case_Freq"
 
+    @property
     def sm_case_freq(self):
         """Case_Freq header index in GWAS summary file"""
         return self._summary_headers[self.case_freq]
@@ -400,6 +401,7 @@ class Input:
         """Key used for accessing Case_N headers, groups or other attributes"""
         return "Case_N"
 
+    @property
     def sm_case_n(self):
         """Case_N header index in GWAS summary file"""
         return self._summary_headers[self.case_freq]
@@ -409,6 +411,7 @@ class Input:
         """Key used for accessing Control_Freq headers, groups or other attributes"""
         return "Control_Freq"
 
+    @property
     def sm_control_freq(self):
         """Control_Freq header index in GWAS summary file"""
         return self._summary_headers[self.case_freq]
@@ -418,6 +421,7 @@ class Input:
         """Key used for accessing Control_N headers, groups or other attributes"""
         return "Control_N"
 
+    @property
     def sm_control_n(self):
         """Control_N header index in GWAS summary file"""
         return self._summary_headers[self.case_freq]
