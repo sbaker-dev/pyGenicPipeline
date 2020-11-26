@@ -8,7 +8,7 @@ header_keys:
   BP_Position: ["POS", "pos", "bp", "BP"]
   P_Value: ["PVAL", "pval", "p", "P", "P.2gc"]
   Effect_size: ["LINREG", "OR"]
-  Minor_Allele_Freq: ["REF_FRQ", "reffrq", "Freq.Hapmap.Ceu", "Freq.Allele1.HapMapCEU", "MAF", "Freq.Hapmap.Ceu"]
+  Minor_Allele_Freq: ["REF_FRQ", "reffreq", "Freq.Hapmap.Ceu", "Freq.Allele1.HapMapCEU", "MAF", "Freq.Hapmap.Ceu"]
   Case_Freq: ["Case_Freq"]
   Control_Freq: ["Control_Freq"]
   Case_N: ["Case_N"]

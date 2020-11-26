@@ -26,7 +26,6 @@ class Input:
         # Set summary statistics information if required
         self.zipped, self.sample_size = self._set_summary_stats()
         self._summary_headers = self._set_summary_headers()
-        self.frequencies = self.args["Summary_Frequency"]
         self.effect_type = self._set_effect_type(self.args["Summary_Effect_Type"])
         self.z_scores = self._set_z_scores(self.args["Z_Scores"])
         self.ambiguous_snps, self.allowed_alleles, self.allele_flip = self._configure_alleles()
