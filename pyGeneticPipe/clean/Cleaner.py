@@ -316,9 +316,7 @@ class Cleaner(Input):
             info = float(line[self.sm_info])
 
         # If we have frequency, then extract it
-        frequency = -1
-        if self.frequencies:
-            frequency = self._sum_stats_frequencies()
+        frequency = self._sum_stats_frequencies(line)
 
         # Return a object with all this information if all the checks pass
         return SMVariant(variant.chromosome, variant.variant_id, variant.bp_position, variant.a1, variant.a2, beta,
@@ -492,5 +490,43 @@ class Cleaner(Input):
         else:
             file.seek(self._summary_last_position)
 
-    def _sum_stats_frequencies(self):
-        raise NotImplementedError("Frequencies are not yet implemented")
+    def _sum_stats_frequencies(self, line):
+        """
+        This will check to see if the user is using Psychiatric Genomics Consortium Summary Stats and if so use the
+        case/control frequency and N to construct the frequency. Otherwise, it will attempt to use the MAF column and
+        if that is also not set it will return -1
+        """
+
+        # If we have Psychiatric Genomics Consortium Summary stats use these
+        if (self.sm_case_freq is not None) and (self.sm_control_freq is not None):
+
+            # If the frequency's are indexed but are NA then return -1
+            if line[self.sm_case_freq] in (".", "NA") or line[self.sm_control_freq] in (".", "NA"):
+                return -1
+
+            # If the n for the case and control are known, then calculate a more accurate frequency
+            elif (self.sm_case_n is not None) and (self.sm_control_freq is not None):
+                if line[self.sm_case_n] in (".", "NA") or line[self.sm_control_n] in (",", "NA"):
+                    return -1
+                else:
+                    case_n = float(line[self.case_n])
+                    control_n = float(line[self.control_n])
+                    tot_n = case_n + control_n
+                    a_scalar = case_n / float(tot_n)
+                    u_scalar = control_n / float(tot_n)
+                    return (float(line[self.sm_case_freq]) * a_scalar) + (float(line[self.sm_control_freq]) * u_scalar)
+
+            # If n is not know we just divide by 2
+            else:
+                return (float(line[self.sm_case_freq]) + float(line[self.sm_control_freq])) / 2.0
+
+        # If we have MAF values in the summary stats then we can use those as the frequency
+        elif self.sm_minor_allele_freq is not None:
+            if line[self.sm_minor_allele_freq] not in (",", "NA"):
+                return float(line[self.sm_minor_allele_freq])
+            else:
+                return -1
+
+        # If we have non frequency information just return -1
+        else:
+            return -1
