@@ -15,6 +15,8 @@ import pickle
 import gzip
 import re
 
+import sys
+
 
 class Cleaner(Input):
     def __init__(self, args):
@@ -43,7 +45,7 @@ class Cleaner(Input):
 
             validation, core = self._construct_validation(load_path)
 
-            self._clean_ss_2(load_path, validation, core, chromosome)
+            sm_variants = self._clean_ss_2(load_path, validation, core, chromosome)
 
             # # Clean the summary statistics
             # sm_variants = self._clean_summary_stats(load_path, validation, core, chromosome)
@@ -51,11 +53,11 @@ class Cleaner(Input):
             # c = [variant.beta for variant in sm_variants]
             # print(c)
             #
-            # # Filter the summary stats
-            # self._filter_snps(load_path, sm_variants)
+            # Filter the summary stats
+            self._filter_snps(load_path, sm_variants)
             #
-            # # Log to terminal what has been filtered / removed
-            # self._error_dict_to_terminal(chromosome)
+            # Log to terminal what has been filtered / removed
+            self._error_dict_to_terminal(chromosome)
 
             return
 
@@ -98,80 +100,80 @@ class Cleaner(Input):
         sm_line = np.array(sm_line)
         sm_variants = np.array(sm_variants)
 
-        if self.sm_chromosome is not None:
-            line_chr = self._line_array(self.sm_chromosome, sm_line)
-            variant_chr = self._variant_array(self.chromosome.lower(), sm_variants)
-            chr_filter = line_chr == variant_chr
-            self._error_dict["Chromosome"] += len(chr_filter) - np.sum(chr_filter)
+        sm_dict = {self.sm_lines: np.array(sm_line), self.sm_variants: np.array(sm_variants)}
 
-            sm_line = sm_line[chr_filter]
-            sm_variants = sm_variants[chr_filter]
+        if self.sm_chromosome is not None:
+            line_chr = self._line_array(self.sm_chromosome, sm_dict[self.sm_lines])
+            variant_chr = self._variant_array(self.chromosome.lower(), sm_dict[self.sm_variants])
+            chr_filter = line_chr == variant_chr
+            self._error_dict["Chromosome"] = len(chr_filter) - np.sum(chr_filter)
+            self._filter_array(sm_dict, chr_filter)
 
         if self.bp_position is not None:
             line_bp_pos = self._line_array(self.sm_bp_position, sm_line, int)
-            variant_bp_pos = self._variant_array(self.bp_position.lower(), sm_variants)
+            variant_bp_pos = self._variant_array(self.bp_position.lower(), sm_dict[self.sm_variants])
             bp_pos_filter = line_bp_pos == variant_bp_pos
-            self._error_dict["Position"] += len(bp_pos_filter) - np.sum(bp_pos_filter)
-            sm_line = sm_line[bp_pos_filter]
-            sm_variants = sm_variants[bp_pos_filter]
+            self._error_dict["Position"] = len(bp_pos_filter) - np.sum(bp_pos_filter)
+            self._filter_array(sm_dict, bp_pos_filter)
 
         # Calculate within a 'beta method'
+        sm_dict[self.beta] = self._line_array(self.sm_effect_size, sm_line, float)
+        filter_beta = np.array([True if np.isfinite(beta) else False for beta in sm_dict[self.beta]])
+        self._error_dict["Effect_Size"] = len(filter_beta) - np.sum(filter_beta)
+        self._filter_array(sm_dict, filter_beta)
 
-        beta_raw = self._line_array(self.sm_effect_size, sm_line, float)
-        filter_beta = np.array([True if np.isfinite(beta) else False for beta in beta_raw])
-        print(beta_raw)
-        print(beta_raw)
-        print("beta - ?")
-
-        p_value = self._line_array(self.sm_p_value, sm_line, float)
-        p_value = np.array([p for p in p_value if np.isfinite(p) and p != 0])
-        print(p_value)
+        # P values
+        sm_dict[self.qc_p] = self._line_array(self.sm_p_value, sm_line, float)
+        filter_p = np.array([True if np.isfinite(p) and p != 0 else False for p in sm_dict[self.qc_p]])
+        self._error_dict["P_Value"] = len(filter_p) - np.sum(filter_p)
+        self._filter_array(sm_dict, filter_beta)
 
         if self.effect_type == "BLUP":
-            betas = beta_raw.copy()
-            betas_odds = beta_raw.copy()
+            betas = sm_dict[self.beta].copy()
+            betas_odds = sm_dict[self.beta].copy()
 
         elif self.z_scores:
-            stds = self._line_array(self.sm_standard_errors, sm_line, float)
-            stds = np.array([std for std in stds if np.isfinite(std) and std != 0])
+            sm_dict[self.qc_std] = self._line_array(self.sm_standard_errors, sm_line, float)
+            filter_std = np.array([True if np.isfinite(std) and std != 0 else False for std in sm_dict[self.qc_std]])
+            self._error_dict["Standard_Errors"] = len(filter_std) - np.sum(filter_std)
+            self._filter_array(sm_dict, filter_std)
 
             if self.effect_type == "OR":
-                abs_beta = np.array([np.absolute(1 - beta) / se for beta, se in zip(beta_raw, stds)])
-                betas_odds = np.array([np.log(beta) for beta in beta_raw])
+                abs_beta = np.array([np.absolute(1 - beta) / se for beta, se in zip(sm_dict[self.beta], sm_dict[self.qc_std])])
+                betas_odds = np.array([np.log(beta) for beta in sm_dict[self.beta]])
             else:
-                abs_beta = np.array([np.absolute(beta) / se for beta, se in zip(beta_raw, stds)])
-                betas_odds = beta_raw.copy()
+                abs_beta = np.array([np.absolute(beta) / se for beta, se in zip(sm_dict[self.beta], sm_dict[self.qc_std])])
+                betas_odds = sm_dict[self.beta].copy()
 
             betas = np.array([np.sign(beta_t) * (ab / np.sqrt(self.sample_size)) for beta_t, ab in zip(betas_odds, abs_beta)])
 
         else:
             if self.effect_type == "OR":
-                betas_odds = np.array([np.log(beta) for beta in beta_raw])
+                betas_odds = np.array([np.log(beta) for beta in sm_dict[self.beta]])
             else:
-                betas_odds = beta_raw.copy()
+                betas_odds = sm_dict[self.beta].copy()
 
             # probability density function
-            pdfs = stats.norm.ppf(p_value / 2.0)
-            betas = np.array([np.sign(beta) * (pdf / np.sqrt(self.sample_size)) for beta, pdf in zip(beta_raw, pdfs)])
+            pdfs = stats.norm.ppf(sm_dict[self.qc_p] / 2.0)
+            betas = np.array([np.sign(beta) * (pdf / np.sqrt(self.sample_size)) for beta, pdf in zip(sm_dict[self.beta], pdfs)])
 
         ###############################################################################################################
-        print(betas)
-        print(betas_odds)
 
         e_allele = self._line_array(self.sm_effect_allele, sm_line)
         a_allele = self._line_array(self.sm_alt_allele, sm_line)
+        sm_dict[self.qc_nuc] = np.array([Nucleotide(e, a) for e, a in zip(e_allele, a_allele)])
 
-        sm_nucleotide = np.array([Nucleotide(e, a) for e, a in zip(e_allele, a_allele)])
-
-        ambiguous_filter = [False if (smn.to_tuple() in self.ambiguous_snps) or ((varn.a1, varn.a2) in self.ambiguous_snps) else True
-                            for smn, varn in zip(sm_nucleotide, sm_variants)]
-        print(ambiguous_filter)
+        filter_ambiguous = [False if (smn.to_tuple() in self.ambiguous_snps) or ((varn.a1, varn.a2) in self.ambiguous_snps) else True
+                            for smn, varn in zip(sm_dict[self.qc_nuc], sm_dict[self.sm_variants])]
+        self._error_dict["Ambiguous_SNP"] = len(filter_ambiguous) - np.sum(filter_ambiguous)
+        self._filter_array(sm_dict, filter_ambiguous)
 
         allowed_filter = [False if (smn.a1 not in self.allowed_alleles) or (smn.a2 not in self.allowed_alleles) or (varn.a1 not in self.allowed_alleles) or (varn.a2 not in self.allowed_alleles)
-                          else True for smn, varn in zip(sm_nucleotide, sm_nucleotide)]
+                          else True for smn, varn in zip(sm_dict[self.qc_nuc], sm_dict[self.sm_variants])]
+        self._error_dict["Non_Allowed_Allele"] = len(allowed_filter) - np.sum(allowed_filter)
 
-        # These two could be made faster by spliting out the methods and running all processes at once like beta
-        bass = np.array([self._flip_nucleotide(varn, smn, b, bo) for varn, smn, b, bo in zip(sm_variants, sm_nucleotide, betas, betas_odds)])
+        # todo These two could be made faster by splinting out the methods and running all processes at once like beta
+        cleaned_betas = np.array([self._flip_nucleotide(varn, smn, b, bo) for varn, smn, b, bo in zip(sm_dict[self.sm_variants], sm_dict[self.qc_nuc], betas, betas_odds)])
         freqss = np.array([self._sum_stats_frequencies(line) for line in sm_line])
 
         if self.sm_info is not None:
@@ -179,6 +181,24 @@ class Cleaner(Input):
         else:
             infos = np.empty(len(sm_line))
             infos.fill(-1)
+
+        sm_variants = []
+        for variant, (b, bl), p, i, fe in zip(sm_dict[self.sm_variants], cleaned_betas, sm_dict[self.qc_p], infos, freqss):
+
+            if (b is not None) and (bl is not None):
+                sm_variants.append(SMVariant(variant.chromosome, variant.variant_id, variant.bp_position, variant.a1,
+                                             variant.a2, b, bl, p, i, fe))
+            else:
+                self._error_dict["Non_Matching"] += 1
+
+        # Given we have only accepted snps that are within the validation / core, we should never have more snps in
+        # summary than within the validation. If we do, something has gone critically wrong.
+        assert len(sm_variants) <= len(validation_snps), ec.snp_overflow(len(sm_variants), len(validation_snps))
+        assert len(sm_variants) <= len(core_snps), ec.snp_overflow(len(sm_variants), len(core_snps))
+
+        # We then need to order the snps on the base pair position
+        variant_by_bp = [[variant, variant.bp_position] for variant in sm_variants]
+        return np.array([variant for variant, bp in sorted(variant_by_bp, key=itemgetter(1))])
 
     @staticmethod
     def _line_array(line_key, line_array, type_np=None):
@@ -190,6 +210,13 @@ class Cleaner(Input):
     @staticmethod
     def _variant_array(variant_key, variant_array):
         return np.array([variant[variant_key] for variant in variant_array])
+
+    @staticmethod
+    def _filter_array(dict_to_filter, array_filter):
+        """Filter out anything that is no longer required"""
+        for key, value in zip(dict_to_filter.keys(), dict_to_filter.values()):
+            dict_to_filter[key] = value[array_filter]
+
 
     def _clean_summary_stats(self, load_path, validation, core, chromosome):
         """
