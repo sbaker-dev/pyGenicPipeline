@@ -280,10 +280,17 @@ custom_summary_header_keys:
   Effect_size: null
 
   # Minor Allele frequency (MAF) header, Optional
-  Minor_Allele_Freq: None
+  Minor_Allele_Freq: null
 
   # INFO  header, Optional
-  Info: None
+  Info: null
 
   # Standard errors header, Optional
-  Standard_Errors: None
+  Standard_Errors: null
+
+  # If working with summary statistics from Psychiatric Genomics Consortium then you will also need to provide these
+  # headers which represent the case-control frequency and number of individuals.
+  Case_Freq: null
+  Control_Freq: null
+  Case_N: null
+  Control_N: null

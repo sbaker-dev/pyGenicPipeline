@@ -388,26 +388,37 @@ class Input:
         return "Frequency"
 
     @property
-    def h5_validation(self):
-        """Validation key for h5py for group data such as chromosomes and snps"""
-        return "Validation"
+    def case_freq(self):
+        """Key used for accessing Case_Freq headers, groups or other attributes"""
+        return "Case_Freq"
+
+    def sm_case_freq(self):
+        """Case_Freq header index in GWAS summary file"""
+        return self._summary_headers[self.case_freq]
 
     @property
-    def h5_valid_chromosome(self):
-        """Key for accessing valid chromosomes within Validation group within the h5py file"""
-        return "Valid_Chromosomes"
+    def case_n(self):
+        """Key used for accessing Case_N headers, groups or other attributes"""
+        return "Case_N"
+
+    def sm_case_n(self):
+        """Case_N header index in GWAS summary file"""
+        return self._summary_headers[self.case_freq]
 
     @property
-    def h5_valid_snps(self):
-        """Key for accessing Valid_Snps within Validation group within the h5py file"""
-        return "Valid_Snps"
+    def control_freq(self):
+        """Key used for accessing Control_Freq headers, groups or other attributes"""
+        return "Control_Freq"
+
+    def sm_control_freq(self):
+        """Control_Freq header index in GWAS summary file"""
+        return self._summary_headers[self.case_freq]
 
     @property
-    def h5_string_type(self):
-        """strings need to be stored a set type in h5py"""
-        return "|S30"
+    def control_n(self):
+        """Key used for accessing Control_N headers, groups or other attributes"""
+        return "Control_N"
 
-    @property
-    def h5_summary(self):
-        """Header for cleaned but not coordinate summary statistics"""
-        return "Summary_Statistics"
+    def sm_control_n(self):
+        """Control_N header index in GWAS summary file"""
+        return self._summary_headers[self.case_freq]

@@ -9,6 +9,10 @@ header_keys:
   P_Value: ["PVAL", "pval", "p", "P", "P.2gc"]
   Effect_size: ["LINREG", "OR"]
   Minor_Allele_Freq: ["REF_FRQ", "reffrq", "Freq.Hapmap.Ceu", "Freq.Allele1.HapMapCEU", "MAF", "Freq.Hapmap.Ceu"]
+  Case_Freq: ["Case_Freq"]
+  Control_Freq: ["Control_Freq"]
+  Case_N: ["Case_N"]
+  Control_N: ["Control_N"]
   Info: ["Info", "info"]
   Standard_Errors: ["SE", "se", "SE.2gc"]
 
