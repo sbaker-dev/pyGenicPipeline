@@ -7,6 +7,7 @@ from pyGeneticPipe.core.Input import Input
 from pysnptools.distreader import Bgen
 from pysnptools.snpreader import Bed
 from operator import itemgetter
+from colorama import Fore
 from pathlib import Path
 from scipy import stats
 import numpy as np
@@ -19,9 +20,10 @@ class Cleaner(Input):
     def __init__(self, args):
         super().__init__(args)
 
-        self._error_dict = {"Invalid_Snps": 0, "Chromosome": 0, "Position": 0, "Effect_Size": 0, "P_Value": 0,
-                            "Standard_Errors": 0, "Duplicate_Position": 0, "Ambiguous_SNP": 0, "Non_Matching": 0,
-                            "Non_Allowed_Allele": 0}
+        self._error_dict = {"Removal case": "Count", "Invalid_Snps": 0, "Chromosome": 0, "Position": 0,
+                            "Effect_Size": 0, "P_Value": 0, "Standard_Errors": 0, "Duplicate_Position": 0,
+                            "Ambiguous_SNP": 0, "Non_Matching": 0, "Non_Allowed_Allele": 0, "Filtered_Frequency": 0,
+                            "Filtered_MAF": 0, "Monomorphic": 0, "Accepted_Snps": 0}
         self._summary_last_position = 0
 
     def clean_summary_statistics(self):
@@ -43,9 +45,8 @@ class Cleaner(Input):
 
             # Clean the summary statistics
             sm_variants = self._clean_summary_stats(load_path, validation, core, chromosome)
-            print(f"\nCleaned summary statistics for chromosome: {chromosome} finding {len(sm_variants)} valid snps\n"
-                  f"And the following errors {self._error_dict}")
 
+            # Filter the summary stats
             self._filter_snps(load_path, sm_variants)
             return
 
@@ -72,7 +73,7 @@ class Cleaner(Input):
 
                 # If the snp exists in both the validation and core snp samples then clean this line, else skip.
                 if (snp_id in validation_snps) and (snp_id in core_snps):
-                    sm_variant = self._validate_summary_line(line,  self._set_variant(snp_id, indexer))
+                    sm_variant = self._validate_summary_line(line, self._set_variant(snp_id, indexer))
                     if sm_variant:
                         sm_variants.append(sm_variant)
 
@@ -450,19 +451,32 @@ class Cleaner(Input):
 
         # for each core / validation we need to do _isoalte dosage
         validation_raw_snps = self._isolate_raw_snps(validation, sm_variants)
-        print(np.mean(validation_raw_snps, axis=1))
+        # print(np.mean(validation_raw_snps, axis=1))
 
         freqs = np.sum(validation_raw_snps, 1, dtype='float32') / (2 * float(validation.iid_count))
 
-        # if self._frequency_op:
-        #     # Filter out anything that fails frequencys
-        #     raise NotImplementedError("Frequencies are not yet implemented")
+        print("PRE FILTER")
+        print(len(sm_variants), len(validation_raw_snps), len(freqs))
+
+        # If the frequencies in the summary stats are not just a list of -1 errors then screen genetic snp frequencies
+        summary_freqs = np.array([variant.frequency for variant in sm_variants])
+        if (self.freq_discrepancy < 1) and (np.sum(summary_freqs == -1) != len(summary_freqs)):
+            freq_filter = np.logical_or(np.absolute(summary_freqs - freqs) < self.freq_discrepancy,
+                                        np.absolute(summary_freqs + (freqs - 1)) < self.freq_discrepancy)
+            freq_filter = np.logical_or(freq_filter, summary_freqs <= 0)
+            filtered_freqs = len(freq_filter) - np.sum(freq_filter)
+            assert filtered_freqs >= 0
+            self._error_dict["Filtered_Frequency"] += filtered_freqs
+
+            sm_variants = sm_variants[freq_filter]
+            validation_raw_snps = validation_raw_snps[freq_filter]
+            freqs = freqs[freq_filter]
 
         if self.maf_min > 0:
             maf_filter = (freqs > self.maf_min) * (freqs < (1 - self.maf_min))
             maf_filtered_snps = len(maf_filter) - np.sum(maf_filter)
-            assert maf_filtered_snps > 0
-            print(f"{maf_filtered_snps} snps removed for low maf")
+            assert maf_filtered_snps >= 0
+            self._error_dict["Filtered_MAF"] += maf_filtered_snps
 
             # Filter out anything that fails maf
             sm_variants = sm_variants[maf_filter]
@@ -472,12 +486,17 @@ class Cleaner(Input):
         # Do the same for std
         stds = np.std(validation_raw_snps, 1, dtype='float32')
         monomorphic_filter = stds > 0
-        assert len(monomorphic_filter) > 0
+        monomorphic_filtered_snps = len(monomorphic_filter) - np.sum(monomorphic_filter)
+        assert monomorphic_filtered_snps >= 0
+        self._error_dict["Monomorphic"] += monomorphic_filtered_snps
         sm_variants = sm_variants[monomorphic_filter]
         validation_raw_snps = validation_raw_snps[monomorphic_filter]
         freqs = freqs[monomorphic_filter]
 
-        print(sm_variants, validation_raw_snps, freqs)
+        self._error_dict["Accepted_Snps"] = len(sm_variants)
+
+        print("POST MONOMORPHIC FILTER")
+        print(len(sm_variants), len(validation_raw_snps), len(freqs))
 
     def _seek_to_start(self, chromosome, file):
         """
@@ -527,6 +546,6 @@ class Cleaner(Input):
             else:
                 return -1
 
-        # If we have non frequency information just return -1
+        # If we have no frequency information just return -1
         else:
             return -1
