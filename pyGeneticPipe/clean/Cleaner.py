@@ -524,15 +524,15 @@ class Cleaner(Input):
         else:
             return 1
 
-    def _isolate_raw_snps(self, gen_file, sm_variants):
+    def _isolate_raw_snps(self, gen_file, sm_dict):
         """
         This will isolate the raw snps for a given bed or bgen file
 
         :param gen_file: Genetic file you wish to load from
-        :param sm_variants: summary statistics variants
+        :param sm_dict: dict of clean information
         :return: raw snps
         """
-        ordered_common = gen_file[:, gen_file.sid_to_index(self._extract_variant_name(sm_variants))].read().val
+        ordered_common = gen_file[:, gen_file.sid_to_index(self._extract_variant_name(sm_dict))].read().val
 
         # bed returns 2, 1, 0 rather than 0, 1, 2 although it says its 0, 1, 2; so this inverts it
         if self.load_type == ".bed":
@@ -546,7 +546,7 @@ class Cleaner(Input):
         else:
             raise Exception(f"Critical Error: Unknown load type {self.load_type} found in _isolate_dosage")
 
-    def _extract_variant_name(self, sm_variants):
+    def _extract_variant_name(self, sm_dict):
         """
         Different file types have different naming standards.
 
@@ -554,66 +554,49 @@ class Cleaner(Input):
         .bgen: ["rs123,rs123", "rs124,rs124", ... "rsN,rsN"]
 
         This will standardise the names to be a list of type equivalent to bed
-        :param sm_variants: list of SMVariant
+        :param sm_dict: dict of clean information
         :return: list of snp names
         """
         if self.load_type == ".bed":
-            return [variant.variant_id for variant in sm_variants]
+            return [variant.variant_id for variant in sm_dict[self.sm_variants]]
         elif self.load_type == ".bgen":
             print("Bgen load type, so need to restructure return type ... will take a bit longer longer!")
-            return [variant.bgen_variant_id() for variant in sm_variants]
+            return [variant.bgen_variant_id() for variant in sm_dict[self.sm_variants]]
         else:
             raise Exception(f"Critical Error: Unknown load type {self.load_type} found in _isolate_dosage")
 
-    def _filter_snps(self, load_path, sm_variants):
+    def _filter_snps(self, load_path, sm_dict):
         # testing validation for comparision TEMP
-        validation = Bed(load_path, count_A1=True)
+        validation = Bgen(load_path)
 
-        # for each core / validation we need to do _isoalte dosage
-        validation_raw_snps = self._isolate_raw_snps(validation, sm_variants)
-        # print(np.mean(validation_raw_snps, axis=1))
-
-        freqs = np.sum(validation_raw_snps, 1, dtype='float32') / (2 * float(validation.iid_count))
+        # Construct the genetic raw snps and genetric freqs
+        sm_dict["Validation_Raw_Snps"] = self._isolate_raw_snps(validation, sm_dict)
+        sm_dict["Freqs"] = np.sum(sm_dict["Validation_Raw_Snps"], 1, dtype='float32') / (2 * float(validation.iid_count))
 
         # If the frequencies in the summary stats are not just a list of -1 errors then screen genetic snp frequencies
-        summary_freqs = np.array([variant.frequency for variant in sm_variants])
-        if (self.freq_discrepancy < 1) and (np.sum(summary_freqs == -1) != len(summary_freqs)):
-            freq_filter = np.logical_or(np.absolute(summary_freqs - freqs) < self.freq_discrepancy,
-                                        np.absolute(summary_freqs + (freqs - 1)) < self.freq_discrepancy)
-            freq_filter = np.logical_or(freq_filter, summary_freqs <= 0)
-            filtered_freqs = len(freq_filter) - np.sum(freq_filter)
-            assert filtered_freqs >= 0
-            self._error_dict["Filtered_Frequency"] += filtered_freqs
-
-            sm_variants = sm_variants[freq_filter]
-            validation_raw_snps = validation_raw_snps[freq_filter]
-            freqs = freqs[freq_filter]
+        if (self.freq_discrepancy < 1) and (np.sum(sm_dict[self.frequency] == -1) != len(sm_dict[self.frequency])):
+            freq_filter = np.logical_or(np.absolute(sm_dict[self.frequency] - sm_dict["Freqs"]) < self.freq_discrepancy,
+                                        np.absolute(sm_dict[self.frequency] + (sm_dict["Freqs"] - 1)) < self.freq_discrepancy)
+            freq_filter = np.logical_or(freq_filter, sm_dict[self.frequency] <= 0)
+            self._error_dict["Filtered_Frequency"] = len(freq_filter) - np.sum(freq_filter)
+            if self._filter_array(sm_dict, freq_filter) == 0:
+                return None
 
         if self.maf_min > 0:
-            maf_filter = (freqs > self.maf_min) * (freqs < (1 - self.maf_min))
-            maf_filtered_snps = len(maf_filter) - np.sum(maf_filter)
-            assert maf_filtered_snps >= 0
-            self._error_dict["Filtered_MAF"] += maf_filtered_snps
-
-            # Filter out anything that fails maf
-            sm_variants = sm_variants[maf_filter]
-            validation_raw_snps = validation_raw_snps[maf_filter]
-            freqs = freqs[maf_filter]
+            maf_filter = (sm_dict["Freqs"] > self.maf_min) * (sm_dict["Freqs"] < (1 - self.maf_min))
+            self._error_dict["Filtered_MAF"] = len(maf_filter) - np.sum(maf_filter)
+            if self._filter_array(sm_dict, maf_filter) == 0:
+                return None
 
         # Do the same for std
-        stds = np.std(validation_raw_snps, 1, dtype='float32')
+        stds = np.std(sm_dict["Validation_Raw_Snps"], 1, dtype='float32')
         monomorphic_filter = stds > 0
-        monomorphic_filtered_snps = len(monomorphic_filter) - np.sum(monomorphic_filter)
-        assert monomorphic_filtered_snps >= 0
-        self._error_dict["Monomorphic"] += monomorphic_filtered_snps
-        sm_variants = sm_variants[monomorphic_filter]
-        validation_raw_snps = validation_raw_snps[monomorphic_filter]
-        freqs = freqs[monomorphic_filter]
+        self._error_dict["Monomorphic"] = len(monomorphic_filter) - np.sum(monomorphic_filter)
 
-        self._error_dict["Accepted_Snps"] = len(sm_variants)
-
-        print("POST MONOMORPHIC FILTER")
-        print(len(sm_variants), len(validation_raw_snps), len(freqs))
+        if self._filter_array(sm_dict, monomorphic_filter) == 0:
+            return None
+        else:
+            self._error_dict["Accepted_Snps"] = len(sm_dict[self.sm_variants])
 
     def _seek_to_start(self, chromosome, file):
         """
