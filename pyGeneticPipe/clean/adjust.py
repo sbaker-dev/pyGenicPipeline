@@ -1,6 +1,6 @@
 import numpy as np
 import h5py
-from scipy import linalg
+import sys
 
 
 def standardise_snps(g):
@@ -97,17 +97,81 @@ def snps_in_window(snps, window_start, number_of_snps, window_size):
     return snps[window_start: min(number_of_snps, (window_start + window_size))]
 
 
-def get_chr_heritiablity(g, chr_avg_ld_score, n):
+def estimate_heritability(g, chr_avg_ld_score, n, n_snps):
+    """
+    This will calculated the chromosome chi-squared lambda (maths from LDPred), and then take the maximum of 0.0001 or
+    the  computed heritability of
+
+    This chromosomes chi-sq lambda (or 1 if its less than 1 for reasons that are beyond me)
+    ---------------------------------------------------------------------------------------
+    Number of samples in the summary stats * (average ld score / number snps)
+
+    :param g: temproy load directory. Will be accessed via sm_dict
+    :param chr_avg_ld_score: avaerage of the score calcualted in the step before
+    :param n: number of samples in summary stats
+    :param n_snps: Number of snps that passed screening on this chromosome
+
+    :return: estimated heritaiblity (h2 in ldpred)
+    """
     betas = g['betas'][...]
-    n_snps = len(betas)
 
     sum_beta_sq = np.sum(betas ** 2)
 
-    chr_chi_sq_lamda = np.mean((n * sum_beta_sq) / float(n_snps))
-    return max(0.0001, (max(1.0, float(chr_chi_sq_lamda)) - 1) / (n * (chr_avg_ld_score / n_snps)))
+    char_chi_sq_lambda = np.mean((n * sum_beta_sq) / float(n_snps))
+
+    return max(0.0001, (max(1.0, float(char_chi_sq_lambda)) - 1) / (n * (chr_avg_ld_score / n_snps)))
 
 
-def call_main(coord_file, radius, n, p_range):
+def _multiple_hertiaiblity(updated_betas, n, n_snps, ld_scores):
+    # todo Do we need both as this is just conjecture at this point?
+    sum_beta_sq = np.sum(updated_betas ** 2)
+
+    char_chi_sq_lambda = np.mean((n * sum_beta_sq) / float(n_snps))
+
+    asddd = max(0.0001, (max(1.0, float(char_chi_sq_lambda)) - 1) / (n * (np.mean(ld_scores) / n_snps)))
+    print(asddd)
+
+
+def compute_ld_scores(n_individuals, n_snps, radius, snps):
+    ld_dict = {}
+    ld_scores = np.ones(n_snps)
+    # todo genetic map seems to be a thing, we can look into that later
+    # If we don't have a genetic map
+    # compute disequilibrium.
+
+    for i, snp in enumerate(snps):
+        _calculate_disequilibrium(snps_in_ld(snps, i, radius, n_snps), i, snp, n_individuals, ld_dict, ld_scores)
+
+    # Temporally store these until we know what they do
+    ret_dict = {}
+    ret_dict["ld_dict"] = ld_dict
+    ret_dict["ld_scores"] = ld_scores
+    return ld_scores, ld_dict
+
+
+def infinitesimal_betas(g, h2, n, n_individuals, n_snps, radius, snps):
+    """
+    Apply the infinitesimal shrink w LD (which requires LD information). LDPRED
+
+    """
+    ld_window_size = radius * 2
+    beta_hats = g['betas'][...]
+    updated_betas = np.empty(n_snps)
+    for wi in range(0, n_snps, ld_window_size):
+        window_snps = snps_in_window(snps, wi, n_snps, ld_window_size)
+        start_i = wi
+        stop_i = min(n_snps, wi + ld_window_size)
+
+        D = shrink_r2_matrix(np.dot(window_snps, window_snps.T) / n_individuals, n_individuals)
+
+        # numpy.eye is just an identity matrix
+        A = np.array(((n_snps / h2) * np.eye(min(n_snps, (wi + (radius * 2))) - wi)) + (n / 1.0) * D)
+
+        updated_betas[start_i: stop_i] = np.dot(np.linalg.pinv(A) * n, beta_hats[start_i: stop_i])
+    return updated_betas
+
+
+def call_main(coord_file, radius, n, rp):
     # todo, allow individuals to store this information to prevent repeated calculation?
     df = h5py.File(coord_file, 'r')
     cord_data_g = df['cord_data']
@@ -118,45 +182,22 @@ def call_main(coord_file, radius, n, p_range):
         # todo This is just a standardised mesure that we could have calculated in input
         snps, n_snps, n_individuals = standardise_snps(g)
 
-        ld_dict = {}
-        ld_scores = np.ones(n_snps)
+        # Calculate the ld scores and a dict containing information (don't know what it does currently)
+        ld_scores, ld_dict = compute_ld_scores(n_individuals, n_snps, radius, snps)
 
-        # todo genetic map seems to be a thing, we can look into that later
-        # If we don't have a genetic map
-        # compute disequilibrium.
-        for i, snp in enumerate(snps):
-            _calculate_disequilibrium(snps_in_ld(snps, i, radius, n_snps), i, snp, n_individuals, ld_dict, ld_scores)
+        # Estimate the partition heritability of this chromosome
+        h2 = estimate_heritability(g, np.mean(ld_scores), n, n_snps)
 
-        beta_hats = g['betas'][...]
-        h2 = get_chr_heritiablity(g, np.mean(ld_scores), n)
+        # Update the betas via infinitesimal shrinkage using ld information
+        updated_betas = infinitesimal_betas(g, h2, n, n_individuals, n_snps, radius, snps)
 
-        ld_window_size = radius * 2
-        updated_betas = np.empty(n_snps)
-        for wi in range(0, n_snps, ld_window_size):
-            wi_distance = snps_in_window(snps, wi, n_snps, ld_window_size)
-            start_i = wi
-            stop_i = min(n_snps, wi + ld_window_size)
-
-            D = shrink_r2_matrix(np.dot(wi_distance, wi_distance.T) / n_individuals, n_individuals)
-
-            A = ((n_snps / h2) * np.eye(min(n_snps, (wi + (radius * 2))) - wi) + (n / 1.0) * D)
-            A_inv = linalg.pinv(A)
-            updated_betas[start_i: stop_i] = np.dot(A_inv * n, beta_hats[start_i: stop_i])  # Adjust the beta_hats
-
+        # heritibailtiy on betas post infinitesimal shrink (for testing only)
+        _multiple_hertiaiblity(updated_betas, n, n_snps, ld_scores)
 
         print(updated_betas)
 
-
-        # ret_dict = {}
-        # ret_dict["ld_dict"] = ld_dict
-        # ret_dict["ld_scores"] = ld_scores
-        # ret_dict["ref_ld_matrices"] = ref_ld_matrices
-
         print("F")
         break
-
-
-
 
 
 
