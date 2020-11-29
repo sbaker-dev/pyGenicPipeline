@@ -171,7 +171,31 @@ def infinitesimal_betas(g, h2, n, n_individuals, n_snps, radius, snps):
     return updated_betas
 
 
-def call_main(coord_file, radius, n, rp):
+def load_lrld_dict():
+    # Load Price et al. AJHG 2008 long range LD table.
+    d = {}
+    for chrom in range(1, 24):
+        d[chrom] = {'reg_dict': {}}
+    # todo set system args to laod data for long-range-ld and hm3 snps
+
+    lrld = r"C:\Users\Samuel\PycharmProjects\External Libaries\ldpred\reference\long-range-ld-price-2008hg38.txt"
+
+    with open(lrld, 'r') as f:
+        for line in f:
+            l = line.split()
+            if l[0] == "X":
+                continue
+            d[int(l[0])][l[3]] = {'start_pos': int(l[1]), 'end_pos': int(l[2])}
+    return d
+
+
+def filter_long_range():
+    d = load_lrld_dict()
+    print(d)
+
+
+
+def call_main(coord_file, radius, n, rp, filter_long_range_ld):
     # todo, allow individuals to store this information to prevent repeated calculation?
     df = h5py.File(coord_file, 'r')
     cord_data_g = df['cord_data']
@@ -194,6 +218,10 @@ def call_main(coord_file, radius, n, rp):
         # heritibailtiy on betas post infinitesimal shrink (for testing only)
         _multiple_hertiaiblity(updated_betas, n, n_snps, ld_scores)
 
+        # Filter long range LD if set
+        if filter_long_range_ld:
+            filter_long_range()
+
         print(updated_betas)
 
         print("F")
@@ -208,7 +236,7 @@ if __name__ == '__main__':
     ns = 253288
     ps = [1, 0.3, 0.1, 0.03, 0.01, 0.003, 0.001]
 
-    call_main(cf, rr, ns, ps)
+    call_main(cf, rr, ns, ps, True)
 
 
 
