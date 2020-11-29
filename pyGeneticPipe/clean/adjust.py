@@ -1,7 +1,5 @@
-from pathlib import Path
-import h5py
-import sys
 import numpy as np
+import h5py
 
 
 def standardise_snps(g):
@@ -81,6 +79,22 @@ def snps_in_ld(snps, snp_index, radius, number_of_snps):
     return snps[max(0, snp_index - radius): min(number_of_snps, (snp_index + radius + 1))]
 
 
+def snps_in_window(snps, window_start, number_of_snps, window_size):
+    """
+    When accessing a window of snps we don't look at the snps +/- radius from the current snp, but just iterate in
+    chunks of r*2 through the snps as a window. However, the last iteration may be out of range so we take the minimum
+    of the number of snps as a precaution to prevent that.
+
+    :param snps: Normalised snps
+    :param window_start: Start index from the window iteration
+    :param number_of_snps: total number of snps
+    :param window_size: The size, radius * 2, of the window
+    :return:
+    """
+
+    return snps[window_start: min(number_of_snps, (window_start + window_size))]
+
+
 def call_main(coord_file, radius):
     df = h5py.File(coord_file, 'r')
     cord_data_g = df['cord_data']
@@ -101,11 +115,21 @@ def call_main(coord_file, radius):
         for i, snp in enumerate(snps):
             _calculate_disequilibrium(snps_in_ld(snps, i, radius, n_snps), i, snp, n_individuals, ld_dict, ld_scores)
 
+        print("E")
+        ld_window_size = radius * 2
+        ref_ld_matrices = []
+        for wi in range(0, n_snps, ld_window_size):
+            wi_distance = snps_in_window(snps, wi, n_snps, ld_window_size)
+            ref_ld_matrices.append(shrink_r2_matrix(np.dot(wi_distance, wi_distance.T) / n_individuals, n_individuals))
 
+        ret_dict = {}
+        ret_dict["ld_dict"] = ld_dict
+        ret_dict["ld_scores"] = ld_scores
+        ret_dict["ref_ld_matrices"] = ref_ld_matrices
 
+        print(ret_dict)
 
         break
-
 
 
 
