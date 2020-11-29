@@ -74,18 +74,22 @@ def main_call(coord_file, n, radius):
             start_i = wi
             stop_i = min(m, wi + ld_window_size)
             D = chrom_ref_ld_mats[chrom_str][i]
-            print(start_i)
-            print(stop_i)
-            print(D.shape)
+
             A = ((m / h2) * np.eye(min(m, (wi + (radius * 2))) - wi) + (n / 1.0) * D)
             A_inv = linalg.pinv(A)
 
             print(A_inv[0])
-            break
 
-            # updated_betas[start_i: stop_i] = np.dot(A_inv * n, beta_hats[start_i: stop_i])  # Adjust the beta_hats
+
+
+
+            updated_betas[start_i: stop_i] = np.dot(A_inv * n, beta_hats[start_i: stop_i])  # Adjust the beta_hats
+
+            print(updated_betas)
 
             print("")
+            break
+
         break
 
 

@@ -1,5 +1,6 @@
 import numpy as np
 import h5py
+from scipy import linalg
 
 
 def standardise_snps(g):
@@ -7,6 +8,7 @@ def standardise_snps(g):
     This loads in the snps and then creates a normalised snp.
     :return:
     """
+    # todo Currently these three are stored seperatly but are only used so far for a normalised snp?
     raw_snps = g['raw_snps_ref'][...]
     snp_stds = g['snp_stds_ref'][...]
     snp_means = g['snp_means_ref'][...]
@@ -95,10 +97,20 @@ def snps_in_window(snps, window_start, number_of_snps, window_size):
     return snps[window_start: min(number_of_snps, (window_start + window_size))]
 
 
-def call_main(coord_file, radius):
+def get_chr_heritiablity(g, chr_avg_ld_score, n):
+    betas = g['betas'][...]
+    n_snps = len(betas)
+
+    sum_beta_sq = np.sum(betas ** 2)
+
+    chr_chi_sq_lamda = np.mean((n * sum_beta_sq) / float(n_snps))
+    return max(0.0001, (max(1.0, float(chr_chi_sq_lamda)) - 1) / (n * (chr_avg_ld_score / n_snps)))
+
+
+def call_main(coord_file, radius, n, p_range):
+    # todo, allow individuals to store this information to prevent repeated calculation?
     df = h5py.File(coord_file, 'r')
     cord_data_g = df['cord_data']
-
     tt = 0
     for chrom_str in cord_data_g:
         g = cord_data_g[chrom_str]
@@ -115,20 +127,32 @@ def call_main(coord_file, radius):
         for i, snp in enumerate(snps):
             _calculate_disequilibrium(snps_in_ld(snps, i, radius, n_snps), i, snp, n_individuals, ld_dict, ld_scores)
 
-        print("E")
+        beta_hats = g['betas'][...]
+        h2 = get_chr_heritiablity(g, np.mean(ld_scores), n)
+
         ld_window_size = radius * 2
-        ref_ld_matrices = []
+        updated_betas = np.empty(n_snps)
         for wi in range(0, n_snps, ld_window_size):
             wi_distance = snps_in_window(snps, wi, n_snps, ld_window_size)
-            ref_ld_matrices.append(shrink_r2_matrix(np.dot(wi_distance, wi_distance.T) / n_individuals, n_individuals))
+            start_i = wi
+            stop_i = min(n_snps, wi + ld_window_size)
 
-        ret_dict = {}
-        ret_dict["ld_dict"] = ld_dict
-        ret_dict["ld_scores"] = ld_scores
-        ret_dict["ref_ld_matrices"] = ref_ld_matrices
+            D = shrink_r2_matrix(np.dot(wi_distance, wi_distance.T) / n_individuals, n_individuals)
 
-        print(ret_dict)
+            A = ((n_snps / h2) * np.eye(min(n_snps, (wi + (radius * 2))) - wi) + (n / 1.0) * D)
+            A_inv = linalg.pinv(A)
+            updated_betas[start_i: stop_i] = np.dot(A_inv * n, beta_hats[start_i: stop_i])  # Adjust the beta_hats
 
+
+        print(updated_betas)
+
+
+        # ret_dict = {}
+        # ret_dict["ld_dict"] = ld_dict
+        # ret_dict["ld_scores"] = ld_scores
+        # ret_dict["ref_ld_matrices"] = ref_ld_matrices
+
+        print("F")
         break
 
 
@@ -140,8 +164,10 @@ if __name__ == '__main__':
     cf = r"C:\Users\Samuel\Documents\Genetic_Examples\PolyTutOut\EUR.coord"
     fff = "EUR.ld"
     rr = 183
+    ns = 253288
+    ps = [1, 0.3, 0.1, 0.03, 0.01, 0.003, 0.001]
 
-    call_main(cf, rr)
+    call_main(cf, rr, ns, ps)
 
 
 
