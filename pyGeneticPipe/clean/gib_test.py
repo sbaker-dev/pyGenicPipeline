@@ -35,6 +35,11 @@ def get_chr_heritiablity(cord_data_g, ld_scores_dict, n, tot_betas_sq, tot_num_s
         chr_h2_ld_score_est = max(0.0001, (max(1.0, float(chr_chi_sq_lamda)) - 1) / (n * (chr_avg_ld_score / n_snps)))
         herit_dict[chrom_str] = {'n_snps': n_snps, 'h2': chr_h2_ld_score_est}
 
+    # todo: may be able to wrap this in with scores construction?
+    # todo: To be able to check for converge we need the avg_gw_ld_score
+    # todo to calculated avg_gw_ld_score you just need to do the sum of the ld_score / total number of snps
+    # todo so the only thing we need to store to calculate this bit is np.sum(ld_score), total number of snps
+
     # todo this bit requries the whole geneome.
     L = ld_scores_dict['avg_gw_ld_score']
     chi_square_lambda = np.mean(n * tot_betas_sq / float(tot_num_snps))
@@ -78,17 +83,10 @@ def main_call(coord_file, n, radius):
             A = ((m / h2) * np.eye(min(m, (wi + (radius * 2))) - wi) + (n / 1.0) * D)
             A_inv = linalg.pinv(A)
 
-            print(A_inv[0])
-
-
-
-
             updated_betas[start_i: stop_i] = np.dot(A_inv * n, beta_hats[start_i: stop_i])  # Adjust the beta_hats
 
-            print(updated_betas)
 
-            print("")
-            break
+        print(updated_betas)
 
         break
 
