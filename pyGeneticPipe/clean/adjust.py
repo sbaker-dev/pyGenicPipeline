@@ -1,4 +1,4 @@
-from pyGeneticPipe.clean.gibs_processor import gibs_processor
+from pyGeneticPipe.clean.gibs_processor import gibs_processor, local_values
 import numpy as np
 import h5py
 import sys
@@ -38,7 +38,7 @@ def shrink_r2_matrix(distance_dp, n):
     """
 
     clipped_r2 = np.clip(distance_dp, -1, 1)
-    clipped_r2[np.absolute(clipped_r2) < (1.0/(n-1))] = 0
+    clipped_r2[np.absolute(clipped_r2) < (1.0 / (n - 1))] = 0
     return clipped_r2
 
 
@@ -61,25 +61,6 @@ def _calculate_disequilibrium(snps, snp_i, snp, n_individuals, ld_dict, ld_score
 
     r2s = distance_dp ** 2
     ld_scores[snp_i] = np.sum(r2s - ((1 - r2s) / (n_individuals - 2)), dtype='float32')
-
-
-def snps_in_ld(snps, snp_index, radius, number_of_snps):
-    """
-    We want to construct a window of -r + r around each snp where r is the radius. However, the first r and last N-r of
-    the snps will not have r number of snps before or after them so we need to account for this by:
-
-    Taking the maximum of (0, i-r) so that we never get a negative index
-    Taking the minimum of (n_snps, (i + radius + 1)) to ensure we never get an index out of range
-
-    :param snps: Normalised snps
-    :param snp_index: Index
-    :param radius: radius
-    :param number_of_snps: total number of snps
-
-    :return: An array of shape snps of a maximum of 'radius' number of snps surrounding the current snp accessed via
-        index.
-    """
-    return snps[max(0, snp_index - radius): min(number_of_snps, (snp_index + radius + 1))]
 
 
 def snps_in_window(snps, window_start, number_of_snps, window_size):
@@ -134,7 +115,8 @@ def compute_ld_scores(n_individuals, n_snps, radius, snps):
     # compute disequilibrium.
 
     for i, snp in enumerate(snps):
-        _calculate_disequilibrium(snps_in_ld(snps, i, radius, n_snps), i, snp, n_individuals, ld_dict, ld_scores)
+        # Get the snps in ld then calculate the disequilibrium
+        _calculate_disequilibrium(local_values(snps, i, radius, n_snps), i, snp, n_individuals, ld_dict, ld_scores)
 
     # Temporally store these until we know what they do
     ret_dict = {}
@@ -198,7 +180,6 @@ def filter_long_range(g, chrom_str):
             # filter call of attributes
 
 
-
 def call_main(coord_file, radius, n, ps, filter_long_range_ld, h2_calculated, iterations, burn):
     df = h5py.File(coord_file, 'r')
     cord_data_g = df['cord_data']
@@ -226,15 +207,31 @@ def call_main(coord_file, radius, n, ps, filter_long_range_ld, h2_calculated, it
             filter_long_range(g, chrom_str)
 
         beta_hats = g['betas'][...]
+        positons = g['positions'][...]
+        sids = g['sids'][...]
+        nts = g['nts'][...]
+        raw_effect = g['log_odds'][...]
+        snp_stds = g['snp_stds_ref'][...]
 
         for cp in ps:
 
-            gibs_processor(n_snps, beta_hats, n, updated_betas, cp, h2, iterations, burn, ld_dict)
+            # todo we need to store both the betas and the effect sizes so that we can do genome wide checks of
+            #  converange
+            betas = gibs_processor(n_snps, beta_hats, n, updated_betas, cp, h2, iterations, burn, ld_dict)
+            effect_sizes = betas / snp_stds
+
+            weights_out_file = '%s_LDpred_p%0.4e.txt' % ("TESTYTEST", cp)
+            with open(weights_out_file, 'w') as f:
+                f.write('chrom    pos    sid    nt1    nt2    raw_beta      gibs_betas     ldpred_beta\n')
+                for pos, sid, nt, raw_beta, bb, ldpred_beta in zip(positons, sids, nts, raw_effect, betas,
+                                                                   effect_sizes):
+                    nt1, nt2 = nt[0], nt[1]
+                    f.write('%s    %d    %s    %s    %s    %0.4e    %0.4e   %0.4e\n' % (
+                        chrom_str, pos, sid, nt1, nt2, raw_beta, bb, ldpred_beta))
             break
 
         print("F")
         break
-
 
 
 if __name__ == '__main__':
@@ -243,14 +240,10 @@ if __name__ == '__main__':
     rr = 183
     ns = 253288
     pss = [1, 0.3, 0.1, 0.03, 0.01, 0.003, 0.001]
-    num_inter = 60  # Number of iterations to run the gins sampler for
-    burn_in_iter = 5  # number of iterations to invalidate
+    num_inter = 100  # Number of iterations to run the gins sampler for
+    burn_in_iter = 10  # number of iterations to invalidate
 
     # Allow user to provide pre calculate heritaiblity for a given chromosome rather than calculate it via ld score regression
     h2_calcualted = None
 
     call_main(cf, rr, ns, pss, True, h2_calcualted, num_inter, burn_in_iter)
-
-
-
-
