@@ -171,27 +171,37 @@ def infinitesimal_betas(g, h2, n, n_individuals, n_snps, radius, snps):
     return updated_betas
 
 
-def load_lrld_dict():
+def load_lrld_dict(chromosome):
     # Load Price et al. AJHG 2008 long range LD table.
-    d = {}
-    for chrom in range(1, 24):
-        d[chrom] = {'reg_dict': {}}
-    # todo set system args to laod data for long-range-ld and hm3 snps
+    long_dict = {chromosome_key: {} for chromosome_key in range(1, 24)}
 
+    # todo set system args to laod data for long-range-ld and hm3 snps
     lrld = r"C:\Users\Samuel\PycharmProjects\External Libaries\ldpred\reference\long-range-ld-price-2008hg38.txt"
 
     with open(lrld, 'r') as f:
         for line in f:
-            l = line.split()
-            if l[0] == "X":
+            chromosome_line, start_pos, end_pos, hild = line.split()
+            try:
+                long_dict[int(chromosome_line)][hild] = {'start_pos': int(start_pos), 'end_pos': int(end_pos)}
+            except ValueError:
                 continue
-            d[int(l[0])][l[3]] = {'start_pos': int(l[1]), 'end_pos': int(l[2])}
-    return d
+
+    # todo use chromosome (int via cleaner)
+    return long_dict[1]
 
 
-def filter_long_range():
-    d = load_lrld_dict()
-    print(d)
+def filter_long_range(g, chrom_str):
+    """
+    This will load the information from our long range ld dict and filter out any snps that are in long range LD.
+    """
+    d = load_lrld_dict(chrom_str)
+    positions = g['positions'][...]
+
+    if len(d) != 0:
+        for key in d.keys():
+            long_filter = np.where((d[key]["start_pos"] < positions) & (positions < d[key]["end_pos"]), True, False)
+            # += np.sum(filtered long range)
+            # filter call of attributes
 
 
 
@@ -215,12 +225,12 @@ def call_main(coord_file, radius, n, rp, filter_long_range_ld):
         # Update the betas via infinitesimal shrinkage using ld information
         updated_betas = infinitesimal_betas(g, h2, n, n_individuals, n_snps, radius, snps)
 
-        # heritibailtiy on betas post infinitesimal shrink (for testing only)
-        _multiple_hertiaiblity(updated_betas, n, n_snps, ld_scores)
+        # # heritibailtiy on betas post infinitesimal shrink (for testing only)
+        # _multiple_hertiaiblity(updated_betas, n, n_snps, ld_scores)
 
         # Filter long range LD if set
         if filter_long_range_ld:
-            filter_long_range()
+            filter_long_range(g, chrom_str)
 
         print(updated_betas)
 
