@@ -126,16 +126,6 @@ def estimate_heritability(h2_calculated, g, chr_avg_ld_score, n, n_snps):
         return max(0.0001, (max(1.0, float(char_chi_sq_lambda)) - 1) / (n * (chr_avg_ld_score / n_snps)))
 
 
-def _multiple_hertiaiblity(updated_betas, n, n_snps, ld_scores):
-    # todo Do we need both as this is just conjecture at this point?
-    sum_beta_sq = np.sum(updated_betas ** 2)
-
-    char_chi_sq_lambda = np.mean((n * sum_beta_sq) / float(n_snps))
-
-    asddd = max(0.0001, (max(1.0, float(char_chi_sq_lambda)) - 1) / (n * (np.mean(ld_scores) / n_snps)))
-    print(asddd)
-
-
 def compute_ld_scores(n_individuals, n_snps, radius, snps):
     ld_dict = {}
     ld_scores = np.ones(n_snps)
@@ -209,7 +199,7 @@ def filter_long_range(g, chrom_str):
 
 
 
-def call_main(coord_file, radius, n, ps, filter_long_range_ld, h2_calculated):
+def call_main(coord_file, radius, n, ps, filter_long_range_ld, h2_calculated, iterations, burn):
     df = h5py.File(coord_file, 'r')
     cord_data_g = df['cord_data']
     tt = 0
@@ -229,22 +219,18 @@ def call_main(coord_file, radius, n, ps, filter_long_range_ld, h2_calculated):
         # Update the betas via infinitesimal shrinkage using ld information
         updated_betas = infinitesimal_betas(g, h2, n, n_individuals, n_snps, radius, snps)
 
-        # # heritibailtiy on betas post infinitesimal shrink (for testing only)
-        # _multiple_hertiaiblity(updated_betas, n, n_snps, ld_scores)
-
         # todo, we probably want to do this in the filter stage of cleaner before standardisation so that n_snps ==
         #  number of filtered snps
         # Filter long range LD if set
         if filter_long_range_ld:
             filter_long_range(g, chrom_str)
 
-        print(updated_betas)
-        print(h2)
         beta_hats = g['betas'][...]
 
         for cp in ps:
 
-            gibs_processor(n_snps, beta_hats, n, updated_betas, cp)
+            gibs_processor(n_snps, beta_hats, n, updated_betas, cp, h2, iterations, burn, ld_dict)
+            break
 
         print("F")
         break
@@ -257,9 +243,13 @@ if __name__ == '__main__':
     rr = 183
     ns = 253288
     pss = [1, 0.3, 0.1, 0.03, 0.01, 0.003, 0.001]
+    num_inter = 60  # Number of iterations to run the gins sampler for
+    burn_in_iter = 5  # number of iterations to invalidate
+
+    # Allow user to provide pre calculate heritaiblity for a given chromosome rather than calculate it via ld score regression
     h2_calcualted = None
 
-    call_main(cf, rr, ns, pss, True, h2_calcualted)
+    call_main(cf, rr, ns, pss, True, h2_calcualted, num_inter, burn_in_iter)
 
 
 
