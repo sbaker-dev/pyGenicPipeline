@@ -1,3 +1,4 @@
+from pyGeneticPipe.clean.gibs_processor import gibs_processor
 import numpy as np
 import h5py
 import sys
@@ -97,7 +98,7 @@ def snps_in_window(snps, window_start, number_of_snps, window_size):
     return snps[window_start: min(number_of_snps, (window_start + window_size))]
 
 
-def estimate_heritability(g, chr_avg_ld_score, n, n_snps):
+def estimate_heritability(h2_calculated, g, chr_avg_ld_score, n, n_snps):
     """
     This will calculated the chromosome chi-squared lambda (maths from LDPred), and then take the maximum of 0.0001 or
     the  computed heritability of
@@ -113,13 +114,16 @@ def estimate_heritability(g, chr_avg_ld_score, n, n_snps):
 
     :return: estimated heritaiblity (h2 in ldpred)
     """
-    betas = g['betas'][...]
+    if h2_calculated:
+        return h2_calcualted
+    else:
+        betas = g['betas'][...]
 
-    sum_beta_sq = np.sum(betas ** 2)
+        sum_beta_sq = np.sum(betas ** 2)
 
-    char_chi_sq_lambda = np.mean((n * sum_beta_sq) / float(n_snps))
+        char_chi_sq_lambda = np.mean((n * sum_beta_sq) / float(n_snps))
 
-    return max(0.0001, (max(1.0, float(char_chi_sq_lambda)) - 1) / (n * (chr_avg_ld_score / n_snps)))
+        return max(0.0001, (max(1.0, float(char_chi_sq_lambda)) - 1) / (n * (chr_avg_ld_score / n_snps)))
 
 
 def _multiple_hertiaiblity(updated_betas, n, n_snps, ld_scores):
@@ -205,8 +209,7 @@ def filter_long_range(g, chrom_str):
 
 
 
-def call_main(coord_file, radius, n, rp, filter_long_range_ld):
-    # todo, allow individuals to store this information to prevent repeated calculation?
+def call_main(coord_file, radius, n, ps, filter_long_range_ld, h2_calculated):
     df = h5py.File(coord_file, 'r')
     cord_data_g = df['cord_data']
     tt = 0
@@ -214,13 +217,14 @@ def call_main(coord_file, radius, n, rp, filter_long_range_ld):
         g = cord_data_g[chrom_str]
 
         # todo This is just a standardised mesure that we could have calculated in input
+        # todo n_snps and n_individuals be accessed via a property esk.
         snps, n_snps, n_individuals = standardise_snps(g)
 
         # Calculate the ld scores and a dict containing information (don't know what it does currently)
         ld_scores, ld_dict = compute_ld_scores(n_individuals, n_snps, radius, snps)
 
         # Estimate the partition heritability of this chromosome
-        h2 = estimate_heritability(g, np.mean(ld_scores), n, n_snps)
+        h2 = estimate_heritability(h2_calculated, g, np.mean(ld_scores), n, n_snps)
 
         # Update the betas via infinitesimal shrinkage using ld information
         updated_betas = infinitesimal_betas(g, h2, n, n_individuals, n_snps, radius, snps)
@@ -228,11 +232,19 @@ def call_main(coord_file, radius, n, rp, filter_long_range_ld):
         # # heritibailtiy on betas post infinitesimal shrink (for testing only)
         # _multiple_hertiaiblity(updated_betas, n, n_snps, ld_scores)
 
+        # todo, we probably want to do this in the filter stage of cleaner before standardisation so that n_snps ==
+        #  number of filtered snps
         # Filter long range LD if set
         if filter_long_range_ld:
             filter_long_range(g, chrom_str)
 
         print(updated_betas)
+        print(h2)
+        beta_hats = g['betas'][...]
+
+        for cp in ps:
+
+            gibs_processor(n_snps, beta_hats, n, updated_betas, cp)
 
         print("F")
         break
@@ -244,9 +256,10 @@ if __name__ == '__main__':
     fff = "EUR.ld"
     rr = 183
     ns = 253288
-    ps = [1, 0.3, 0.1, 0.03, 0.01, 0.003, 0.001]
+    pss = [1, 0.3, 0.1, 0.03, 0.01, 0.003, 0.001]
+    h2_calcualted = None
 
-    call_main(cf, rr, ns, ps, True)
+    call_main(cf, rr, ns, pss, True, h2_calcualted)
 
 
 
