@@ -18,8 +18,8 @@ class Input:
         self.project_name = self.args['Project_Name']
         self.project_file = self._create_project_file()
         self.summary_file = self._validate_path(self.args["Summary_Path"])
-        self.hap_map_3_file = self._validate_path(self.args["HapMap3"])
         self.load_directory = self._validate_path(self.args["Load_Directory"])
+        self.hap_map_3_file = self._load_local_data("HapMap3")
         self.load_type = self.args["Load_Type"]
         self.validation_size = self._set_validation_size(self.args["Validation_Size"])
 
@@ -89,6 +89,32 @@ class Input:
         else:
             assert path and Path(path).exists(), ec.path_invalid(path, "_validate_path")
             return Path(path)
+
+    def _load_local_data(self, access_key):
+        """
+        This will load a dataset that has been embedded into the package as a non yaml file sourced from LDPred
+        :param access_key: The key to access the data file
+        :type access_key: str
+        :return: Path to the relevant file if request is not equal to None, else None
+        :rtype: Path | None
+        """
+
+        if self.args[access_key]:
+            package_root = Path(__file__).parent.parent
+
+            if access_key == "HapMap3":
+                access_path = Path(package_root, "Data", "hm3_sids.txt.gz")
+                assert access_path, ec.path_invalid(access_path, "_load_local_data")
+                return access_path
+            elif access_key == "LongRangeLD":
+                access_path = Path(package_root, "Data", "long-range-ld-price-2008hg38.txt")
+                assert access_path, ec.path_invalid(access_path, "_load_local_data")
+                return access_path
+            else:
+                raise Exception(f"Unknown Key provided to _load_local_data: {access_key}")
+
+        else:
+            return None
 
     def _configure_alleles(self):
         """
@@ -412,10 +438,12 @@ class Input:
 
     @property
     def sm_lines(self):
+        """Key for accessing lines in the summary stats file"""
         return "sm_lines"
 
     @property
     def sm_variants(self):
+        """Key for accessing variants associated with the snps found in the summary stats file"""
         return "sm_variants"
 
     @property
@@ -437,15 +465,3 @@ class Input:
     def frequency(self):
         """Key used for accessing Frequency headers, groups or other attributes"""
         return "Frequency"
-
-    @property
-    def qc_p(self):
-        return "qc_p"
-
-    @property
-    def qc_std(self):
-        return "qc_std"
-
-    @property
-    def qc_nuc(self):
-        return "qc_nuc"

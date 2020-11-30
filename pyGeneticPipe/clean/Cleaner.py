@@ -19,6 +19,8 @@ class Cleaner(Input):
     def __init__(self, args):
         super().__init__(args)
 
+        # Depending on how this ends up being constructed we might want to log this out as a .txt rather than just
+        # print this to a terminal.
         self._error_dict = {"Removal case": "Count", "Invalid_Snps": 0, self.chromosome: 0, self.bp_position: 0,
                             self.effect_size: 0, self.p_value: 0, self.standard_errors: 0, "Ambiguous_SNP": 0,
                             "Non_Allowed_Allele": 0, "Non_Matching": 0, "Filtered_Frequency": 0,
@@ -29,6 +31,8 @@ class Cleaner(Input):
 
         # Note - this is basically becoming the -main- of prs, so will want to extract the chromosome bit so that it can
         # run in a multi-core manner
+        # Make sure output is on a per chromosome level in a project directory so that the next step can read in all the
+        #  data when it is required to be genome wide
 
         # Check for input arguments
         self._assert_clean_summary_statistics()
@@ -428,14 +432,11 @@ class Cleaner(Input):
         """
 
         if self.hap_map_3_file:
-            print("WARNING: THIS IS UNTESTED CODE FROM LDPRED")
-            # Construct path as an object and check it exists
-
             # If the HapMap3 file exists, then extract the snp ids and return them
             f = gzip.open(self.hap_map_3_file, 'r')
             hm3_sids = pickle.load(f)
             f.close()
-            return hm3_sids
+            return set(hm3_sids)
         else:
             return None
 
