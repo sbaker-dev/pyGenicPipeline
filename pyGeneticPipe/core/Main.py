@@ -44,3 +44,12 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, Input):
         # Then we need to take these samples to construct valid snps, these snps are extract for this chromosome from
         # our summary stats, and then cleaned for possible errors.
         sm_dict = self.clean_summary_statistics(chromosome, load_path, validation, core)
+
+        # Filter our genetic types for snps, such as those that have undesirable frequencies.
+        sm_dict = self.filter_snps("VAL", validation, sm_dict, chromosome)
+        sm_dict = self.filter_snps("REF", validation, sm_dict, chromosome)
+
+        print(sm_dict.keys())
+
+        # todo clean dict (of things like sm_lines) that we no longer need and setup parameters for static calls
+        #  such as number of variables
