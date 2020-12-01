@@ -14,10 +14,11 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, Input):
         """
         init(autoreset=True)
         super().__init__(args)
-        print(f"Starting {self.operation}: {terminal_time()}")
-        getattr(Main, self.operation)(self)
+        if self.operation is not None:
+            print(f"Starting {self.operation}: {terminal_time()}")
+            getattr(Main, self.operation)(self)
 
-    def _pgs_construct_weights(self):
+    def pgs_construct_weights(self):
         """
         This will clean and coordinate the summary statistics and merge it with our genetic data via Cleaners
         clean_summary_stats.
@@ -27,19 +28,21 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, Input):
         _pgs_construct_scores
         """
         if self.multi_core_splitter:
-            # Load the validation and core samples, as well as the indexer
-            load_path = str(self.select_file_on_chromosome(self.multi_core_splitter))
-            validation, core = self.construct_validation(load_path)
-
-            self.clean_summary_statistics(self.multi_core_splitter, load_path, validation, core)
+            self.chromosome_construct_weights(self.multi_core_splitter)
 
         else:
             valid_chromosomes = self._validation_chromosomes()
             for chromosome in valid_chromosomes:
-                # Load the validation and core samples, as well as the indexer
-                load_path = str(self.select_file_on_chromosome(chromosome))
-                validation, core = self.construct_validation(load_path)
+                self.chromosome_construct_weights(chromosome)
 
-                self.clean_summary_statistics(chromosome, load_path, validation, core)
+    def chromosome_construct_weights(self, chromosome):
+        """This takes the value of a current chromosome and constructs the weights described in pgs_construct_weights"""
+        # Load the validation and core samples, as well as the indexer
+        load_path = str(self.select_file_on_chromosome(chromosome))
+        validation, core = self.construct_validation(load_path)
+
+        # Then we need to take these samples to construct valid snps, these snps are extract for this chromosome from
+        # our summary stats, and then cleaned for possible errors.
+        self.clean_summary_statistics(chromosome, load_path, validation, core)
 
 
