@@ -27,11 +27,19 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, Input):
         _pgs_construct_scores
         """
         if self.multi_core_splitter:
-            self.clean_summary_statistics(self.multi_core_splitter)
+            # Load the validation and core samples, as well as the indexer
+            load_path = str(self.select_file_on_chromosome(self.multi_core_splitter))
+            validation, core = self.construct_validation(load_path)
+
+            self.clean_summary_statistics(self.multi_core_splitter, load_path, validation, core)
 
         else:
             valid_chromosomes = self._validation_chromosomes()
             for chromosome in valid_chromosomes:
-                self.clean_summary_statistics(chromosome)
+                # Load the validation and core samples, as well as the indexer
+                load_path = str(self.select_file_on_chromosome(chromosome))
+                validation, core = self.construct_validation(load_path)
+
+                self.clean_summary_statistics(chromosome, load_path, validation, core)
 
 

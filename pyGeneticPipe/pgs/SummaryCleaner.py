@@ -24,42 +24,15 @@ class SummaryCleaner(Input):
                             "Filtered_MAF": 0, "Monomorphic": 0, "Long_Range": 0, "Accepted_Snps": 0}
         self._summary_last_position = 0
 
-    def clean_summary_statistics(self, chromosome):
-        t0 = time.time()
-
-        # Check for input arguments
-        self._assert_clean_summary_statistics()
-        print(f"Starting Chromosome: {chromosome}")
-
-        # Load the validation and core samples, as well as the indexer
-        load_path = str(self.select_file_on_chromosome(chromosome))
-        validation, core = self.construct_validation(load_path)
-
-        # Clean the summary statistics
-        sm_variants = self._clean_summary_stats(load_path, validation, core, chromosome)
-
-        # Log to terminal what has been filtered / removed
-        mc.error_dict_to_terminal(self._error_dict)
-        t1 = time.time()
-        print(f"Cleaned summary stats for Chromosome {chromosome} in {round(t1 - t0, 2)} Seconds")
-
-        # If we failed to find any valid snps return None, else return the variants, validation and core.
-        if not sm_variants:
-            print(f"No variants found for {chromosome}")
-            return None
-        else:
-            return sm_variants, validation, core
-
-        #
-        # # Filter the summary stats
-        # self._filter_snps("VAL", load_path, sm_variants, chromosome)
-
-    def _clean_summary_stats(self, load_path, validation, core, chromosome):
+    def clean_summary_statistics(self, chromosome, load_path, validation, core):
         """
         This will take the summary statistics and access the validatable snps, found by cross referencing the genetic
         validation and core samples, and clean them of possible errors. It then returns a ordered on base pair position
         dictionary of information required for constructing poly-genetic scores
         """
+        # Check for input arguments
+        t0 = self._assert_clean_summary_statistics()
+        print(f"Starting Chromosome: {chromosome}")
 
         # Clean the summary lines to only include validatable snps from our genetic samples that exit in this chromosome
         core_snps, sm_line, sm_variants, validation_snps = self._valid_snps_lines_and_variants(
@@ -83,6 +56,10 @@ class SummaryCleaner(Input):
 
         # In this case we can order the array using filter array as well, and we return this ordered dict
         mc.filter_array(sm_dict, order)
+
+        # Log to terminal what has been filtered / removed
+        t1 = mc.error_dict_to_terminal(self._error_dict)
+        print(f"Cleaned summary stats for Chromosome {chromosome} in {round(t1 - t0, 2)} Seconds")
         return sm_dict
 
     def _valid_snps_lines_and_variants(self, chromosome, core, load_path, validation):
@@ -406,6 +383,9 @@ class SummaryCleaner(Input):
         assert self.load_type, ec.missing_arg(self.operation, "Load_Type")
         assert self.load_directory, ec.missing_arg(self.operation, "Load_Directory")
         assert self.validation_size, ec.missing_arg(self.operation, "Validation_Size")
+
+        return time.time()
+
 
     def _set_variant(self, variant_id, indexer):
         """

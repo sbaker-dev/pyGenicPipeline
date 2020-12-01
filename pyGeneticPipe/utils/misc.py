@@ -3,6 +3,7 @@ from itertools import chain
 from colorama import Fore
 from pathlib import Path
 import numpy as np
+import time
 import yaml
 import gzip
 import os
@@ -91,15 +92,15 @@ def load_yaml(path_to_file):
             raise yaml.YAMLError
 
 
-def line_array(line_index, line_array, type_np=None):
+def line_array(line_index, numpy_line_array, type_np=None):
     """
     Construct an array of a single line index form line_array considering the type
     :rtype: np.ndarray
     """
     if type_np:
-        return np.array([line[line_index] for line in line_array], dtype=type_np)
+        return np.array([line[line_index] for line in numpy_line_array], dtype=type_np)
     else:
-        return np.array([line[line_index] for line in line_array])
+        return np.array([line[line_index] for line in numpy_line_array])
 
 
 def variant_array(variant_key, variant_numpy_array):
@@ -137,3 +138,5 @@ def error_dict_to_terminal(error_dict):
     for k, v in zip(error_dict.keys(), error_dict.values()):
         if isinstance(v, int):
             error_dict[k] = 0
+
+    return time.time()
