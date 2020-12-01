@@ -1,7 +1,7 @@
 """
 This is a modified version of the pybgen project available at https://github.com/lemieuxl/pybgen
 """
-from pyGeneticPipe.geneticParsers.supportObjects import Variant
+from pyGeneticPipe.geneticParsers.variantObjects import Variant
 from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils.misc import bits_to_int
 from pathlib import Path

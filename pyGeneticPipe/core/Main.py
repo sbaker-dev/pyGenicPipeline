@@ -1,7 +1,7 @@
-from pyGeneticPipe.support.ShellMaker import ShellMaker
-from pyGeneticPipe.utils.misc import terminal_time
 from pyGeneticPipe.pgs.SummaryCleaner import SummaryCleaner
+from pyGeneticPipe.support.ShellMaker import ShellMaker
 from pyGeneticPipe.pgs.FilterSnps import FilterSnps
+from pyGeneticPipe.utils.misc import terminal_time
 from pyGeneticPipe.core.Input import Input
 from colorama import init
 

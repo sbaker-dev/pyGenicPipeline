@@ -1,4 +1,4 @@
-from pyGeneticPipe.geneticParsers.supportObjects import BimVariant
+from pyGeneticPipe.geneticParsers.variantObjects import BimVariant
 
 
 class BimObject:

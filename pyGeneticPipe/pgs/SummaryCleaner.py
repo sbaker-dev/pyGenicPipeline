@@ -1,6 +1,6 @@
-from pyGeneticPipe.geneticParsers.supportObjects import Variant, Nucleotide
-from pyGeneticPipe.geneticParsers.plink.plinkObject import PlinkObject
-from pyGeneticPipe.geneticParsers.bgen.bgenObject import BgenObject
+from pyGeneticPipe.geneticParsers.variantObjects import Variant, Nucleotide
+from pyGeneticPipe.geneticParsers.bgenObject import BgenObject
+from pyGeneticPipe.geneticParsers.bimObject import BimObject
 from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils import misc as mc
 from pyGeneticPipe.core.Input import Input
@@ -351,7 +351,7 @@ class SummaryCleaner(Input):
         if self.load_type == ".bed":
             validation = validation.sid
             core = core.sid
-            indexer = [PlinkObject(load_path).bim_index(), PlinkObject(load_path).bim_object()]
+            indexer = [BimObject(load_path).construct_index(), BimObject(load_path)]
 
         elif self.load_type == ".bgen":
             # Bgen files store [variant id, rsid], we just want the rsid hence the [1]; see https://bit.ly/2J0C1kC
