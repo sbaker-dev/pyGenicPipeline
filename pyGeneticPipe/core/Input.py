@@ -33,7 +33,7 @@ class Input:
         self.freq_discrepancy = self._config["max_freq_discrepancy"]
 
         if (self.sm_case_freq is not None) or (self.sm_control_n is not None):
-            print("WARNING!: Psychiatric Genomics Consortium Summary stats are untested - code from LDPred!")
+            raise NotImplementedError("Psychiatric Genomics Consortium Summary stats are untested and unfinished!")
 
     @staticmethod
     def _set_args(args):

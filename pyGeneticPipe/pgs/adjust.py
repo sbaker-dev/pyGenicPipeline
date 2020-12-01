@@ -1,4 +1,4 @@
-from pyGeneticPipe.clean.gibs_processor import gibs_processor, local_values
+from pyGeneticPipe.pgs.gibs_processor import gibs_processor, local_values
 import numpy as np
 import h5py
 import sys
