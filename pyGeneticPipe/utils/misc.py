@@ -1,5 +1,6 @@
 from datetime import datetime
 from itertools import chain
+from colorama import Fore
 from pathlib import Path
 import numpy as np
 import yaml
@@ -121,3 +122,18 @@ def filter_array(dict_to_filter, array_filter):
         return None
     else:
         return "OK"
+
+
+def error_dict_to_terminal(error_dict):
+    """Print the error dict for this chromosome then reset the initialised to default 0"""
+    for index, (k, v) in enumerate(zip(error_dict.keys(), error_dict.values())):
+        if index == 0:
+            print(Fore.LIGHTCYAN_EX + "{:<25} {}".format(k, v))
+            print(Fore.LIGHTCYAN_EX + "----------------------------------------")
+        else:
+            print("{:<25} {}".format(k, v))
+
+    # Reset values to 0
+    for k, v in zip(error_dict.keys(), error_dict.values()):
+        if isinstance(v, int):
+            error_dict[k] = 0

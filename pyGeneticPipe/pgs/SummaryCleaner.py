@@ -5,7 +5,6 @@ from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils import misc as mc
 from pyGeneticPipe.core.Input import Input
 from pysnptools.distreader import Bgen
-from colorama import Fore
 from scipy import stats
 import numpy as np
 import pickle
@@ -40,7 +39,7 @@ class SummaryCleaner(Input):
         sm_variants = self._clean_summary_stats(load_path, validation, core, chromosome)
 
         # Log to terminal what has been filtered / removed
-        self._error_dict_to_terminal(chromosome)
+        mc.error_dict_to_terminal(self._error_dict)
         t1 = time.time()
         print(f"Cleaned summary stats for Chromosome {chromosome} in {round(t1 - t0, 2)} Seconds")
 
@@ -293,7 +292,7 @@ class SummaryCleaner(Input):
         if not mc.filter_array(sm_dict, filter_ambiguous):
             return None
 
-        # Sainity Check
+        # Sanity Check
         # Filter out any snps that do not pass a sanity check (Only a t c and g)
         allowed_filter = [False if (sm_nuc.a1 not in self.allowed_alleles) or
                                    (sm_nuc.a2 not in self.allowed_alleles) or
@@ -607,18 +606,3 @@ class SummaryCleaner(Input):
         # If we have no frequency information just return -1
         else:
             return -1
-
-    def _error_dict_to_terminal(self, chromosome):
-        """Print the error dict for this chromosome then reset the initialised to default 0"""
-        print(f"\nCleaned summary statistics for chromosome: {chromosome}")
-        for index, (k, v) in enumerate(zip(self._error_dict.keys(), self._error_dict.values())):
-            if index == 0:
-                print(Fore.LIGHTCYAN_EX + "{:<25} {}".format(k, v))
-                print(Fore.LIGHTCYAN_EX + "----------------------------------------")
-            else:
-                print("{:<25} {}".format(k, v))
-
-        # Reset values to 0
-        for k, v in zip(self._error_dict.keys(), self._error_dict.values()):
-            if isinstance(v, int):
-                self._error_dict[k] = 0
