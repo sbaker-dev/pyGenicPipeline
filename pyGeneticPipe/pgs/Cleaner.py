@@ -42,9 +42,9 @@ class Cleaner(Input):
         if not sm_variants:
             print(f"No variants found for {chromosome}")
             return None
-        print(len(sm_variants[self.sm_variants]))
+
         # Filter the summary stats
-        # self._filter_snps(load_path, sm_variants, chromosome)
+        self._filter_snps("VAL", load_path, sm_variants, chromosome)
 
         # Log to terminal what has been filtered / removed
         self._error_dict_to_terminal(chromosome)
@@ -88,17 +88,18 @@ class Cleaner(Input):
 
         sm_dict = {self.sm_lines: np.array(sm_line), self.sm_variants: np.array(sm_variants)}
         sm_dict = self._validate_summary_lines(sm_dict)
+
         if not sm_dict:
             return None
 
         # Construct the order from the base pair position
-        order = np.argsort(np.array([variant.bp_position for variant in sm_dict[self.sm_variants]]))
+        order = np.argsort(self._variant_array(self.bp_position.lower(), sm_dict[self.sm_variants]))
 
         # Given we have only accepted snps that are within the validation / core, we should never have more snps in
         # summary than within the validation. If we do, something has gone critically wrong.
         assert len(order) <= len(validation_snps), ec.snp_overflow(len(order), len(validation_snps))
         assert len(order) <= len(core_snps), ec.snp_overflow(len(order), len(core_snps))
-        if self._filter_array(sm_dict, order) == 1:
+        if not self._filter_array(sm_dict, order):
             return None
         else:
             return sm_dict
@@ -108,39 +109,39 @@ class Cleaner(Input):
 
         # If we have chromosomes in our summary statistics check the chromosome of the snps against the validation
         if self.sm_chromosome is not None:
-            if self._validation_equality(self.sm_chromosome, self.chromosome, sm_dict) == 1:
+            if not self._validation_equality(self.sm_chromosome, self.chromosome, sm_dict):
                 return None
 
         # If we have base pair position in our summary then validate the base pair
         if self.bp_position is not None:
-            if self._validation_equality(self.sm_bp_position, self.bp_position, sm_dict, int) == 1:
+            if not self._validation_equality(self.sm_bp_position, self.bp_position, sm_dict, int):
                 return None
 
         # Clean the summary stats effect sizes for calculation of beta later
-        if self._validation_finite(sm_dict, self.sm_effect_size, self.effect_size) == 1:
+        if not self._validation_finite(sm_dict, self.sm_effect_size, self.effect_size):
             return None
 
         # Clean the P values
-        if self._validation_finite(sm_dict, self.sm_p_value, self.p_value) == 1:
+        if not self._validation_finite(sm_dict, self.sm_p_value, self.p_value):
             return None
 
         # If we are using z scores we need to load and clean the standard errors column
         if self.z_scores:
-            if self._validation_finite(sm_dict, self.sm_standard_errors, self.standard_errors) == 1:
+            if not self._validation_finite(sm_dict, self.sm_standard_errors, self.standard_errors):
                 return None
 
         # Use the raw beta, standard errors, and p value if required to construct beta and beta_odds
         self._validation_betas(sm_dict)
 
         # Check that the nucleotides are sane and flip them if required
-        if self._validate_nucleotides(sm_dict) == 1:
+        sm_dict = self._validate_nucleotides(sm_dict)
+        if not sm_dict:
             return None
-
-        # Calculate the frequencies and set info if it exists
-        sm_dict[self.frequency] = np.array([self._sum_stats_frequencies(line) for line in sm_dict[self.sm_lines]])
-        sm_dict[self.info] = self._validate_info(sm_dict[self.sm_lines])
-
-        return sm_dict
+        else:
+            # Calculate the frequencies and set info if it exists
+            sm_dict[self.frequency] = np.array([self._sum_stats_frequencies(line) for line in sm_dict[self.sm_lines]])
+            sm_dict[self.info] = self._validate_info(sm_dict[self.sm_lines])
+            return sm_dict
 
     @staticmethod
     def _line_array(line_index, line_array, type_np=None):
@@ -165,9 +166,9 @@ class Cleaner(Input):
             dict_to_filter[key] = value[array_filter]
 
         if np.array([len(value) for value in dict_to_filter.values()])[0] == 0:
-            return 1
+            return None
         else:
-            return 0
+            return "OK"
 
     def _validate_info(self, sm_line):
         """Construct infos if they exist in the summary stats else return an array of length of summary dict"""
@@ -294,8 +295,8 @@ class Cleaner(Input):
                             else True
                             for sm_nuc, var_nuc in zip(sm_dict[self.nucleotide], sm_dict[self.sm_variants])]
         self._error_dict["Ambiguous_SNP"] = len(filter_ambiguous) - np.sum(filter_ambiguous)
-        if self._filter_array(sm_dict, filter_ambiguous) == 1:
-            return 1
+        if not self._filter_array(sm_dict, filter_ambiguous):
+            return None
 
         # Sainity Check
         # Filter out any snps that do not pass a sanity check (Only a t c and g)
@@ -306,8 +307,8 @@ class Cleaner(Input):
                           else True
                           for sm_nuc, var_nuc in zip(sm_dict[self.nucleotide], sm_dict[self.sm_variants])]
         self._error_dict["Non_Allowed_Allele"] = len(allowed_filter) - np.sum(allowed_filter)
-        if self._filter_array(sm_dict, allowed_filter) == 1:
-            return 1
+        if not self._filter_array(sm_dict, allowed_filter):
+            return None
 
         # Determine Flipping
         # Construct a flip status of 1, 0, -1 for No flipping, failed flipping, and flipped successfully which we can
@@ -316,13 +317,14 @@ class Cleaner(Input):
                                     zip(sm_dict[self.sm_variants], sm_dict[self.nucleotide])])
         filter_flipped = np.array([False if flipped == 0 else True for flipped in sm_dict["Flip"]])
         self._error_dict["Non_Matching"] = len(filter_flipped) - np.sum(filter_flipped)
-        if self._filter_array(sm_dict, filter_flipped) == 1:
-            return 1
+        if not self._filter_array(sm_dict, filter_flipped):
+            return None
 
         # Now we have filtered away any errors, multiple the dicts beta and log_odds elements by 1 or -1 based on no
         # flipping or requiring flipping
         sm_dict[self.beta] = sm_dict[self.beta] * sm_dict["Flip"]
         sm_dict[self.log_odds] = sm_dict[self.log_odds] * sm_dict["Flip"]
+        return sm_dict
 
     def _select_file(self, chromosome):
         """
@@ -561,51 +563,51 @@ class Cleaner(Input):
         else:
             raise Exception(f"Critical Error: Unknown load type {self.load_type} found in _isolate_dosage")
 
-    def _filter_snps(self, load_path, sm_dict, chromosome):
+    def _filter_snps(self, gen_type, load_path, sm_dict, chromosome):
         # testing validation for comparision TEMP
         validation = Bgen(load_path)
 
         # Construct the genetic raw snps and genetics freqs
-        sm_dict["Validation_Raw_Snps"] = self._isolate_raw_snps(validation, sm_dict)
-        sm_dict["Freqs"] = np.sum(sm_dict["Validation_Raw_Snps"], 1, dtype='float32') / (2 * float(validation.iid_count))
+        sm_dict[f"{gen_type}_Raw_Snps"] = self._isolate_raw_snps(validation, sm_dict)
+        sm_dict[f"{gen_type}_Freqs"] = np.sum(sm_dict[f"{gen_type}_Raw_Snps"], 1, dtype='float32') / (2 * float(validation.iid_count))
 
         # If the frequencies in the summary stats are not just a list of -1 errors then screen genetic snp frequencies
         if (self.freq_discrepancy < 1) and (np.sum(sm_dict[self.frequency] == -1) != len(sm_dict[self.frequency])):
             freq_filter = np.logical_or(
-                np.absolute(sm_dict[self.frequency] - sm_dict["Freqs"]) < self.freq_discrepancy,
-                np.absolute(sm_dict[self.frequency] + (sm_dict["Freqs"] - 1)) < self.freq_discrepancy)
+                np.absolute(sm_dict[self.frequency] - sm_dict[f"{gen_type}_Freqs"]) < self.freq_discrepancy,
+                np.absolute(sm_dict[self.frequency] + (sm_dict[f"{gen_type}_Freqs"] - 1)) < self.freq_discrepancy)
 
             # Invalid frequencies from summary stats where coded as -1 so these will be removed
             freq_filter = np.logical_or(freq_filter, sm_dict[self.frequency] <= 0)
             self._error_dict["Filtered_Frequency"] = len(freq_filter) - np.sum(freq_filter)
-            if self._filter_array(sm_dict, freq_filter) == 1:
+            if not self._filter_array(sm_dict, freq_filter):
                 return None
 
         # Filter minor allele frequency SNPs.
         if self.maf_min > 0:
-            maf_filter = (sm_dict["Freqs"] > self.maf_min) * (sm_dict["Freqs"] < (1 - self.maf_min))
+            maf_filter = (sm_dict[f"{gen_type}_Freqs"] > self.maf_min) * (sm_dict[f"{gen_type}_Freqs"] < (1 - self.maf_min))
             self._error_dict["Filtered_MAF"] = len(maf_filter) - np.sum(maf_filter)
-            if self._filter_array(sm_dict, maf_filter) == 1:
+            if not self._filter_array(sm_dict, maf_filter):
                 return None
 
         # Do the same for std
-        stds = np.std(sm_dict["Validation_Raw_Snps"], 1, dtype='float32')
+        stds = np.std(sm_dict[f"{gen_type}_Raw_Snps"], 1, dtype='float32')
         monomorphic_filter = stds > 0
         self._error_dict["Monomorphic"] = len(monomorphic_filter) - np.sum(monomorphic_filter)
-        if self._filter_array(sm_dict, monomorphic_filter) == 1:
+        if not self._filter_array(sm_dict, monomorphic_filter):
             return None
 
-        print(sm_dict.keys())
-        # # Filter long range LD if set
-        # if self.lr_ld_path:
-        #     lr_pos = self._load_lr_ld_dict(chromosome)
-        #     if len(lr_pos) != 0:
-        #         for key in lr_pos.keys():
-        #             long_filter = np.where((lr_pos[key]["start_pos"] < sm_dict[self.bp_position]) &
-        #                                    (sm_dict[self.bp_position] < lr_pos[key]["end_pos"]), True, False)
-        #             self._error_dict["Long_Range"] += np.sum(long_filter)
-        #             if self._filter_array(sm_dict, long_filter) == 1:
-        #                 return None
+        # Filter long range LD if set
+        if self.lr_ld_path:
+            lr_pos = self._load_lr_ld_dict(chromosome)
+            if len(lr_pos) != 0:
+                for key in lr_pos.keys():
+                    position = self._variant_array(self.bp_position.lower(), sm_dict[self.sm_variants])
+                    long_filter = np.where((lr_pos[key]["start_pos"] < position) & (position < lr_pos[key]["end_pos"]),
+                                           False, True)
+                    self._error_dict["Long_Range"] += len(long_filter) - np.sum(long_filter)
+                    if not self._filter_array(sm_dict, long_filter):
+                        return None
 
         self._error_dict["Accepted_Snps"] = len(sm_dict[self.sm_variants])
         return sm_dict
