@@ -6,8 +6,6 @@ from pyGeneticPipe.utils import misc as mc
 from pyGeneticPipe.core.Input import Input
 from scipy import stats
 import numpy as np
-import pickle
-import gzip
 import time
 
 
@@ -347,7 +345,6 @@ class SummaryCleaner(Input):
         :param load_path: Current Chromosome file
         :return: Set of the validation and core set
         """
-        hap_map_3 = self._load_hap_map_3()
 
         #  Set validation and core sets of sids based on the load type
         if self.load_type == ".bed":
@@ -365,29 +362,12 @@ class SummaryCleaner(Input):
             raise Exception("Unknown load type set")
 
         # If we only want the hap_map_3 snps then check each snp against the set of hap_map_3
-        if hap_map_3:
-            validation = [snp for snp in validation if snp in hap_map_3]
-            core = [snp for snp in core if snp in hap_map_3]
+        if self.hap_map_3:
+            hap_map_3_snps = self.load_hap_map_3()
+            validation = [snp for snp in validation if snp in hap_map_3_snps]
+            core = [snp for snp in core if snp in hap_map_3_snps]
 
         return set(validation), set(core), indexer
-
-    def _load_hap_map_3(self):
-        """
-        Users may wish to limit valid snps to those found within HapMap3. If they do, they need to provide a path to the
-        hapmap3 snp file which will be check that it exists, have the snps extracted and return. Otherwise set to none
-
-        :return: The set of the valid HapMap3 snps or None
-        :rtype: set | None
-        """
-
-        if self.hap_map_3_path:
-            # If the HapMap3 file exists, then extract the snp ids and return them
-            f = gzip.open(self.hap_map_3_path, 'r')
-            hm3_sids = pickle.load(f)
-            f.close()
-            return set(hm3_sids)
-        else:
-            return None
 
     def _assert_clean_summary_statistics(self):
         """

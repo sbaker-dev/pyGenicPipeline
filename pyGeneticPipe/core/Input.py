@@ -4,6 +4,8 @@ from pysnptools.distreader import Bgen
 from pysnptools.snpreader import Bed
 from pathlib import Path
 import numpy as np
+import pickle
+import gzip
 import h5py
 import re
 
@@ -23,7 +25,7 @@ class Input:
         self.project_file = self._create_project_file()
         self.summary_file = self._validate_path(self.args["Summary_Path"])
         self.load_directory = self._validate_path(self.args["Load_Directory"])
-        self.hap_map_3_path = self._load_local_data("HapMap3")
+        self.hap_map_3 = self._load_local_data("HapMap3")
         self.lr_ld_path = self._load_local_data("Filter_Long_Range_LD")
         self.load_type = self.args["Load_Type"]
         self.validation_size = self._set_validation_size(self.args["Validation_Size"])
@@ -290,7 +292,7 @@ class Input:
         :return: The validation and core sample class holders
         """
 
-        # todo Before splitting in to validation and core, allow a sample size modifier to remove people out (ie for ukb)
+        # todo Before splitting in to validation and core, allow a sample size modifier to remove people (ie for ukb)
         # Set validation and core sets of sids based on the load type
         if self.load_type == ".bed":
             validation_size = self._set_validation_sample_size(Bed(load_path, count_A1=True).iid_count)
@@ -335,6 +337,33 @@ class Input:
             return True
         else:
             return None
+
+    def load_hap_map_3(self):
+        """
+        Users may wish to limit valid snps to those found within HapMap3. If they do, we access them via the local file
+        and return them as a set
+        """
+
+        # If the HapMap3 file exists, then extract the snp ids as a set and return them
+        f = gzip.open(self.hap_map_3, 'r')
+        hm3_sids = pickle.load(f)
+        f.close()
+        return set(hm3_sids)
+
+    def load_lr_ld_dict(self):
+        """
+        This will read in the long rang ld dict from Price et al. AJHG 2008 long range LD tables taken from LDPred and
+        then filter out the keys relevant to this chromosome.
+        """
+        long_dict = {chromosome_key: {} for chromosome_key in range(1, 24)}
+        with open(str(self.lr_ld_path.absolute()), 'r') as f:
+            for line in f:
+                chromosome_line, start_pos, end_pos, hild = line.split()
+                try:
+                    long_dict[int(chromosome_line)][hild] = {'start_pos': int(start_pos), 'end_pos': int(end_pos)}
+                except ValueError:
+                    continue
+        return long_dict
 
     def _create_project_file(self):
         """

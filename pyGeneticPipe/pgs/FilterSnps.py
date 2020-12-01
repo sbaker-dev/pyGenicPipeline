@@ -44,7 +44,7 @@ class FilterSnps(Input):
 
         # Filter long range LD if set
         if self.lr_ld_path:
-            lr_pos = self._load_lr_ld_dict(chromosome)
+            lr_pos = self.load_lr_ld_dict()[chromosome]
             if len(lr_pos) != 0:
                 for key in lr_pos.keys():
                     position = mc.variant_array(self.bp_position.lower(), sm_dict[self.sm_variants])
@@ -98,19 +98,3 @@ class FilterSnps(Input):
             return [variant.bgen_variant_id() for variant in sm_dict[self.sm_variants]]
         else:
             raise Exception(f"Critical Error: Unknown load type {self.load_type} found in _isolate_dosage")
-
-    def _load_lr_ld_dict(self, chromosome):
-        """
-        This will read in the long rang ld dict from Price et al. AJHG 2008 long range LD tables taken from LDPred and
-        then filter out the keys relevant to this chromosome.
-        """
-        # Load
-        long_dict = {chromosome_key: {} for chromosome_key in range(1, 24)}
-        with open(self.lr_ld_path, 'r') as f:
-            for line in f:
-                chromosome_line, start_pos, end_pos, hild = line.split()
-                try:
-                    long_dict[int(chromosome_line)][hild] = {'start_pos': int(start_pos), 'end_pos': int(end_pos)}
-                except ValueError:
-                    continue
-        return long_dict[chromosome]
