@@ -567,6 +567,6 @@ class Input:
         return "Nucleotide"
 
     @property
-    def frequency(self):
+    def freq(self):
         """Key used for accessing Frequency headers, groups or other attributes"""
         return "Frequency"

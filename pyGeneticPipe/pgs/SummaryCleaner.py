@@ -133,7 +133,7 @@ class SummaryCleaner(Input):
             return None
         else:
             # Calculate the frequencies and set info if it exists
-            sm_dict[self.frequency] = np.array([self._sum_stats_frequencies(line) for line in sm_dict[self.sm_lines]])
+            sm_dict[self.freq] = np.array([self._sum_stats_frequencies(line) for line in sm_dict[self.sm_lines]])
             sm_dict[self.info] = self._validate_info(sm_dict[self.sm_lines])
             return sm_dict
 
