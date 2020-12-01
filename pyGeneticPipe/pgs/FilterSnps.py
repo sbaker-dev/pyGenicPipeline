@@ -8,9 +8,9 @@ import time
 class FilterSnps(Input):
     def __init__(self, args):
         super().__init__(args)
-        self._filter_error_dict = {"Filter case": "Count", "Frequency": 0, "MAF": 0, "Monomorphic": 0, "Long_Range": 0}
+        self._filter_error_dict = {"Filter case": "Count", self.freq: 0, "MAF": 0, "Monomorphic": 0, "Long_Range": 0}
 
-    def filter_snps(self, gen_type, genetic_file, sm_dict, chromosome):
+    def filter_snps(self, gen_type, gen_file, sm_dict, chromosome):
         """
         From our cleaned summary statistics we can construct a set of information for our validation and reference
         genetic samples. These samples need there raw snps to be loaded, and then we can use these to calculate genetic
@@ -23,12 +23,15 @@ class FilterSnps(Input):
         t0 = self._assert_filter_snps()
         print(f"\nStarting the filtering for {gen_type}")
 
-        # Construct the genetic raw snps and genetics freqs
-        sm_dict[f"{gen_type}_Raw_Snps"] = self._isolate_raw_snps(genetic_file, sm_dict)
-        sm_dict[f"{gen_type}_Freqs"] = self._genetic_frequencies(sm_dict, gen_type, genetic_file)
+        # Load the raw snps from the .bed or .bgen file and use it to isolate statistical information
+        raw_snps = self._isolate_raw_snps(gen_file, sm_dict)
+        sm_dict[f"{gen_type}_{self.mean}"] = np.mean(raw_snps, 1, dtype='float32')
+        sm_dict[f"{gen_type}_{self.stds}"] = np.std(raw_snps, 1, dtype='float32')
+        sm_dict[f"{gen_type}_{self.freq}"] = np.sum(raw_snps, 1, dtype='float32') / (2 * float(gen_file.iid_count))
+        sm_dict[f"{gen_type}_{self.raw_snps}"] = raw_snps
 
         # If the frequencies in the summary stats are not just a list of -1 errors then screen genetic snp frequencies
-        if (self.freq_discrepancy < 1) and (np.sum(sm_dict[self.frequency] == -1) != len(sm_dict[self.frequency])):
+        if (self.freq_discrepancy < 1) and (np.sum(sm_dict[self.freq] == -1) != len(sm_dict[self.freq])):
             if not self._summary_frequencies(sm_dict, gen_type):
                 return None
 
@@ -46,6 +49,10 @@ class FilterSnps(Input):
             sm_dict = self._long_range_ld_filter(sm_dict, chromosome)
             if not sm_dict:
                 return None
+
+        # Now that the genetic information has been cleaned and filtered, use this information to create a normalised
+        # snp and clean up sm_dict of anything we know long need
+        self._normalise_snps(sm_dict, gen_type)
 
         t1 = mc.error_dict_to_terminal(self._filter_error_dict)
         print(f"Cleaned summary stats for Chromosome {chromosome} in {round(t1 - t0, 2)} Seconds\n")
@@ -92,23 +99,18 @@ class FilterSnps(Input):
         else:
             raise Exception(f"Critical Error: Unknown load type {self.load_type} found in _isolate_dosage")
 
-    @staticmethod
-    def _genetic_frequencies(sm_dict, gen_type, genetic_file):
-        """Calculate the frequencies from the raw extracted snps for this genetic file"""
-        return np.sum(sm_dict[f"{gen_type}_Raw_Snps"], 1, dtype='float32') / (2 * float(genetic_file.iid_count))
-
     def _summary_frequencies(self, sm_dict, gen_type):
         """
         If the summary frequencies existed in the summary stats then cross check them with our genetic frequencies,
         removing anything that is outside of the frequency discrepancy allow by the user.
         """
         freq_filter = np.logical_or(
-            np.absolute(sm_dict[self.frequency] - sm_dict[f"{gen_type}_Freqs"]) < self.freq_discrepancy,
-            np.absolute(sm_dict[self.frequency] + (sm_dict[f"{gen_type}_Freqs"] - 1)) < self.freq_discrepancy)
+            np.absolute(sm_dict[self.freq] - sm_dict[f"{gen_type}_{self.freq}"]) < self.freq_discrepancy,
+            np.absolute(sm_dict[self.freq] + (sm_dict[f"{gen_type}_{self.freq}"] - 1)) < self.freq_discrepancy)
 
         # Invalid frequencies from summary stats where coded as -1 so these should be removed
-        freq_filter = np.logical_or(freq_filter, sm_dict[self.frequency] <= 0)
-        self._filter_error_dict["Frequency"] = len(freq_filter) - np.sum(freq_filter)
+        freq_filter = np.logical_or(freq_filter, sm_dict[self.freq] <= 0)
+        self._filter_error_dict[self.freq] = len(freq_filter) - np.sum(freq_filter)
         return mc.filter_array(sm_dict, freq_filter)
 
     def _maf_filter(self, sm_dict, gen_type):
@@ -116,15 +118,15 @@ class FilterSnps(Input):
         If the maf filter is greater than zero, then use this to remove any maf frequencies less that the frequency
         provided or greater than 1 - frequency provided.
         """
-        maf_filter = (sm_dict[f"{gen_type}_Freqs"] > self.maf_min) * (sm_dict[f"{gen_type}_Freqs"] < (1 - self.maf_min))
+        maf_filter = (sm_dict[f"{gen_type}_{self.freq}"] > self.maf_min) * \
+                     (sm_dict[f"{gen_type}_{self.freq}"] < (1 - self.maf_min))
+
         self._filter_error_dict["MAF"] = len(maf_filter) - np.sum(maf_filter)
         return mc.filter_array(sm_dict, maf_filter)
 
     def _monomorphic_filter(self, sm_dict, gen_type):
         """Remove any Monomorphic snps, those with no variation"""
-        # todo: we might want to save standard errors
-        stds = np.std(sm_dict[f"{gen_type}_Raw_Snps"], 1, dtype='float32')
-        monomorphic_filter = stds > 0
+        monomorphic_filter = sm_dict[f"{gen_type}_{self.stds}"] > 0
         self._filter_error_dict["Monomorphic"] = len(monomorphic_filter) - np.sum(monomorphic_filter)
         return mc.filter_array(sm_dict, monomorphic_filter)
 
@@ -145,6 +147,23 @@ class FilterSnps(Input):
                     return None
 
         return sm_dict
+
+    def _normalise_snps(self, sm_dict, gen_type):
+        """For gibbs we use normalised snps, this process will use the information we have filtered to construct it"""
+
+        # Get the number of snps and individuals in the filtered dict
+        n_snps, n_individuals = sm_dict[f"{gen_type}_{self.raw_snps}"].shape
+
+        # Need to reformat the shape to construct the normalised snps
+        raw_means = sm_dict[f"{gen_type}_{self.mean}"]
+        raw_stds = sm_dict[f"{gen_type}_{self.stds}"]
+        raw_means.shape = (n_snps, 1)
+        raw_stds.shape = (n_snps, 1)
+
+        # Use this information to construct a normalised snps
+        normalised_snps = np.array((sm_dict[f"{gen_type}_{self.raw_snps}"] - raw_means) / raw_stds, dtype="float32")
+        assert normalised_snps.shape == sm_dict[f"{gen_type}_{self.raw_snps}"].shape
+        sm_dict[f"{gen_type}_Normalised_Snps"] = normalised_snps
 
     def _assert_filter_snps(self):
         """Different files require different load type operations, so load type must be set"""

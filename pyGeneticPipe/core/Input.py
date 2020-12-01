@@ -570,3 +570,23 @@ class Input:
     def freq(self):
         """Key used for accessing Frequency headers, groups or other attributes"""
         return "Frequency"
+
+    @property
+    def mean(self):
+        """Key used for accessing Means headers, groups or other attributes"""
+        return "Mean"
+
+    @property
+    def stds(self):
+        """Key used for accessing Standard_Deviations headers, groups or other attributes"""
+        return "Standard_Deviations"
+
+    @property
+    def raw_snps(self):
+        """Key used for accessing Raw_Snps headers, groups or other attributes"""
+        return "Raw_Snps"
+
+    @property
+    def normalised_snps(self):
+        """Key used for accessing Raw_Snps headers, groups or other attributes"""
+        return "Normalised_Snps"
