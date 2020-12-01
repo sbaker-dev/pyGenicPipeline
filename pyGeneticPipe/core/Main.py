@@ -43,6 +43,4 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, Input):
 
         # Then we need to take these samples to construct valid snps, these snps are extract for this chromosome from
         # our summary stats, and then cleaned for possible errors.
-        self.clean_summary_statistics(chromosome, load_path, validation, core)
-
-
+        sm_dict = self.clean_summary_statistics(chromosome, load_path, validation, core)

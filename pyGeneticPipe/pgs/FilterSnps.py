@@ -6,15 +6,13 @@ import numpy as np
 class FilterSnps(Input):
     def __init__(self, args):
         super().__init__(args)
-        self._error_dict = {"Filter case": "Count", "Frequency": 0, "MAF": 0,
-                            "Monomorphic": 0, "Long_Range": 0}
+        self._error_dict = {"Filter case": "Count", "Frequency": 0, "MAF": 0, "Monomorphic": 0, "Long_Range": 0}
 
     def _filter_snps(self, gen_type, genetic_file, sm_dict, chromosome):
-        # testing validation for comparision TEMP
 
         # Construct the genetic raw snps and genetics freqs
         sm_dict[f"{gen_type}_Raw_Snps"] = self._isolate_raw_snps(genetic_file, sm_dict)
-        sm_dict[f"{gen_type}_Freqs"] = np.sum(sm_dict[f"{gen_type}_Raw_Snps"], 1, dtype='float32') / (2 * float(genetic_file.iid_count))
+        sm_dict[f"{gen_type}_Freqs"] = self._genetic_frequencies(sm_dict, gen_type, genetic_file)
 
         # If the frequencies in the summary stats are not just a list of -1 errors then screen genetic snp frequencies
         if (self.freq_discrepancy < 1) and (np.sum(sm_dict[self.frequency] == -1) != len(sm_dict[self.frequency])):
@@ -30,7 +28,8 @@ class FilterSnps(Input):
 
         # Filter minor allele frequency SNPs.
         if self.maf_min > 0:
-            maf_filter = (sm_dict[f"{gen_type}_Freqs"] > self.maf_min) * (sm_dict[f"{gen_type}_Freqs"] < (1 - self.maf_min))
+            maf_filter = (sm_dict[f"{gen_type}_Freqs"] > self.maf_min) * (
+                        sm_dict[f"{gen_type}_Freqs"] < (1 - self.maf_min))
             self._error_dict["Filtered_MAF"] = len(maf_filter) - np.sum(maf_filter)
             if not mc.filter_array(sm_dict, maf_filter):
                 return None
@@ -56,6 +55,8 @@ class FilterSnps(Input):
 
         # set accept snps for gibbs
         print(len(sm_dict[self.sm_variants]))
+
+        # todo clean dict (of things like sm_lines) that we no longer need
         return sm_dict
 
     def _isolate_raw_snps(self, gen_file, sm_dict):
@@ -98,3 +99,9 @@ class FilterSnps(Input):
             return [variant.bgen_variant_id() for variant in sm_dict[self.sm_variants]]
         else:
             raise Exception(f"Critical Error: Unknown load type {self.load_type} found in _isolate_dosage")
+
+    @staticmethod
+    def _genetic_frequencies(sm_dict, gen_type, genetic_file):
+        """Calculate the frequencies from the raw extracted snps for this genetic file"""
+        return np.sum(sm_dict[f"{gen_type}_Raw_Snps"], 1, dtype='float32') / (2 * float(genetic_file.iid_count))
+

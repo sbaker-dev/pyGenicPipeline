@@ -544,12 +544,12 @@ class Input:
     @property
     def sm_lines(self):
         """Key for accessing lines in the summary stats file"""
-        return "sm_lines"
+        return "SM_Lines"
 
     @property
     def sm_variants(self):
         """Key for accessing variants associated with the snps found in the summary stats file"""
-        return "sm_variants"
+        return "SM_Variants"
 
     @property
     def beta(self):
