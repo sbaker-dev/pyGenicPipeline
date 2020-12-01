@@ -106,7 +106,7 @@ class Cleaner(Input):
         # summary than within the validation. If we do, something has gone critically wrong.
         assert len(order) <= len(validation_snps), ec.snp_overflow(len(order), len(validation_snps))
         assert len(order) <= len(core_snps), ec.snp_overflow(len(order), len(core_snps))
-        if self._filter_array(sm_dict, order) == 0:
+        if self._filter_array(sm_dict, order) == 1:
             return None
         else:
             return sm_dict
@@ -116,32 +116,32 @@ class Cleaner(Input):
 
         # If we have chromosomes in our summary statistics check the chromosome of the snps against the validation
         if self.sm_chromosome is not None:
-            if self._validation_equality(self.sm_chromosome, self.chromosome, sm_dict) == 0:
+            if self._validation_equality(self.sm_chromosome, self.chromosome, sm_dict) == 1:
                 return None
 
         # If we have base pair position in our summary then validate the base pair
         if self.bp_position is not None:
-            if self._validation_equality(self.sm_bp_position, self.bp_position, sm_dict, int) == 0:
+            if self._validation_equality(self.sm_bp_position, self.bp_position, sm_dict, int) == 1:
                 return None
 
         # Clean the summary stats effect sizes for calculation of beta later
-        if self._validation_finite(sm_dict, self.sm_effect_size, self.effect_size) == 0:
+        if self._validation_finite(sm_dict, self.sm_effect_size, self.effect_size) == 1:
             return None
 
         # Clean the P values
-        if self._validation_finite(sm_dict, self.sm_p_value, self.p_value) == 0:
+        if self._validation_finite(sm_dict, self.sm_p_value, self.p_value) == 1:
             return None
 
         # If we are using z scores we need to load and clean the standard errors column
         if self.z_scores:
-            if self._validation_finite(sm_dict, self.sm_standard_errors, self.standard_errors) == 0:
+            if self._validation_finite(sm_dict, self.sm_standard_errors, self.standard_errors) == 1:
                 return None
 
         # Use the raw beta, standard errors, and p value if required to construct beta and beta_odds
         self._validation_betas(sm_dict)
 
         # Check that the nucleotides are sane and flip them if required
-        if self._validate_nucleotides(sm_dict) == 0:
+        if self._validate_nucleotides(sm_dict) == 1:
             return None
 
         # Calculate the frequencies and set info if it exists
@@ -165,14 +165,17 @@ class Cleaner(Input):
 
     @staticmethod
     def _filter_array(dict_to_filter, array_filter):
-        """Filter out anything that is no longer required"""
+        """
+        Filter out anything that is no longer required If the length of the array becomes zero, pass an error code of
+        1. Otherwise return 0.
+        """
         for key, value in zip(dict_to_filter.keys(), dict_to_filter.values()):
             dict_to_filter[key] = value[array_filter]
 
         if np.array([len(value) for value in dict_to_filter.values()])[0] == 0:
-            return 0
-        else:
             return 1
+        else:
+            return 0
 
     def _validate_info(self, sm_line):
         """Construct infos if they exist in the summary stats else return an array of length of summary dict"""
@@ -299,8 +302,8 @@ class Cleaner(Input):
                             else True
                             for sm_nuc, var_nuc in zip(sm_dict[self.nucleotide], sm_dict[self.sm_variants])]
         self._error_dict["Ambiguous_SNP"] = len(filter_ambiguous) - np.sum(filter_ambiguous)
-        if self._filter_array(sm_dict, filter_ambiguous) == 0:
-            return None
+        if self._filter_array(sm_dict, filter_ambiguous) == 1:
+            return 1
 
         # Sainity Check
         # Filter out any snps that do not pass a sanity check (Only a t c and g)
@@ -311,8 +314,8 @@ class Cleaner(Input):
                           else True
                           for sm_nuc, var_nuc in zip(sm_dict[self.nucleotide], sm_dict[self.sm_variants])]
         self._error_dict["Non_Allowed_Allele"] = len(allowed_filter) - np.sum(allowed_filter)
-        if self._filter_array(sm_dict, allowed_filter) == 0:
-            return None
+        if self._filter_array(sm_dict, allowed_filter) == 1:
+            return 1
 
         # Determine Flipping
         # Construct a flip status of 1, 0, -1 for No flipping, failed flipping, and flipped successfully which we can
@@ -321,8 +324,8 @@ class Cleaner(Input):
                                     zip(sm_dict[self.sm_variants], sm_dict[self.nucleotide])])
         filter_flipped = np.array([False if flipped == 0 else True for flipped in sm_dict["Flip"]])
         self._error_dict["Non_Matching"] = len(filter_flipped) - np.sum(filter_flipped)
-        if self._filter_array(sm_dict, filter_flipped) == 0:
-            return None
+        if self._filter_array(sm_dict, filter_flipped) == 1:
+            return 1
 
         # Now we have filtered away any errors, multiple the dicts beta and log_odds elements by 1 or -1 based on no
         # flipping or requiring flipping
