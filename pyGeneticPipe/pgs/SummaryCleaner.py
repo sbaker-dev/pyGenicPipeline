@@ -15,9 +15,9 @@ class SummaryCleaner(Input):
 
         # Depending on how this ends up being constructed we might want to log this out as a .txt rather than just
         # print this to a terminal.
-        self._error_dict = {"Removal case": "Count", "Invalid_Snps": 0, self.chromosome: 0, self.bp_position: 0,
-                            self.effect_size: 0, self.p_value: 0, self.standard_errors: 0, "Ambiguous_SNP": 0,
-                            "Non_Allowed_Allele": 0, "Non_Matching": 0}
+        self._sum_error_dict = {"Removal case": "Count", "Invalid_Snps": 0, self.chromosome: 0, self.bp_position: 0,
+                                self.effect_size: 0, self.p_value: 0, self.standard_errors: 0, "Ambiguous_SNP": 0,
+                                "Non_Allowed_Allele": 0, "Non_Matching": 0}
         self._summary_last_position = 0
 
     def clean_summary_statistics(self, chromosome, load_path, validation, core):
@@ -54,8 +54,8 @@ class SummaryCleaner(Input):
         mc.filter_array(sm_dict, order)
 
         # Log to terminal what has been filtered / removed
-        t1 = mc.error_dict_to_terminal(self._error_dict)
-        print(f"Cleaned summary stats for Chromosome {chromosome} in {round(t1 - t0, 2)} Seconds")
+        t1 = mc.error_dict_to_terminal(self._sum_error_dict)
+        print(f"Cleaned summary stats for Chromosome {chromosome} in {round(t1 - t0, 2)} Seconds\n")
         return sm_dict
 
     def _valid_snps_lines_and_variants(self, chromosome, core, load_path, validation):
@@ -93,8 +93,9 @@ class SummaryCleaner(Input):
                         file.close()
                         break
                     else:
-                        self._error_dict["Invalid_Snps"] += 1
+                        self._sum_error_dict["Invalid_Snps"] += 1
 
+        print("Extracted snps from summary file\n")
         return core_snps, sm_line, sm_variants, validation_snps
 
     def _validate_summary_lines(self, sm_dict):
@@ -164,7 +165,7 @@ class SummaryCleaner(Input):
         # Filter of True if the variant and summary match, else False which will remove this snp
         obj_filter = summary_array == variant_array
 
-        self._error_dict[variant_key] = len(obj_filter) - np.sum(obj_filter)
+        self._sum_error_dict[variant_key] = len(obj_filter) - np.sum(obj_filter)
         return mc.filter_array(summary_dict, obj_filter)
 
     def _validation_finite(self, summary_dict, line_index, summary_key):
@@ -189,7 +190,7 @@ class SummaryCleaner(Input):
 
         # Filter out anything that is not finite or is equal to zero
         obj_filter = np.array([True if np.isfinite(obj) and obj != 0 else False for obj in summary_dict[summary_key]])
-        self._error_dict[summary_key] = len(obj_filter) - np.sum(obj_filter)
+        self._sum_error_dict[summary_key] = len(obj_filter) - np.sum(obj_filter)
         return mc.filter_array(summary_dict, obj_filter)
 
     def _validation_betas(self, sm_dict):
@@ -252,7 +253,7 @@ class SummaryCleaner(Input):
                                      ((var_nuc.a1, var_nuc.a2) in self.ambiguous_snps)
                             else True
                             for sm_nuc, var_nuc in zip(sm_dict[self.nucleotide], sm_dict[self.sm_variants])]
-        self._error_dict["Ambiguous_SNP"] = len(filter_ambiguous) - np.sum(filter_ambiguous)
+        self._sum_error_dict["Ambiguous_SNP"] = len(filter_ambiguous) - np.sum(filter_ambiguous)
         if not mc.filter_array(sm_dict, filter_ambiguous):
             return None
 
@@ -264,7 +265,7 @@ class SummaryCleaner(Input):
                                    (var_nuc.a2 not in self.allowed_alleles)
                           else True
                           for sm_nuc, var_nuc in zip(sm_dict[self.nucleotide], sm_dict[self.sm_variants])]
-        self._error_dict["Non_Allowed_Allele"] = len(allowed_filter) - np.sum(allowed_filter)
+        self._sum_error_dict["Non_Allowed_Allele"] = len(allowed_filter) - np.sum(allowed_filter)
         if not mc.filter_array(sm_dict, allowed_filter):
             return None
 
@@ -274,7 +275,7 @@ class SummaryCleaner(Input):
         sm_dict["Flip"] = np.array([self._flip_nucleotide(var_nuc, sm_nuc) for var_nuc, sm_nuc in
                                     zip(sm_dict[self.sm_variants], sm_dict[self.nucleotide])])
         filter_flipped = np.array([False if flipped == 0 else True for flipped in sm_dict["Flip"]])
-        self._error_dict["Non_Matching"] = len(filter_flipped) - np.sum(filter_flipped)
+        self._sum_error_dict["Non_Matching"] = len(filter_flipped) - np.sum(filter_flipped)
         if not mc.filter_array(sm_dict, filter_flipped):
             return None
 

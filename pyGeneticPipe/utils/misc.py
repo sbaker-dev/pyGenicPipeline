@@ -136,7 +136,7 @@ def error_dict_to_terminal(error_dict):
 
     # Reset values to 0
     for k, v in zip(error_dict.keys(), error_dict.values()):
-        if isinstance(v, int):
+        if isinstance(v, (int, np.int32, np.int8)):
             error_dict[k] = 0
 
     return time.time()
