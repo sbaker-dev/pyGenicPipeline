@@ -24,7 +24,7 @@ class Cleaner(Input):
         self._error_dict = {"Removal case": "Count", "Invalid_Snps": 0, self.chromosome: 0, self.bp_position: 0,
                             self.effect_size: 0, self.p_value: 0, self.standard_errors: 0, "Ambiguous_SNP": 0,
                             "Non_Allowed_Allele": 0, "Non_Matching": 0, "Filtered_Frequency": 0,
-                            "Filtered_MAF": 0, "Monomorphic": 0, "Accepted_Snps": 0}
+                            "Filtered_MAF": 0, "Monomorphic": 0, "Long_Range": 0, "Accepted_Snps": 0}
         self._summary_last_position = 0
 
     def clean_summary_statistics(self, chromosome):
@@ -41,10 +41,10 @@ class Cleaner(Input):
         sm_variants = self._clean_summary_stats(load_path, validation, core, chromosome)
         if not sm_variants:
             print(f"No variants found for {chromosome}")
-            return
-
+            return None
+        print(len(sm_variants[self.sm_variants]))
         # Filter the summary stats
-        self._filter_snps(load_path, sm_variants)
+        # self._filter_snps(load_path, sm_variants, chromosome)
 
         # Log to terminal what has been filtered / removed
         self._error_dict_to_terminal(chromosome)
@@ -410,14 +410,30 @@ class Cleaner(Input):
         :rtype: set | None
         """
 
-        if self.hap_map_3_file:
+        if self.hap_map_3_path:
             # If the HapMap3 file exists, then extract the snp ids and return them
-            f = gzip.open(self.hap_map_3_file, 'r')
+            f = gzip.open(self.hap_map_3_path, 'r')
             hm3_sids = pickle.load(f)
             f.close()
             return set(hm3_sids)
         else:
             return None
+
+    def _load_lr_ld_dict(self, chromosome):
+        """
+        This will read in the long rang ld dict from Price et al. AJHG 2008 long range LD tables taken from LDPred and
+        then filter out the keys relevant to this chromosome.
+        """
+        # Load
+        long_dict = {chromosome_key: {} for chromosome_key in range(1, 24)}
+        with open(self.lr_ld_path, 'r') as f:
+            for line in f:
+                chromosome_line, start_pos, end_pos, hild = line.split()
+                try:
+                    long_dict[int(chromosome_line)][hild] = {'start_pos': int(start_pos), 'end_pos': int(end_pos)}
+                except ValueError:
+                    continue
+        return long_dict[chromosome]
 
     def _assert_clean_summary_statistics(self):
         """
@@ -545,38 +561,54 @@ class Cleaner(Input):
         else:
             raise Exception(f"Critical Error: Unknown load type {self.load_type} found in _isolate_dosage")
 
-    def _filter_snps(self, load_path, sm_dict):
+    def _filter_snps(self, load_path, sm_dict, chromosome):
         # testing validation for comparision TEMP
         validation = Bgen(load_path)
 
-        # Construct the genetic raw snps and genetric freqs
+        # Construct the genetic raw snps and genetics freqs
         sm_dict["Validation_Raw_Snps"] = self._isolate_raw_snps(validation, sm_dict)
         sm_dict["Freqs"] = np.sum(sm_dict["Validation_Raw_Snps"], 1, dtype='float32') / (2 * float(validation.iid_count))
 
         # If the frequencies in the summary stats are not just a list of -1 errors then screen genetic snp frequencies
         if (self.freq_discrepancy < 1) and (np.sum(sm_dict[self.frequency] == -1) != len(sm_dict[self.frequency])):
-            freq_filter = np.logical_or(np.absolute(sm_dict[self.frequency] - sm_dict["Freqs"]) < self.freq_discrepancy,
-                                        np.absolute(sm_dict[self.frequency] + (sm_dict["Freqs"] - 1)) < self.freq_discrepancy)
+            freq_filter = np.logical_or(
+                np.absolute(sm_dict[self.frequency] - sm_dict["Freqs"]) < self.freq_discrepancy,
+                np.absolute(sm_dict[self.frequency] + (sm_dict["Freqs"] - 1)) < self.freq_discrepancy)
+
+            # Invalid frequencies from summary stats where coded as -1 so these will be removed
             freq_filter = np.logical_or(freq_filter, sm_dict[self.frequency] <= 0)
             self._error_dict["Filtered_Frequency"] = len(freq_filter) - np.sum(freq_filter)
-            if self._filter_array(sm_dict, freq_filter) == 0:
+            if self._filter_array(sm_dict, freq_filter) == 1:
                 return None
 
+        # Filter minor allele frequency SNPs.
         if self.maf_min > 0:
             maf_filter = (sm_dict["Freqs"] > self.maf_min) * (sm_dict["Freqs"] < (1 - self.maf_min))
             self._error_dict["Filtered_MAF"] = len(maf_filter) - np.sum(maf_filter)
-            if self._filter_array(sm_dict, maf_filter) == 0:
+            if self._filter_array(sm_dict, maf_filter) == 1:
                 return None
 
         # Do the same for std
         stds = np.std(sm_dict["Validation_Raw_Snps"], 1, dtype='float32')
         monomorphic_filter = stds > 0
         self._error_dict["Monomorphic"] = len(monomorphic_filter) - np.sum(monomorphic_filter)
-
-        if self._filter_array(sm_dict, monomorphic_filter) == 0:
+        if self._filter_array(sm_dict, monomorphic_filter) == 1:
             return None
-        else:
-            self._error_dict["Accepted_Snps"] = len(sm_dict[self.sm_variants])
+
+        print(sm_dict.keys())
+        # # Filter long range LD if set
+        # if self.lr_ld_path:
+        #     lr_pos = self._load_lr_ld_dict(chromosome)
+        #     if len(lr_pos) != 0:
+        #         for key in lr_pos.keys():
+        #             long_filter = np.where((lr_pos[key]["start_pos"] < sm_dict[self.bp_position]) &
+        #                                    (sm_dict[self.bp_position] < lr_pos[key]["end_pos"]), True, False)
+        #             self._error_dict["Long_Range"] += np.sum(long_filter)
+        #             if self._filter_array(sm_dict, long_filter) == 1:
+        #                 return None
+
+        self._error_dict["Accepted_Snps"] = len(sm_dict[self.sm_variants])
+        return sm_dict
 
     def _seek_to_start(self, chromosome, file):
         """
