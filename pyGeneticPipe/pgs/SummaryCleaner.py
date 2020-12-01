@@ -4,7 +4,6 @@ from pyGeneticPipe.geneticParsers.bgen.bgenObject import BgenObject
 from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils import misc as mc
 from pyGeneticPipe.core.Input import Input
-from pysnptools.distreader import Bgen
 from scipy import stats
 import numpy as np
 import pickle
@@ -20,8 +19,7 @@ class SummaryCleaner(Input):
         # print this to a terminal.
         self._error_dict = {"Removal case": "Count", "Invalid_Snps": 0, self.chromosome: 0, self.bp_position: 0,
                             self.effect_size: 0, self.p_value: 0, self.standard_errors: 0, "Ambiguous_SNP": 0,
-                            "Non_Allowed_Allele": 0, "Non_Matching": 0, "Filtered_Frequency": 0,
-                            "Filtered_MAF": 0, "Monomorphic": 0, "Long_Range": 0, "Accepted_Snps": 0}
+                            "Non_Allowed_Allele": 0, "Non_Matching": 0}
         self._summary_last_position = 0
 
     def clean_summary_statistics(self, chromosome, load_path, validation, core):
@@ -139,15 +137,6 @@ class SummaryCleaner(Input):
             sm_dict[self.frequency] = np.array([self._sum_stats_frequencies(line) for line in sm_dict[self.sm_lines]])
             sm_dict[self.info] = self._validate_info(sm_dict[self.sm_lines])
             return sm_dict
-
-    def _validate_info(self, sm_line):
-        """Construct infos if they exist in the summary stats else return an array of length of summary dict"""
-        if self.sm_info is not None:
-            infos = mc.line_array(self.sm_info, sm_line, float)
-        else:
-            infos = np.empty(len(sm_line))
-            infos.fill(-1)
-        return infos
 
     def _validation_equality(self, line_index, variant_key, summary_dict, line_type=None):
         """
@@ -297,6 +286,56 @@ class SummaryCleaner(Input):
         sm_dict[self.log_odds] = sm_dict[self.log_odds] * sm_dict["Flip"]
         return sm_dict
 
+    def _sum_stats_frequencies(self, line):
+        """
+        This will check to see if the user is using Psychiatric Genomics Consortium Summary Stats and if so use the
+        case/control frequency and N to construct the frequency. Otherwise, it will attempt to use the MAF column and
+        if that is also not set it will return -1
+        """
+
+        # If we have Psychiatric Genomics Consortium Summary stats use these
+        if (self.sm_case_freq is not None) and (self.sm_control_freq is not None):
+
+            # If the frequency's are indexed but are NA then return -1
+            if line[self.sm_case_freq] in (".", "NA") or line[self.sm_control_freq] in (".", "NA"):
+                return -1
+
+            # If the n for the case and control are known, then calculate a more accurate frequency
+            elif (self.sm_case_n is not None) and (self.sm_control_freq is not None):
+                if line[self.sm_case_n] in (".", "NA") or line[self.sm_control_n] in (",", "NA"):
+                    return -1
+                else:
+                    case_n = float(line[self.case_n])
+                    control_n = float(line[self.control_n])
+                    tot_n = case_n + control_n
+                    a_scalar = case_n / float(tot_n)
+                    u_scalar = control_n / float(tot_n)
+                    return (float(line[self.sm_case_freq]) * a_scalar) + (float(line[self.sm_control_freq]) * u_scalar)
+
+            # If n is not know we just divide by 2
+            else:
+                return (float(line[self.sm_case_freq]) + float(line[self.sm_control_freq])) / 2.0
+
+        # If we have MAF values in the summary stats then we can use those as the frequency
+        elif self.sm_minor_allele_freq is not None:
+            if line[self.sm_minor_allele_freq] not in (",", "NA"):
+                return float(line[self.sm_minor_allele_freq])
+            else:
+                return -1
+
+        # If we have no frequency information just return -1
+        else:
+            return -1
+
+    def _validate_info(self, sm_line):
+        """Construct infos if they exist in the summary stats else return an array of length of summary dict"""
+        if self.sm_info is not None:
+            infos = mc.line_array(self.sm_info, sm_line, float)
+        else:
+            infos = np.empty(len(sm_line))
+            infos.fill(-1)
+        return infos
+
     def _load_variants(self, load_path, validation, core):
         """
         Load variants, for .bgen or plink files, as a set of snps that exist within the current chromosome. Uses the
@@ -350,22 +389,6 @@ class SummaryCleaner(Input):
         else:
             return None
 
-    def _load_lr_ld_dict(self, chromosome):
-        """
-        This will read in the long rang ld dict from Price et al. AJHG 2008 long range LD tables taken from LDPred and
-        then filter out the keys relevant to this chromosome.
-        """
-        # Load
-        long_dict = {chromosome_key: {} for chromosome_key in range(1, 24)}
-        with open(self.lr_ld_path, 'r') as f:
-            for line in f:
-                chromosome_line, start_pos, end_pos, hild = line.split()
-                try:
-                    long_dict[int(chromosome_line)][hild] = {'start_pos': int(start_pos), 'end_pos': int(end_pos)}
-                except ValueError:
-                    continue
-        return long_dict[chromosome]
-
     def _assert_clean_summary_statistics(self):
         """
         clean_summary_statistics requires
@@ -385,7 +408,6 @@ class SummaryCleaner(Input):
         assert self.validation_size, ec.missing_arg(self.operation, "Validation_Size")
 
         return time.time()
-
 
     def _set_variant(self, variant_id, indexer):
         """
@@ -441,96 +463,6 @@ class SummaryCleaner(Input):
         else:
             return 1
 
-    def _isolate_raw_snps(self, gen_file, sm_dict):
-        """
-        This will isolate the raw snps for a given bed or bgen file
-
-        :param gen_file: Genetic file you wish to load from
-        :param sm_dict: dict of clean information
-        :return: raw snps
-        """
-        ordered_common = gen_file[:, gen_file.sid_to_index(self._extract_variant_name(sm_dict))].read().val
-
-        # bed returns 2, 1, 0 rather than 0, 1, 2 although it says its 0, 1, 2; so this inverts it
-        if self.load_type == ".bed":
-            return np.array([abs(snp - 2) for snp in ordered_common.T])
-
-        # We have a [1, 0, 0], [0, 1, 0], [0, 0, 1] array return for 0, 1, 2 respectively. So if we multiple the arrays
-        # by their index position and then sum them we get [0, 1, 2]
-        elif self.load_type == ".bgen":
-            return sum(np.array([snp * i for i, snp in enumerate(ordered_common.T)]))
-
-        else:
-            raise Exception(f"Critical Error: Unknown load type {self.load_type} found in _isolate_dosage")
-
-    def _extract_variant_name(self, sm_dict):
-        """
-        Different file types have different naming standards.
-
-        .bed: ["rs123", "rs124", ... "rsN"]
-        .bgen: ["rs123,rs123", "rs124,rs124", ... "rsN,rsN"]
-
-        This will standardise the names to be a list of type equivalent to bed
-        :param sm_dict: dict of clean information
-        :return: list of snp names
-        """
-        if self.load_type == ".bed":
-            return [variant.variant_id for variant in sm_dict[self.sm_variants]]
-        elif self.load_type == ".bgen":
-            print("Bgen load type, so need to restructure return type ... will take a bit longer longer!")
-            return [variant.bgen_variant_id() for variant in sm_dict[self.sm_variants]]
-        else:
-            raise Exception(f"Critical Error: Unknown load type {self.load_type} found in _isolate_dosage")
-
-    def _filter_snps(self, gen_type, load_path, sm_dict, chromosome):
-        # testing validation for comparision TEMP
-        validation = Bgen(load_path)
-
-        # Construct the genetic raw snps and genetics freqs
-        sm_dict[f"{gen_type}_Raw_Snps"] = self._isolate_raw_snps(validation, sm_dict)
-        sm_dict[f"{gen_type}_Freqs"] = np.sum(sm_dict[f"{gen_type}_Raw_Snps"], 1, dtype='float32') / (2 * float(validation.iid_count))
-
-        # If the frequencies in the summary stats are not just a list of -1 errors then screen genetic snp frequencies
-        if (self.freq_discrepancy < 1) and (np.sum(sm_dict[self.frequency] == -1) != len(sm_dict[self.frequency])):
-            freq_filter = np.logical_or(
-                np.absolute(sm_dict[self.frequency] - sm_dict[f"{gen_type}_Freqs"]) < self.freq_discrepancy,
-                np.absolute(sm_dict[self.frequency] + (sm_dict[f"{gen_type}_Freqs"] - 1)) < self.freq_discrepancy)
-
-            # Invalid frequencies from summary stats where coded as -1 so these will be removed
-            freq_filter = np.logical_or(freq_filter, sm_dict[self.frequency] <= 0)
-            self._error_dict["Filtered_Frequency"] = len(freq_filter) - np.sum(freq_filter)
-            if not mc.filter_array(sm_dict, freq_filter):
-                return None
-
-        # Filter minor allele frequency SNPs.
-        if self.maf_min > 0:
-            maf_filter = (sm_dict[f"{gen_type}_Freqs"] > self.maf_min) * (sm_dict[f"{gen_type}_Freqs"] < (1 - self.maf_min))
-            self._error_dict["Filtered_MAF"] = len(maf_filter) - np.sum(maf_filter)
-            if not mc.filter_array(sm_dict, maf_filter):
-                return None
-
-        # Do the same for std
-        stds = np.std(sm_dict[f"{gen_type}_Raw_Snps"], 1, dtype='float32')
-        monomorphic_filter = stds > 0
-        self._error_dict["Monomorphic"] = len(monomorphic_filter) - np.sum(monomorphic_filter)
-        if not mc.filter_array(sm_dict, monomorphic_filter):
-            return None
-
-        # Filter long range LD if set
-        if self.lr_ld_path:
-            lr_pos = self._load_lr_ld_dict(chromosome)
-            if len(lr_pos) != 0:
-                for key in lr_pos.keys():
-                    position = mc.variant_array(self.bp_position.lower(), sm_dict[self.sm_variants])
-                    long_filter = np.where((lr_pos[key]["start_pos"] < position) & (position < lr_pos[key]["end_pos"]),
-                                           False, True)
-                    self._error_dict["Long_Range"] += len(long_filter) - np.sum(long_filter)
-                    if not mc.filter_array(sm_dict, long_filter):
-                        return None
-
-        self._error_dict["Accepted_Snps"] = len(sm_dict[self.sm_variants])
-        return sm_dict
-
     def _seek_to_start(self, chromosome, file):
         """
         If we are running without multi-core positioning then we can log the differing seek values to jump to the next
@@ -545,44 +477,3 @@ class SummaryCleaner(Input):
                 self._summary_last_position = len(start_line)
             else:
                 file.seek(self._summary_last_position)
-
-    def _sum_stats_frequencies(self, line):
-        """
-        This will check to see if the user is using Psychiatric Genomics Consortium Summary Stats and if so use the
-        case/control frequency and N to construct the frequency. Otherwise, it will attempt to use the MAF column and
-        if that is also not set it will return -1
-        """
-
-        # If we have Psychiatric Genomics Consortium Summary stats use these
-        if (self.sm_case_freq is not None) and (self.sm_control_freq is not None):
-
-            # If the frequency's are indexed but are NA then return -1
-            if line[self.sm_case_freq] in (".", "NA") or line[self.sm_control_freq] in (".", "NA"):
-                return -1
-
-            # If the n for the case and control are known, then calculate a more accurate frequency
-            elif (self.sm_case_n is not None) and (self.sm_control_freq is not None):
-                if line[self.sm_case_n] in (".", "NA") or line[self.sm_control_n] in (",", "NA"):
-                    return -1
-                else:
-                    case_n = float(line[self.case_n])
-                    control_n = float(line[self.control_n])
-                    tot_n = case_n + control_n
-                    a_scalar = case_n / float(tot_n)
-                    u_scalar = control_n / float(tot_n)
-                    return (float(line[self.sm_case_freq]) * a_scalar) + (float(line[self.sm_control_freq]) * u_scalar)
-
-            # If n is not know we just divide by 2
-            else:
-                return (float(line[self.sm_case_freq]) + float(line[self.sm_control_freq])) / 2.0
-
-        # If we have MAF values in the summary stats then we can use those as the frequency
-        elif self.sm_minor_allele_freq is not None:
-            if line[self.sm_minor_allele_freq] not in (",", "NA"):
-                return float(line[self.sm_minor_allele_freq])
-            else:
-                return -1
-
-        # If we have no frequency information just return -1
-        else:
-            return -1
