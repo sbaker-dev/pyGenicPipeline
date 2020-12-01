@@ -15,7 +15,7 @@ import gzip
 import re
 
 
-class Cleaner(Input):
+class SummaryCleaner(Input):
     def __init__(self, args):
         super().__init__(args)
 

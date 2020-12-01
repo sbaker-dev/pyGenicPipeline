@@ -5,6 +5,7 @@ import numpy as np
 import h5py
 import re
 
+
 class Input:
     def __init__(self, args):
         # General operational parameters
@@ -20,7 +21,8 @@ class Input:
         self.project_file = self._create_project_file()
         self.summary_file = self._validate_path(self.args["Summary_Path"])
         self.load_directory = self._validate_path(self.args["Load_Directory"])
-        self.hap_map_3_file = self._load_local_data("HapMap3")
+        self.hap_map_3_path = self._load_local_data("HapMap3")
+        self.lr_ld_path = self._load_local_data("Filter_Long_Range_LD")
         self.load_type = self.args["Load_Type"]
         self.validation_size = self._set_validation_size(self.args["Validation_Size"])
 
@@ -107,7 +109,7 @@ class Input:
                 access_path = Path(package_root, "Data", "hm3_sids.txt.gz")
                 assert access_path, ec.path_invalid(access_path, "_load_local_data")
                 return access_path
-            elif access_key == "LongRangeLD":
+            elif access_key == "Filter_Long_Range_LD":
                 access_path = Path(package_root, "Data", "long-range-ld-price-2008hg38.txt")
                 assert access_path, ec.path_invalid(access_path, "_load_local_data")
                 return access_path

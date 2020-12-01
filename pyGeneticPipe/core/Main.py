@@ -1,11 +1,11 @@
 from pyGeneticPipe.support.ShellMaker import ShellMaker
 from pyGeneticPipe.utils.misc import terminal_time
-from pyGeneticPipe.pgs.Cleaner import Cleaner
+from pyGeneticPipe.pgs.SummaryCleaner import SummaryCleaner
 from pyGeneticPipe.core.Input import Input
 from colorama import init
 
 
-class Main(ShellMaker, Cleaner, Input):
+class Main(ShellMaker, SummaryCleaner, Input):
     def __init__(self, args):
         """
         This Class inherits all other classes that can be used, and then execute the job via getattr
