@@ -1,14 +1,27 @@
-from pyGeneticPipe.core.Input import Input
+from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils import misc as mc
+from pyGeneticPipe.core.Input import Input
 import numpy as np
+import time
 
 
 class FilterSnps(Input):
     def __init__(self, args):
         super().__init__(args)
-        self._error_dict = {"Filter case": "Count", "Frequency": 0, "MAF": 0, "Monomorphic": 0, "Long_Range": 0}
+        self._filter_error_dict = {"Filter case": "Count", "Frequency": 0, "MAF": 0, "Monomorphic": 0, "Long_Range": 0}
 
-    def _filter_snps(self, gen_type, genetic_file, sm_dict, chromosome):
+    def filter_snps(self, gen_type, genetic_file, sm_dict, chromosome):
+        """
+        From our cleaned summary statistics we can construct a set of information for our validation and reference
+        genetic samples. These samples need there raw snps to be loaded, and then we can use these to calculate genetic
+        frequencies and standard deviations.
+
+        If we have information on summary frequencies, the user has specified a maf_min or wants to filter snps in long
+        range LD then we can filter those out. This process will always filter out monomorphic snps.
+        """
+
+        t0 = self._assert_filter_snps()
+        print(f"\nStarting the filtering for {gen_type}")
 
         # Construct the genetic raw snps and genetics freqs
         sm_dict[f"{gen_type}_Raw_Snps"] = self._isolate_raw_snps(genetic_file, sm_dict)
@@ -16,47 +29,26 @@ class FilterSnps(Input):
 
         # If the frequencies in the summary stats are not just a list of -1 errors then screen genetic snp frequencies
         if (self.freq_discrepancy < 1) and (np.sum(sm_dict[self.frequency] == -1) != len(sm_dict[self.frequency])):
-            freq_filter = np.logical_or(
-                np.absolute(sm_dict[self.frequency] - sm_dict[f"{gen_type}_Freqs"]) < self.freq_discrepancy,
-                np.absolute(sm_dict[self.frequency] + (sm_dict[f"{gen_type}_Freqs"] - 1)) < self.freq_discrepancy)
-
-            # Invalid frequencies from summary stats where coded as -1 so these will be removed
-            freq_filter = np.logical_or(freq_filter, sm_dict[self.frequency] <= 0)
-            self._error_dict["Filtered_Frequency"] = len(freq_filter) - np.sum(freq_filter)
-            if not mc.filter_array(sm_dict, freq_filter):
+            if not self._summary_frequencies(sm_dict, gen_type):
                 return None
 
         # Filter minor allele frequency SNPs.
         if self.maf_min > 0:
-            maf_filter = (sm_dict[f"{gen_type}_Freqs"] > self.maf_min) * (
-                        sm_dict[f"{gen_type}_Freqs"] < (1 - self.maf_min))
-            self._error_dict["Filtered_MAF"] = len(maf_filter) - np.sum(maf_filter)
-            if not mc.filter_array(sm_dict, maf_filter):
+            if not self._maf_filter(sm_dict, gen_type):
                 return None
 
-        # Do the same for std
-        stds = np.std(sm_dict[f"{gen_type}_Raw_Snps"], 1, dtype='float32')
-        monomorphic_filter = stds > 0
-        self._error_dict["Monomorphic"] = len(monomorphic_filter) - np.sum(monomorphic_filter)
-        if not mc.filter_array(sm_dict, monomorphic_filter):
+        # Filter any Monomorphic snps
+        if not self._monomorphic_filter(sm_dict, gen_type):
             return None
 
         # Filter long range LD if set
         if self.lr_ld_path:
-            lr_pos = self.load_lr_ld_dict()[chromosome]
-            if len(lr_pos) != 0:
-                for key in lr_pos.keys():
-                    position = mc.variant_array(self.bp_position.lower(), sm_dict[self.sm_variants])
-                    long_filter = np.where((lr_pos[key]["start_pos"] < position) & (position < lr_pos[key]["end_pos"]),
-                                           False, True)
-                    self._error_dict["Long_Range"] += len(long_filter) - np.sum(long_filter)
-                    if not mc.filter_array(sm_dict, long_filter):
-                        return None
+            sm_dict = self._long_range_ld_filter(sm_dict, chromosome)
+            if not sm_dict:
+                return None
 
-        # set accept snps for gibbs
-        print(len(sm_dict[self.sm_variants]))
-
-        # todo clean dict (of things like sm_lines) that we no longer need
+        t1 = mc.error_dict_to_terminal(self._filter_error_dict)
+        print(f"Cleaned summary stats for Chromosome {chromosome} in {round(t1 - t0, 2)} Seconds\n")
         return sm_dict
 
     def _isolate_raw_snps(self, gen_file, sm_dict):
@@ -105,3 +97,56 @@ class FilterSnps(Input):
         """Calculate the frequencies from the raw extracted snps for this genetic file"""
         return np.sum(sm_dict[f"{gen_type}_Raw_Snps"], 1, dtype='float32') / (2 * float(genetic_file.iid_count))
 
+    def _summary_frequencies(self, sm_dict, gen_type):
+        """
+        If the summary frequencies existed in the summary stats then cross check them with our genetic frequencies,
+        removing anything that is outside of the frequency discrepancy allow by the user.
+        """
+        freq_filter = np.logical_or(
+            np.absolute(sm_dict[self.frequency] - sm_dict[f"{gen_type}_Freqs"]) < self.freq_discrepancy,
+            np.absolute(sm_dict[self.frequency] + (sm_dict[f"{gen_type}_Freqs"] - 1)) < self.freq_discrepancy)
+
+        # Invalid frequencies from summary stats where coded as -1 so these should be removed
+        freq_filter = np.logical_or(freq_filter, sm_dict[self.frequency] <= 0)
+        self._filter_error_dict["Frequency"] = len(freq_filter) - np.sum(freq_filter)
+        return mc.filter_array(sm_dict, freq_filter)
+
+    def _maf_filter(self, sm_dict, gen_type):
+        """
+        If the maf filter is greater than zero, then use this to remove any maf frequencies less that the frequency
+        provided or greater than 1 - frequency provided.
+        """
+        maf_filter = (sm_dict[f"{gen_type}_Freqs"] > self.maf_min) * (sm_dict[f"{gen_type}_Freqs"] < (1 - self.maf_min))
+        self._filter_error_dict["MAF"] = len(maf_filter) - np.sum(maf_filter)
+        return mc.filter_array(sm_dict, maf_filter)
+
+    def _monomorphic_filter(self, sm_dict, gen_type):
+        """Remove any Monomorphic snps, those with no variation"""
+        # todo: we might want to save standard errors
+        stds = np.std(sm_dict[f"{gen_type}_Raw_Snps"], 1, dtype='float32')
+        monomorphic_filter = stds > 0
+        self._filter_error_dict["Monomorphic"] = len(monomorphic_filter) - np.sum(monomorphic_filter)
+        return mc.filter_array(sm_dict, monomorphic_filter)
+
+    def _long_range_ld_filter(self, sm_dict, chromosome):
+        """
+        If we have filtering of long range LD in place then we load a dict of long range ld from Price et all 2008 as
+        was done within, and data taken from, LdPred. Then we isolate the long range ld regions for this chromosome,
+        and filter any in long range LD.
+        """
+        lr_pos = self.load_lr_ld_dict()[chromosome]
+        if len(lr_pos) != 0:
+            for key in lr_pos.keys():
+                position = mc.variant_array(self.bp_position.lower(), sm_dict[self.sm_variants])
+                long_filter = np.where((lr_pos[key]["start_pos"] < position) & (position < lr_pos[key]["end_pos"]),
+                                       False, True)
+                self._filter_error_dict["Long_Range"] += len(long_filter) - np.sum(long_filter)
+                if not mc.filter_array(sm_dict, long_filter):
+                    return None
+
+        return sm_dict
+
+    def _assert_filter_snps(self):
+        """Different files require different load type operations, so load type must be set"""
+        assert self.load_type, ec.missing_arg(self.operation, "Load_Type")
+        return time.time()
