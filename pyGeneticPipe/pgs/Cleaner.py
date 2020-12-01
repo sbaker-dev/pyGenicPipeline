@@ -51,10 +51,41 @@ class Cleaner(Input):
 
     def _clean_summary_stats(self, load_path, validation, core, chromosome):
         """
-        This will take the validation and core sample of snps, and check the snp against both sets. If the snp exists in
-        the validation files, then it will go to cleaning the summary statistics for this chromosome line by line.
+        This will take the summary statistics and access the validatable snps, found by cross referencing the genetic
+        validation and core samples, and clean them of possible errors. It then returns a ordered on base pair position
+        dictionary of information required for constructing poly-genetic scores
         """
 
+        # Clean the summary lines to only include validatable snps from our genetic samples that exit in this chromosome
+        core_snps, sm_line, sm_variants, validation_snps = self._valid_snps_lines_and_variants(
+            chromosome, core, load_path, validation)
+
+        # Construct the summary dict with our summary lines and Variants objects of our valid snps
+        sm_dict = {self.sm_lines: np.array(sm_line), self.sm_variants: np.array(sm_variants)}
+
+        # Clean the summary lines of valid snps for potential errors, if we ever wipe all our samples return None
+        sm_dict = self._validate_summary_lines(sm_dict)
+        if not sm_dict:
+            return None
+
+        # Construct the order from the base pair position
+        order = np.argsort(self._variant_array(self.bp_position.lower(), sm_dict[self.sm_variants]))
+
+        # Given we have only accepted snps that are within the validation / core, we should never have more snps in
+        # summary than within the validation. If we do, something has gone critically wrong.
+        assert len(order) <= len(validation_snps), ec.snp_overflow(len(order), len(validation_snps))
+        assert len(order) <= len(core_snps), ec.snp_overflow(len(order), len(core_snps))
+
+        # In this case we can order the array using filter array as well, and we return this ordered dict
+        self._filter_array(sm_dict, order)
+        return sm_dict
+
+    def _valid_snps_lines_and_variants(self, chromosome, core, load_path, validation):
+        """
+        We will load our variants from our validation and core samples and use those to check if the snp found in the
+        summary line is within our validation and core sample sets of snps. If this is the case, then we will add the
+        line to sm_line as well as a Variant object of the current snp valid snp to sm_variants
+        """
         validation_snps, core_snps, indexer = self._load_variants(load_path, validation, core)
 
         sm_variants = []
@@ -86,23 +117,7 @@ class Cleaner(Input):
                     else:
                         self._error_dict["Invalid_Snps"] += 1
 
-        sm_dict = {self.sm_lines: np.array(sm_line), self.sm_variants: np.array(sm_variants)}
-        sm_dict = self._validate_summary_lines(sm_dict)
-
-        if not sm_dict:
-            return None
-
-        # Construct the order from the base pair position
-        order = np.argsort(self._variant_array(self.bp_position.lower(), sm_dict[self.sm_variants]))
-
-        # Given we have only accepted snps that are within the validation / core, we should never have more snps in
-        # summary than within the validation. If we do, something has gone critically wrong.
-        assert len(order) <= len(validation_snps), ec.snp_overflow(len(order), len(validation_snps))
-        assert len(order) <= len(core_snps), ec.snp_overflow(len(order), len(core_snps))
-        if not self._filter_array(sm_dict, order):
-            return None
-        else:
-            return sm_dict
+        return core_snps, sm_line, sm_variants, validation_snps
 
     def _validate_summary_lines(self, sm_dict):
         """This will load in each possible header, and clean our dict of values by filtering"""
