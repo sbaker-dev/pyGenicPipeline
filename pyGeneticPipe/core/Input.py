@@ -3,7 +3,7 @@ from pyGeneticPipe.utils import misc as mc
 from pathlib import Path
 import numpy as np
 import h5py
-
+import re
 
 class Input:
     def __init__(self, args):
@@ -13,6 +13,7 @@ class Input:
         self.debug = self.args["Debug"]
         self.working_dir = self._validate_path(self.args["Working_Directory"], False)
         self.operation = self._set_current_job(self.args["Operation"])
+        self.multi_core_splitter = self.args["Multi_Core_Splitter"]
 
         # The project file for this project
         self.project_name = self.args['Project_Name']
@@ -123,6 +124,22 @@ class Input:
         """
         ambiguous = set(tuple(ambiguous) for ambiguous in self._config["ambiguous_snps"])
         return ambiguous, set(self._config["allowed_alleles"]), self._config["allele_flip"]
+
+    def _validation_chromosomes(self):
+        """
+        This will create a dataset of all the chromosomes that we have to work with our validation group in the
+        h5py file
+
+        :return: A list of valid chromosomes
+        :rtype: list
+        """
+
+        valid_chromosomes = []
+        for file in mc.directory_iterator(self.load_directory):
+            if Path(self.load_directory, file).suffix == self.load_type:
+                valid_chromosomes.append(int(re.sub(r'[\D]', "", Path(self.load_directory, file).stem)))
+        valid_chromosomes.sort()
+        return valid_chromosomes
 
     def _set_summary_stats(self):
         """

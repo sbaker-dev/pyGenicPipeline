@@ -27,35 +27,27 @@ class Cleaner(Input):
                             "Filtered_MAF": 0, "Monomorphic": 0, "Accepted_Snps": 0}
         self._summary_last_position = 0
 
-    def clean_summary_statistics(self):
-
-        # Note - this is basically becoming the -main- of prs, so will want to extract the chromosome bit so that it can
-        # run in a multi-core manner
-        # Make sure output is on a per chromosome level in a project directory so that the next step can read in all the
-        #  data when it is required to be genome wide
+    def clean_summary_statistics(self, chromosome):
 
         # Check for input arguments
         self._assert_clean_summary_statistics()
-        valid_chromosomes = self._validation_chromosomes()
+        print(f"Starting Chromosome: {chromosome}")
 
-        for chromosome in valid_chromosomes:
-            print(f"Starting Chromosome: {chromosome}")
+        # Load the validation and core samples, as well as the indexer
+        load_path = str(self._select_file(chromosome))
+        validation, core = self._construct_validation(load_path)
 
-            # Load the validation and core samples, as well as the indexer
-            load_path = str(self._select_file(chromosome))
-            validation, core = self._construct_validation(load_path)
+        # Clean the summary statistics
+        sm_variants = self._clean_summary_stats(load_path, validation, core, chromosome)
+        if not sm_variants:
+            print(f"No variants found for {chromosome}")
+            return
 
-            # Clean the summary statistics
-            sm_variants = self._clean_summary_stats(load_path, validation, core, chromosome)
-            if not sm_variants:
-                print(f"No variants found for {chromosome}")
-                return
+        # Filter the summary stats
+        self._filter_snps(load_path, sm_variants)
 
-            # Filter the summary stats
-            self._filter_snps(load_path, sm_variants)
-
-            # Log to terminal what has been filtered / removed
-            self._error_dict_to_terminal(chromosome)
+        # Log to terminal what has been filtered / removed
+        self._error_dict_to_terminal(chromosome)
 
     def _clean_summary_stats(self, load_path, validation, core, chromosome):
         """
@@ -345,22 +337,6 @@ class Cleaner(Input):
 
         raise Exception(f"Failed to find any relevant file for {chromosome} in {self.load_directory}")
 
-    def _validation_chromosomes(self):
-        """
-        This will create a dataset of all the chromosomes that we have to work with our validation group in the
-        h5py file
-
-        :return: A list of valid chromosomes
-        :rtype: list
-        """
-
-        valid_chromosomes = []
-        for file in mc.directory_iterator(self.load_directory):
-            if Path(self.load_directory, file).suffix == self.load_type:
-                valid_chromosomes.append(int(re.sub(r'[\D]', "", Path(self.load_directory, file).stem)))
-        valid_chromosomes.sort()
-        return valid_chromosomes
-
     def _construct_validation(self, load_path):
         """
         We need to construct a validation sample from the percentage the user provided and the iid_count, this then
@@ -604,14 +580,18 @@ class Cleaner(Input):
 
     def _seek_to_start(self, chromosome, file):
         """
-        Seek to the start position of the summary file for this chromosome if chromosomes where in the summary file
-        otherwise it will just skip the header
+        If we are running without multi-core positioning then we can log the differing seek values to jump to the next
+        position when calling the next chromosome. Otherwise it will just skip the header
         """
-        if chromosome == 1:
+        if self.multi_core_splitter:
             start_line = file.readline()
             self._summary_last_position = len(start_line)
         else:
-            file.seek(self._summary_last_position)
+            if chromosome == 1:
+                start_line = file.readline()
+                self._summary_last_position = len(start_line)
+            else:
+                file.seek(self._summary_last_position)
 
     def _sum_stats_frequencies(self, line):
         """
