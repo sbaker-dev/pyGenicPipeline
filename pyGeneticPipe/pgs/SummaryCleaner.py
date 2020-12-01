@@ -5,14 +5,12 @@ from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils import misc as mc
 from pyGeneticPipe.core.Input import Input
 from pysnptools.distreader import Bgen
-from pysnptools.snpreader import Bed
 from colorama import Fore
-from pathlib import Path
 from scipy import stats
 import numpy as np
 import pickle
 import gzip
-import re
+import time
 
 
 class SummaryCleaner(Input):
@@ -28,26 +26,34 @@ class SummaryCleaner(Input):
         self._summary_last_position = 0
 
     def clean_summary_statistics(self, chromosome):
+        t0 = time.time()
 
         # Check for input arguments
         self._assert_clean_summary_statistics()
         print(f"Starting Chromosome: {chromosome}")
 
         # Load the validation and core samples, as well as the indexer
-        load_path = str(self._select_file(chromosome))
-        validation, core = self._construct_validation(load_path)
+        load_path = str(self.select_file_on_chromosome(chromosome))
+        validation, core = self.construct_validation(load_path)
 
         # Clean the summary statistics
         sm_variants = self._clean_summary_stats(load_path, validation, core, chromosome)
-        if not sm_variants:
-            print(f"No variants found for {chromosome}")
-            return None
-
-        # Filter the summary stats
-        self._filter_snps("VAL", load_path, sm_variants, chromosome)
 
         # Log to terminal what has been filtered / removed
         self._error_dict_to_terminal(chromosome)
+        t1 = time.time()
+        print(f"Cleaned summary stats for Chromosome {chromosome} in {round(t1 - t0, 2)} Seconds")
+
+        # If we failed to find any valid snps return None, else return the variants, validation and core.
+        if not sm_variants:
+            print(f"No variants found for {chromosome}")
+            return None
+        else:
+            return sm_variants, validation, core
+
+        #
+        # # Filter the summary stats
+        # self._filter_snps("VAL", load_path, sm_variants, chromosome)
 
     def _clean_summary_stats(self, load_path, validation, core, chromosome):
         """
@@ -315,48 +321,6 @@ class SummaryCleaner(Input):
         sm_dict[self.log_odds] = sm_dict[self.log_odds] * sm_dict["Flip"]
         return sm_dict
 
-    def _select_file(self, chromosome):
-        """
-        For a given chromosome, get the respective file
-        :param chromosome: Current chromosome to be loaded
-        :return: Path to the current file as a Path from pathlib
-        """
-        for file in mc.directory_iterator(self.load_directory):
-            if Path(self.load_directory, file).suffix == self.load_type:
-                if int(re.sub(r'[\D]', "", Path(self.load_directory, file).stem)) == chromosome:
-                    return Path(self.load_directory, file)
-
-        raise Exception(f"Failed to find any relevant file for {chromosome} in {self.load_directory}")
-
-    def _construct_validation(self, load_path):
-        """
-        We need to construct a validation sample from the percentage the user provided and the iid_count, this then
-        returns this slice of the sample from the start up to this percentage (Uses int so may be slightly above or
-        below the percentage provided based on rounding / floating point errors), and then the rest of the sample of the
-        core set
-
-        :param load_path: Path to the relevant load file
-        :return: The validation and core sample class holders
-        """
-
-        # todo Before spliting in to validation and core, allow a sample size modifier to remove people out (ie for ukb)
-        # Set validation and core sets of sids based on the load type
-        if self.load_type == ".bed":
-            validation_size = self._set_validation_sample_size(Bed(load_path, count_A1=True).iid_count)
-            validation = Bed(load_path, count_A1=True)[:validation_size, :]
-            core = Bed(load_path, count_A1=True)[validation_size:, :]
-            return validation, core
-
-        elif self.load_type == ".bgen":
-            # Bgen files store [variant id, rsid], we just want the rsid hence the [1]; see https://bit.ly/2J0C1kC
-            validation_size = self._set_validation_sample_size(Bgen(load_path).iid_count)
-            validation = Bgen(load_path)[:validation_size, :]
-            core = Bgen(load_path)[validation_size:, :]
-            return validation, core
-
-        else:
-            raise Exception("Unknown load type set")
-
     def _load_variants(self, load_path, validation, core):
         """
         Load variants, for .bgen or plink files, as a set of snps that exist within the current chromosome. Uses the
@@ -443,19 +407,6 @@ class SummaryCleaner(Input):
         assert self.load_type, ec.missing_arg(self.operation, "Load_Type")
         assert self.load_directory, ec.missing_arg(self.operation, "Load_Directory")
         assert self.validation_size, ec.missing_arg(self.operation, "Validation_Size")
-
-    def _set_validation_sample_size(self, full_sample_size):
-        """
-        This will return the value of the validation in terms of individuals rather than a percentage that the user
-        specified
-
-        :param full_sample_size: An integer of the number of samples in the full sample
-        :type full_sample_size: int
-
-        :return: Integer of the number of samples required in the validation sample
-        :rtype: int
-        """
-        return int(full_sample_size * self.validation_size)
 
     def _set_variant(self, variant_id, indexer):
         """

@@ -1,5 +1,7 @@
 from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils import misc as mc
+from pysnptools.distreader import Bgen
+from pysnptools.snpreader import Bed
 from pathlib import Path
 import numpy as np
 import h5py
@@ -181,6 +183,19 @@ class Input:
 
         return np.unique(ok_chromosomes)
 
+    def select_file_on_chromosome(self, chromosome):
+        """
+        For a given chromosome, get the respective file
+        :param chromosome: Current chromosome to be loaded
+        :return: Path to the current file as a Path from pathlib
+        """
+        for file in mc.directory_iterator(self.load_directory):
+            if Path(self.load_directory, file).suffix == self.load_type:
+                if int(re.sub(r'[\D]', "", Path(self.load_directory, file).stem)) == chromosome:
+                    return Path(self.load_directory, file)
+
+        raise Exception(f"Failed to find any relevant file for {chromosome} in {self.load_directory}")
+
     def _check_header(self, sum_header, headers, summary_headers):
         """
         We need to standardise our headers, and locate where the current header is in our summary file in terms of a
@@ -250,6 +265,48 @@ class Input:
         else:
             assert 0 <= float(validation_size) <= 1, ec.validation_size_invalid(validation_size)
             return float(validation_size)
+
+    def _set_validation_sample_size(self, full_sample_size):
+        """
+        This will return the value of the validation in terms of individuals rather than a percentage that the user
+        specified
+
+        :param full_sample_size: An integer of the number of samples in the full sample
+        :type full_sample_size: int
+
+        :return: Integer of the number of samples required in the validation sample
+        :rtype: int
+        """
+        return int(full_sample_size * self.validation_size)
+
+    def construct_validation(self, load_path):
+        """
+        We need to construct a validation sample from the percentage the user provided and the iid_count, this then
+        returns this slice of the sample from the start up to this percentage (Uses int so may be slightly above or
+        below the percentage provided based on rounding / floating point errors), and then the rest of the sample of the
+        core set
+
+        :param load_path: Path to the relevant load file
+        :return: The validation and core sample class holders
+        """
+
+        # todo Before splitting in to validation and core, allow a sample size modifier to remove people out (ie for ukb)
+        # Set validation and core sets of sids based on the load type
+        if self.load_type == ".bed":
+            validation_size = self._set_validation_sample_size(Bed(load_path, count_A1=True).iid_count)
+            validation = Bed(load_path, count_A1=True)[:validation_size, :]
+            core = Bed(load_path, count_A1=True)[validation_size:, :]
+            return validation, core
+
+        elif self.load_type == ".bgen":
+            # Bgen files store [variant id, rsid], we just want the rsid hence the [1]; see https://bit.ly/2J0C1kC
+            validation_size = self._set_validation_sample_size(Bgen(load_path).iid_count)
+            validation = Bgen(load_path)[:validation_size, :]
+            core = Bgen(load_path)[validation_size:, :]
+            return validation, core
+
+        else:
+            raise Exception("Unknown load type set")
 
     def _set_effect_type(self, effect_type):
         """
