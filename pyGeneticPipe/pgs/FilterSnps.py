@@ -164,7 +164,7 @@ class FilterSnps(Input):
         # Use this information to construct a normalised snps
         normalised_snps = np.array((sm_dict[f"{gen_type}_{self.raw_snps}"] - raw_means) / raw_stds, dtype="float32")
         assert normalised_snps.shape == sm_dict[f"{gen_type}_{self.raw_snps}"].shape
-        sm_dict[f"{gen_type}_{self.normalised_snps}"] = normalised_snps
+        sm_dict[f"{gen_type}_{self.norm_snps}"] = normalised_snps
 
     def _assert_filter_snps(self):
         """Different files require different load type operations, so load type must be set"""

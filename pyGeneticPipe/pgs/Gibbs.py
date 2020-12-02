@@ -13,7 +13,13 @@ class Gibbs(Input):
         average_ld = self.compute_ld_scores(sm_dict)
 
         # Calculate the estimate heritability for this chromosome
-        self.estimate_heritability(sm_dict, average_ld, chromosome)
+        estimated_herit = self._estimate_heritability(sm_dict, average_ld, chromosome)
+
+        # Update the betas via infinitesimal shrinkage using ld information
+        updated_betas = self._infinitesimal_betas(sm_dict, estimated_herit)
+
+        for variant_fraction in self.gibbs_causal_fractions:
+            print(variant_fraction)
 
         return
 
@@ -29,7 +35,7 @@ class Gibbs(Input):
         if "Genetic_Map" in sm_dict.keys():
             raise NotImplementedError("Genetic Map Not Yet Implemented")
         else:
-            norm_snps = sm_dict[f"{self.ref_prefix}_{self.normalised_snps}"]
+            norm_snps = sm_dict[f"{self.ref_prefix}_{self.norm_snps}"]
             number_iid = sm_dict[f"{self.ref_prefix}_{self.iid_count}"]
             for i, snp in enumerate(norm_snps):
                 self.calculate_disequilibrium(i, snp, norm_snps, sm_dict, ld_scores, ld_dict, number_iid)
@@ -53,10 +59,10 @@ class Gibbs(Input):
         r2s = distance_dp ** 2
         ld_scores[snp_index] = np.sum(r2s - ((1 - r2s) / (iid_count - 2)), dtype="float32")
 
-    def estimate_heritability(self, sm_dict, average_ld, chromosome):
+    def _estimate_heritability(self, sm_dict, average_ld, chromosome):
         """
-        This will calculated the chromosome chi-squared lambda (maths from LDPred), and then take the maximum of 0.0001 or
-        the  computed heritability of
+        This will calculated the chromosome chi-squared lambda (maths from LDPred), and then take the maximum of 0.0001
+        or the computed heritability of
 
         This chromosomes chi-sq lambda (or 1 if its less than 1 for reasons that are beyond me)
         ---------------------------------------------------------------------------------------
@@ -79,10 +85,36 @@ class Gibbs(Input):
 
             return max(0.0001, (max(1.0, float(char_chi_sq_lambda)) - 1) / (iid_count * (average_ld / snp_count)))
 
+    def _infinitesimal_betas(self, sm_dict, estimate_herit):
+        """
+        Apply the infinitesimal shrink w LD (which requires LD information), from LDPred directly (mostly).
+
+        """
+        ld_window = self.ld_radius * 2
+        iid_count = sm_dict[f"{self.ref_prefix}_{self.iid_count}"]
+        snp_count = sm_dict[f"{self.ref_prefix}_{self.snp_count}"]
+
+        updated_betas = np.empty(snp_count)
+        for wi in range(0, snp_count, ld_window):
+            window_snps = mc.snps_in_window(sm_dict[f"{self.ref_prefix}_{self.norm_snps}"], wi, snp_count, ld_window)
+
+            D = mc.shrink_r2_matrix(np.dot(window_snps, window_snps.T) / iid_count, iid_count)
+
+            # numpy.eye is just an identity matrix
+            A = np.array(((snp_count / estimate_herit) * np.eye(min(snp_count, (wi + (self.ld_radius * 2))) - wi))
+                         + (iid_count / 1.0) * D)
+
+            # Update the betas for this window
+            start_i = wi
+            stop_i = min(snp_count, wi + ld_window)
+            updated_betas[start_i: stop_i] = np.dot(np.linalg.pinv(A) * iid_count, sm_dict[self.beta][start_i: stop_i])
+        return updated_betas
+
     def local_values(self, values, snp_index, number_of_snps):
         """
-        We want to construct a window of -r + r around each a given list of values where r is the radius. However, the first
-        r and last N-r of the snps will not have r number of snps before or after them so we need to account for this by:
+        We want to construct a window of -r + r around each a given list of values where r is the radius. However, the
+        first r and last N-r of the snps will not have r number of snps before or after them so we need to account for
+        this by:
 
         Taking the maximum of (0, i-r) so that we never get a negative index
         Taking the minimum of (n_snps, (i + radius + 1)) to ensure we never get an index out of range

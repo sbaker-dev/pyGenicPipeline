@@ -42,6 +42,14 @@ class Input:
         # Gibbs information
         self.ld_radius = self.args["LD_Radius"]
         self.heritability_calculated = self.args["Heritability_Calculated"]
+        self.gibbs_causal_fractions = self._set_causal_fractions()
+        # todo set these up externally
+        self.gibbs_iter = 60
+        self.gibbs_burn_in = 10
+        self.gibbs_shrink = 1
+        self.gibbs_zero_jump = 0.01
+        self.gibbs_random_seed = 42
+
 
         if (self.sm_case_freq is not None) or (self.sm_control_n is not None):
             raise NotImplementedError("Psychiatric Genomics Consortium Summary stats are untested and unfinished!")
@@ -369,6 +377,17 @@ class Input:
                     continue
         return long_dict
 
+    def _set_causal_fractions(self):
+        """
+        If the user has provided a set of causal fractions of variants to use for the gibbs sampler then use those, else
+        use the default that LDPred used.
+        """
+        if self.args["Causal_Fractions"]:
+            return self.args["Causal_Fractions"]
+        else:
+            return [1, 0.3, 0.1, 0.03, 0.01, 0.003, 0.001]
+
+
     def _create_project_file(self):
         """
         Setup the hdf5 file for this project
@@ -591,7 +610,7 @@ class Input:
         return "Raw_Snps"
 
     @property
-    def normalised_snps(self):
+    def norm_snps(self):
         """Key used for accessing Raw_Snps headers, groups or other attributes"""
         return "Normalised_Snps"
 
