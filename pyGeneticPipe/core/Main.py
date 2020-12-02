@@ -54,7 +54,7 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, Gibbs, Input):
         self._clean_sm_dict(sm_dict)
 
         # Construct the gibbs weights
-        self.construct_gibbs_weights(sm_dict)
+        self.construct_gibbs_weights(sm_dict, chromosome)
 
     def _clean_sm_dict(self, sm_dict):
         number_of_snps, number_of_individuals = sm_dict[f"{self.ref_prefix}_{self.raw_snps}"].shape

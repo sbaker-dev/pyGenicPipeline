@@ -41,6 +41,7 @@ class Input:
 
         # Gibbs information
         self.ld_radius = self.args["LD_Radius"]
+        self.heritability_calculated = self.args["Heritability_Calculated"]
 
         if (self.sm_case_freq is not None) or (self.sm_control_n is not None):
             raise NotImplementedError("Psychiatric Genomics Consortium Summary stats are untested and unfinished!")

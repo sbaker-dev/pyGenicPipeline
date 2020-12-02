@@ -7,11 +7,13 @@ class Gibbs(Input):
     def __init__(self, args):
         super().__init__(args)
 
-    def construct_gibbs_weights(self, sm_dict):
+    def construct_gibbs_weights(self, sm_dict, chromosome):
 
         # Calculate the mean ld score and construct a dict of ld reference
-        self.compute_ld_scores(sm_dict)
+        average_ld = self.compute_ld_scores(sm_dict)
 
+        # Calculate the estimate heritability for this chromosome
+        self.estimate_heritability(sm_dict, average_ld, chromosome)
 
         return
 
@@ -32,8 +34,8 @@ class Gibbs(Input):
             for i, snp in enumerate(norm_snps):
                 self.calculate_disequilibrium(i, snp, norm_snps, sm_dict, ld_scores, ld_dict, number_iid)
 
-        sm_dict[f"{self.ref_prefix}_{self.ld_scores}"] = np.mean(ld_scores)
         sm_dict[f"{self.ref_prefix}_{self.ld_dict}"] = ld_dict
+        return np.mean(ld_scores)
 
     def calculate_disequilibrium(self, snp_index, current_snp, norm_snps, sm_dict, ld_scores, ld_dict, iid_count):
         """
@@ -50,6 +52,32 @@ class Gibbs(Input):
         # calculate the ld score
         r2s = distance_dp ** 2
         ld_scores[snp_index] = np.sum(r2s - ((1 - r2s) / (iid_count - 2)), dtype="float32")
+
+    def estimate_heritability(self, sm_dict, average_ld, chromosome):
+        """
+        This will calculated the chromosome chi-squared lambda (maths from LDPred), and then take the maximum of 0.0001 or
+        the  computed heritability of
+
+        This chromosomes chi-sq lambda (or 1 if its less than 1 for reasons that are beyond me)
+        ---------------------------------------------------------------------------------------
+        Number of samples in the summary stats * (average ld score / number snps)
+
+        :return: estimated heritability (h2 in ldpred)
+        """
+        if self.heritability_calculated:
+            try:
+                return self.heritability_calculated[chromosome]
+            except KeyError:
+                raise Exception("You have said you will provided pre-calculated heritability but failed to find it for"
+                                f"chromosome {chromosome}")
+        else:
+            sum_beta_sq = np.sum(sm_dict[self.beta] ** 2)
+            iid_count = sm_dict[f"{self.ref_prefix}_{self.iid_count}"]
+            snp_count = float(sm_dict[f"{self.ref_prefix}_{self.snp_count}"])
+
+            char_chi_sq_lambda = np.mean((iid_count * sum_beta_sq) / snp_count)
+
+            return max(0.0001, (max(1.0, float(char_chi_sq_lambda)) - 1) / (iid_count * (average_ld / snp_count)))
 
     def local_values(self, values, snp_index, number_of_snps):
         """
