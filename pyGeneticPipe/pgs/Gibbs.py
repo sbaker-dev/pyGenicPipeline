@@ -24,8 +24,14 @@ class Gibbs(Input):
         updated_betas = self._infinitesimal_betas(sm_dict, estimated_herit, iid_count, snp_count)
 
         for variant_fraction in self.gibbs_causal_fractions:
+            # Run the LDPred gibbs processor to calculate a beta value
             beta = self.gibbs_processor(snp_count, iid_count, updated_betas, estimated_herit, variant_fraction, sm_dict)
-            print(beta)
+
+            # Compute the effect size
+            effect_size = beta / sm_dict[f"{self.ref_prefix}_{self.stds}"].flatten()
+
+            self._write(sm_dict, beta, effect_size, chromosome)
+            break
 
         return
 
@@ -111,6 +117,7 @@ class Gibbs(Input):
         return updated_betas
 
     def gibbs_processor(self, snp_count, iid_count, start_betas, est_herit, variant_fraction, sm_dict):
+        """LDPred Gibbs Sampler"""
         # Set random seed to stabilize results
         np.random.seed(self.gibbs_random_seed)
         currant_betas = np.copy(start_betas)
@@ -183,13 +190,14 @@ class Gibbs(Input):
         return values[max(0, snp_index - self.ld_radius): min(number_of_snps, (snp_index + self.ld_radius + 1))]
 
     def _const_dict_constructor(self, chromosome_heritability, cp, iid_count, snp_count):
+        """A bunch of constants where constructed in ldpred for the gibbs processor which is duplicated here"""
         causal_variants = snp_count * cp
         herit_by_cv = (chromosome_heritability / causal_variants)
         rv_scalars = np.zeros(snp_count)
         const_dict = {'Mp': causal_variants, 'hdmp': herit_by_cv}
 
         if iid_count is not None:
-            # NOTE M = Number of snps and P is the fraction of causal variants (cv)
+            # NOTE M = Number of snps and CP is the fraction of causal variants (CV)
             hdmpn = herit_by_cv + 1.0 / iid_count
             hdmp_hdmpn = (herit_by_cv / hdmpn)
             c_const = (cp / np.sqrt(hdmpn))
@@ -208,15 +216,35 @@ class Gibbs(Input):
         return const_dict
 
     def set_alpha(self, est_herit, h2_est, iid_count):
+        """
+        This allows a forced alpha shrink if estimates are way off compared to heritability estimates via gibbs tight
+         which may improve MCMC convergence
+        """
         if self.gibbs_tight:
-            # Force an alpha shrink if estimates are way off compared to heritability estimates.
-            # (May improve MCMC convergence.)
             return min(1.0 - self.gibbs_zero_jump, 1.0 / h2_est, (est_herit + 1.0 / np.sqrt(iid_count)) / h2_est)
         else:
             return 1.0 - self.gibbs_zero_jump
 
+    def _write(self, sm_dict, gibbs_effect_beta, gibbs_effect_size, chromosome):
+        test_out = r"C:\Users\Samuel\Documents\Genetic_Examples\PolyTutOut\Working\TESTOUT.txt"
+
+        bp_positions = mc.variant_array(self.bp_position.lower(), sm_dict[self.sm_variants])
+        snp_ids = mc.variant_array(self.snp_id.lower(), sm_dict[self.sm_variants])
+        nt1s = mc.variant_array("a1", sm_dict[self.sm_variants])
+        nt2s = mc.variant_array("a2", sm_dict[self.sm_variants])
+
+        with open(test_out, "w") as f:
+            f.write('chrom    pos    sid    nt1    nt2    raw_beta      gibs_betas     ldpred_beta\n')
+            for pos, sid, nt1, nt2, raw_beta, gibbs_beta, ldpred_beta in zip(bp_positions, snp_ids, nt1s, nt2s,
+                                                                             sm_dict[self.log_odds], gibbs_effect_beta,
+                                                                             gibbs_effect_size):
+
+                f.write('%s    %d    %s    %s    %s    %0.4e    %0.4e   %0.4e\n' % (
+                    chromosome, pos, sid, nt1, nt2, raw_beta, gibbs_beta, ldpred_beta))
+
     @staticmethod
     def _get_constants(snp_i, const_dict):
+        """Managing differing specifications of constant"""
         if 'snp_dict' in const_dict:
             return const_dict['snp_dict'][snp_i]
         else:
