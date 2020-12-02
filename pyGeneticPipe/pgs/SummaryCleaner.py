@@ -15,9 +15,10 @@ class SummaryCleaner(Input):
 
         # Depending on how this ends up being constructed we might want to log this out as a .txt rather than just
         # print this to a terminal.
-        self._sum_error_dict = {"Removal case": "Count", "Invalid_Snps": 0, self.chromosome: 0, self.bp_position: 0,
-                                self.effect_size: 0, self.p_value: 0, self.standard_errors: 0, "Ambiguous_SNP": 0,
-                                "Non_Allowed_Allele": 0, "Non_Matching": 0}
+        self._sum_error_dict = {"Removal case": "Count", "Invalid_Snps": 0, f"Miss Matching {self.chromosome}": 0,
+                                f"Miss Matching {self.bp_position}": 0, f"Non Finite {self.effect_size}": 0,
+                                f"Non Finite {self.p_value}": 0, f"Non Finite {self.standard_errors}": 0,
+                                "Ambiguous_SNP": 0, "Non_Allowed_Allele": 0, "Non_Matching": 0}
         self._summary_last_position = 0
 
     def clean_summary_statistics(self, chromosome, load_path, validation, core):
@@ -165,7 +166,7 @@ class SummaryCleaner(Input):
         # Filter of True if the variant and summary match, else False which will remove this snp
         obj_filter = summary_array == variant_array
 
-        self._sum_error_dict[variant_key] = len(obj_filter) - np.sum(obj_filter)
+        self._sum_error_dict[f"Miss Matching {variant_key}"] = len(obj_filter) - np.sum(obj_filter)
         return mc.filter_array(summary_dict, obj_filter)
 
     def _validation_finite(self, summary_dict, line_index, summary_key):
@@ -190,7 +191,7 @@ class SummaryCleaner(Input):
 
         # Filter out anything that is not finite or is equal to zero
         obj_filter = np.array([True if np.isfinite(obj) and obj != 0 else False for obj in summary_dict[summary_key]])
-        self._sum_error_dict[summary_key] = len(obj_filter) - np.sum(obj_filter)
+        self._sum_error_dict[f"Non Finite {summary_key}"] = len(obj_filter) - np.sum(obj_filter)
         return mc.filter_array(summary_dict, obj_filter)
 
     def _validation_betas(self, sm_dict):

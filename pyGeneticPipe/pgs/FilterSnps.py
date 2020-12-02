@@ -8,7 +8,8 @@ import time
 class FilterSnps(Input):
     def __init__(self, args):
         super().__init__(args)
-        self._filter_error_dict = {"Filter case": "Count", self.freq: 0, "MAF": 0, "Monomorphic": 0, "Long_Range": 0}
+        self._filter_error_dict = {"Filter case": "Count", f"{self.freq} Discrepancy": 0, "MAF": 0,
+                                   "Monomorphic": 0, "In Long Range LD": 0}
 
     def filter_snps(self, gen_type, gen_file, sm_dict, chromosome):
         """
@@ -110,7 +111,7 @@ class FilterSnps(Input):
 
         # Invalid frequencies from summary stats where coded as -1 so these should be removed
         freq_filter = np.logical_or(freq_filter, sm_dict[self.freq] <= 0)
-        self._filter_error_dict[self.freq] = len(freq_filter) - np.sum(freq_filter)
+        self._filter_error_dict[f"{self.freq} Discrepancy"] = len(freq_filter) - np.sum(freq_filter)
         return mc.filter_array(sm_dict, freq_filter)
 
     def _maf_filter(self, sm_dict, gen_type):
@@ -142,7 +143,7 @@ class FilterSnps(Input):
                 position = mc.variant_array(self.bp_position.lower(), sm_dict[self.sm_variants])
                 long_filter = np.where((lr_pos[key]["start_pos"] < position) & (position < lr_pos[key]["end_pos"]),
                                        False, True)
-                self._filter_error_dict["Long_Range"] += len(long_filter) - np.sum(long_filter)
+                self._filter_error_dict["In Long Range LD"] += len(long_filter) - np.sum(long_filter)
                 if not mc.filter_array(sm_dict, long_filter):
                     return None
 
