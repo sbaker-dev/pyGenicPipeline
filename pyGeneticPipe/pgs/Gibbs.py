@@ -42,7 +42,13 @@ class Gibbs(Input):
             # Compute the effect size
             effect_size = beta / sm_dict[f"{self.ref_prefix}_{self.stds}"].flatten()
 
-            self._write_weights(sm_dict, beta, effect_size, variant_fraction, chromosome)
+            file_name = f"{chromosome}_weights_p{Decimal(variant_fraction):.2E}"
+            self._write_weights(sm_dict, effect_size, file_name, chromosome, with_gibbs=True, gibbs_effect_beta=beta)
+            print(f"Construct weights file for Chromosome {chromosome} with variant fraction of {variant_fraction} in "
+                  f"{round(time.time() - self.start_time, 2)} Seconds")
+
+        inf_beta = updated_betas / sm_dict[f"{self.ref_prefix}_{self.stds}"].flatten()
+        self._write_weights(sm_dict, inf_beta, f"{chromosome}_weights_inf", chromosome)
 
     def compute_ld_scores(self, sm_dict, iid_count):
         """
@@ -234,7 +240,7 @@ class Gibbs(Input):
         else:
             return 1.0 - self.gibbs_zero_jump
 
-    def _write_weights(self, sm_dict, gibbs_effect_beta, gibbs_effect_size, variant_fraction, chromosome):
+    def _write_weights(self, sm_dict, effect_size, file_name, chromosome, with_gibbs=None, gibbs_effect_beta=None):
         """
         This will format all of our data into a csv file and store it in the working directory
         """
@@ -243,15 +249,19 @@ class Gibbs(Input):
         nt1s = mc.variant_array("a1", sm_dict[self.sm_variants])
         nt2s = mc.variant_array("a2", sm_dict[self.sm_variants])
 
-        rows = [[chromosome, pos, sid, nt1, nt2, raw_beta, gibbs_beta, ldpred_beta]
-                for pos, sid, nt1, nt2, raw_beta, gibbs_beta, ldpred_beta in zip(
-                bp_positions, snp_ids, nt1s, nt2s, sm_dict[self.log_odds], gibbs_effect_beta, gibbs_effect_size)]
+        if with_gibbs:
+            headers = self.gibbs_headers + ["Gibbs_Beta"]
+            rows = [[chromosome, pos, sid, nt1, nt2, raw_beta, ldpred_beta, gibbs_beta]
+                    for pos, sid, nt1, nt2, raw_beta, ldpred_beta, gibbs_beta in zip(
+                    bp_positions, snp_ids, nt1s, nt2s, sm_dict[self.log_odds], effect_size, gibbs_effect_beta)]
 
-        write_csv(self.working_dir, f"{chromosome}_weights_p{Decimal(variant_fraction):.2E}", self.gibbs_headers,
-                  rows)
+        else:
+            headers = self.gibbs_headers
+            rows = [[chromosome, pos, sid, nt1, nt2, raw_beta, ldpred_beta]
+                    for pos, sid, nt1, nt2, raw_beta, ldpred_beta in zip(
+                    bp_positions, snp_ids, nt1s, nt2s, sm_dict[self.log_odds], effect_size)]
 
-        print(f"Construct weights file for Chromosome {chromosome} with variant fraction of {variant_fraction} in "
-              f"{round(time.time() - self.start_time, 2)} Seconds")
+        write_csv(self.working_dir, file_name, headers, rows)
 
     @staticmethod
     def _get_constants(snp_i, const_dict):
