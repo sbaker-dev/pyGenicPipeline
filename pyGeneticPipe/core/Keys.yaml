@@ -31,4 +31,5 @@ allele_flip:
 min_maf: 0.01
 max_freq_discrepancy: 0.1
 
-Gibbs_Headers: ["Chromosome", "Position", "sid", "nt1", "nt2", "raw_beta", "gibbs_betas", "ldpred_beta"]
+Gibbs_Headers: ["Chromosome", "Position", "RSID", "Effect Allele", "Alt Allele", "Raw_Beta", "Gibbs_Beta",
+                "Weight_Beta"]
