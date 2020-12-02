@@ -49,6 +49,7 @@ class Input:
         self.gibbs_shrink = 1
         self.gibbs_zero_jump = 0.01
         self.gibbs_random_seed = 42
+        self.gibbs_tight = None
 
 
         if (self.sm_case_freq is not None) or (self.sm_control_n is not None):
