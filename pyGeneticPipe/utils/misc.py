@@ -141,6 +141,36 @@ def shrink_r2_matrix(distance_dp, n):
     return clipped_r2
 
 
+def snps_in_window(snps, window_start, number_of_snps, window_size):
+    """
+    When accessing a window of snps we don't look at the snps +/- radius from the current snp, but just iterate in
+    chunks of r*2 through the snps as a window. However, the last iteration may be out of range so we take the minimum
+    of the number of snps as a precaution to prevent that.
+
+    :param snps: Normalised snps
+    :param window_start: Start index from the window iteration
+    :param number_of_snps: total number of snps
+    :param window_size: The size, radius * 2, of the window
+    :return:
+    """
+
+    return snps[window_start: min(number_of_snps, (window_start + window_size))]
+
+
+def posterior_mean(cd, b2, n):
+    d_const_b2_exp = cd['d_const'] * np.exp(-b2 * n / 2.0)
+    numerator = cd['c_const'] * np.exp(-b2 / (2.0 * cd['hdmpn']))
+    if not isinstance(d_const_b2_exp, complex):
+        if not isinstance(numerator, complex) and (numerator != 0.0):
+            postp = numerator / (numerator + d_const_b2_exp)
+            assert type(postp) != complex, "Post mean not a real number"
+            return postp
+        else:
+            return 0.0
+    else:
+        return 1.0
+
+
 def error_dict_to_terminal(error_dict):
     """Print the error dict for this chromosome then reset the initialised to default 0"""
     for index, (k, v) in enumerate(zip(error_dict.keys(), error_dict.values())):
