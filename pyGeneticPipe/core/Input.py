@@ -50,6 +50,7 @@ class Input:
         self.gibbs_zero_jump = 0.01
         self.gibbs_random_seed = 42
         self.gibbs_tight = None
+        self.gibbs_headers = self._config["Gibbs_Headers"]
 
         if (self.sm_case_freq is not None) or (self.sm_control_n is not None):
             raise NotImplementedError("Psychiatric Genomics Consortium Summary stats are untested and unfinished!")
