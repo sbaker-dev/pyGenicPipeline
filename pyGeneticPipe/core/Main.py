@@ -4,10 +4,11 @@ from pyGeneticPipe.pgs.FilterSnps import FilterSnps
 from pyGeneticPipe.utils.misc import terminal_time
 from pyGeneticPipe.core.Input import Input
 from pyGeneticPipe.pgs.Gibbs import Gibbs
+from pyGeneticPipe.pgs.Score import Score
 from colorama import init
 
 
-class Main(ShellMaker, SummaryCleaner, FilterSnps, Gibbs, Input):
+class Main(ShellMaker, SummaryCleaner, FilterSnps, Gibbs, Score, Input):
     def __init__(self, args):
         """
         This Class inherits all other classes that can be used, and then execute the job via getattr
@@ -62,7 +63,5 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, Gibbs, Input):
         sm_dict[f"{self.ref_prefix}_{self.snp_count}"] = number_of_snps
         sm_dict[f"{self.ref_prefix}_{self.iid_count}"] = number_of_individuals
 
-
         # todo clean dict (of things like sm_lines) that we no longer need and setup parameters for static calls
         #  such as number of variables
-

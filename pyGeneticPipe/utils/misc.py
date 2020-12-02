@@ -158,6 +158,7 @@ def snps_in_window(snps, window_start, number_of_snps, window_size):
 
 
 def posterior_mean(cd, b2, n):
+    """Calculate the posterior mean from the denominator and numerator"""
     d_const_b2_exp = cd['d_const'] * np.exp(-b2 * n / 2.0)
     numerator = cd['c_const'] * np.exp(-b2 / (2.0 * cd['hdmpn']))
     if not isinstance(d_const_b2_exp, complex):

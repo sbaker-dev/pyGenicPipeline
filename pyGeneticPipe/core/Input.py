@@ -51,7 +51,6 @@ class Input:
         self.gibbs_random_seed = 42
         self.gibbs_tight = None
 
-
         if (self.sm_case_freq is not None) or (self.sm_control_n is not None):
             raise NotImplementedError("Psychiatric Genomics Consortium Summary stats are untested and unfinished!")
 
@@ -387,7 +386,6 @@ class Input:
             return self.args["Causal_Fractions"]
         else:
             return [1, 0.3, 0.1, 0.03, 0.01, 0.003, 0.001]
-
 
     def _create_project_file(self):
         """
