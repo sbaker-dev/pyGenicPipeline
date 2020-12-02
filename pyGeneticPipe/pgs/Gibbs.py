@@ -1,5 +1,7 @@
 from pyGeneticPipe.core.Input import Input
 from pyGeneticPipe.utils import misc as mc
+from csvObject import write_csv
+from decimal import Decimal
 from scipy import stats
 import numpy as np
 
@@ -30,10 +32,7 @@ class Gibbs(Input):
             # Compute the effect size
             effect_size = beta / sm_dict[f"{self.ref_prefix}_{self.stds}"].flatten()
 
-            self._write(sm_dict, beta, effect_size, chromosome)
-            break
-
-        return
+            self._write_weights(sm_dict, beta, effect_size, variant_fraction, chromosome)
 
     def compute_ld_scores(self, sm_dict, iid_count):
         """
@@ -225,22 +224,21 @@ class Gibbs(Input):
         else:
             return 1.0 - self.gibbs_zero_jump
 
-    def _write(self, sm_dict, gibbs_effect_beta, gibbs_effect_size, chromosome):
-        test_out = r"C:\Users\Samuel\Documents\Genetic_Examples\PolyTutOut\Working\TESTOUT.txt"
-
+    def _write_weights(self, sm_dict, gibbs_effect_beta, gibbs_effect_size, variant_fraction, chromosome):
+        """
+        This will format all of our data into a csv file and store it in the working directory
+        """
         bp_positions = mc.variant_array(self.bp_position.lower(), sm_dict[self.sm_variants])
         snp_ids = mc.variant_array(self.snp_id.lower(), sm_dict[self.sm_variants])
         nt1s = mc.variant_array("a1", sm_dict[self.sm_variants])
         nt2s = mc.variant_array("a2", sm_dict[self.sm_variants])
 
-        with open(test_out, "w") as f:
-            f.write('chrom    pos    sid    nt1    nt2    raw_beta      gibs_betas     ldpred_beta\n')
-            for pos, sid, nt1, nt2, raw_beta, gibbs_beta, ldpred_beta in zip(bp_positions, snp_ids, nt1s, nt2s,
-                                                                             sm_dict[self.log_odds], gibbs_effect_beta,
-                                                                             gibbs_effect_size):
+        rows = [[chromosome, pos, sid, nt1, nt2, raw_beta, gibbs_beta, ldpred_beta]
+                for pos, sid, nt1, nt2, raw_beta, gibbs_beta, ldpred_beta in zip(
+                bp_positions, snp_ids, nt1s, nt2s, sm_dict[self.log_odds], gibbs_effect_beta, gibbs_effect_size)]
 
-                f.write('%s    %d    %s    %s    %s    %0.4e    %0.4e   %0.4e\n' % (
-                    chromosome, pos, sid, nt1, nt2, raw_beta, gibbs_beta, ldpred_beta))
+        write_csv(self.working_dir, f"{chromosome}_weights_p{Decimal(variant_fraction):.2E}", self.gibbs_headers,
+                  rows)
 
     @staticmethod
     def _get_constants(snp_i, const_dict):
