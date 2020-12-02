@@ -6,7 +6,6 @@ from pathlib import Path
 import numpy as np
 import pickle
 import gzip
-import h5py
 import re
 
 
@@ -21,8 +20,6 @@ class Input:
         self.multi_core_splitter = self.args["Multi_Core_Splitter"]
 
         # The project file for this project
-        self.project_name = self.args['Project_Name']
-        self.project_file = self._create_project_file()
         self.summary_file = self._validate_path(self.args["Summary_Path"])
         self.load_directory = self._validate_path(self.args["Load_Directory"])
         self.hap_map_3 = self._load_local_data("HapMap3")
@@ -144,7 +141,7 @@ class Input:
         ambiguous = set(tuple(ambiguous) for ambiguous in self._config["ambiguous_snps"])
         return ambiguous, set(self._config["allowed_alleles"]), self._config["allele_flip"]
 
-    def _validation_chromosomes(self):
+    def validation_chromosomes(self):
         """
         This will create a dataset of all the chromosomes that we have to work with our validation group in the
         h5py file
@@ -387,30 +384,6 @@ class Input:
             return self.args["Causal_Fractions"]
         else:
             return [1, 0.3, 0.1, 0.03, 0.01, 0.003, 0.001]
-
-    def _create_project_file(self):
-        """
-        Setup the hdf5 file for this project
-
-        :rtype: h5py.File
-        """
-        if not self.project_name:
-            return None
-
-        # Construct the path and validate it
-        project_file = Path(self.working_dir, self.project_name)
-
-        # Creates file if it doesn't exist, or overrides it, ie for fast debugging iterations, if set.
-        if (project_file.exists() and self.args["Override"]) or not project_file.exists():
-            return h5py.File(Path(self.working_dir, self.project_name), "w")
-
-        # If we don't want to override it, we load it in appending mode
-        elif project_file.exists() and not self.args["Override"]:
-            return h5py.File(Path(self.working_dir, self.project_name), "a")
-
-        # Should be impossible to reach here
-        else:
-            raise Exception(f"CRITICAL ERROR: Cannot load file - unknown reason")
 
     @property
     def _chromosome_map(self):
