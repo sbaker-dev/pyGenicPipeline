@@ -125,6 +125,22 @@ def filter_array(dict_to_filter, array_filter):
         return "OK"
 
 
+def shrink_r2_matrix(distance_dp, n):
+    """
+    The values of R squared to be no less or greater than -1 and 1 respectively so the value calculated from the dot
+    product is bounded to -1 and 1. Any value that is less than 1 divided by the number of individuals minus 1
+    (to account for 0 indexing) is set to zero to reduce the complexity of the finalised r squared matrix
+
+    :param distance_dp: The dot product tp calculate the clipped r2 matrix off
+    :param n: The number of individuals in the sample
+    :return: Clipped and reduced r2 matrix
+    """
+
+    clipped_r2 = np.clip(distance_dp, -1, 1)
+    clipped_r2[np.absolute(clipped_r2) < (1.0 / (n - 1))] = 0
+    return clipped_r2
+
+
 def error_dict_to_terminal(error_dict):
     """Print the error dict for this chromosome then reset the initialised to default 0"""
     for index, (k, v) in enumerate(zip(error_dict.keys(), error_dict.values())):

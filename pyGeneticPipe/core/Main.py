@@ -3,10 +3,11 @@ from pyGeneticPipe.support.ShellMaker import ShellMaker
 from pyGeneticPipe.pgs.FilterSnps import FilterSnps
 from pyGeneticPipe.utils.misc import terminal_time
 from pyGeneticPipe.core.Input import Input
+from pyGeneticPipe.pgs.Gibbs import Gibbs
 from colorama import init
 
 
-class Main(ShellMaker, SummaryCleaner, FilterSnps, Input):
+class Main(ShellMaker, SummaryCleaner, FilterSnps, Gibbs, Input):
     def __init__(self, args):
         """
         This Class inherits all other classes that can be used, and then execute the job via getattr
@@ -46,10 +47,22 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, Input):
         sm_dict = self.clean_summary_statistics(chromosome, load_path, validation, core)
 
         # Filter our genetic types for snps, such as those that have undesirable frequencies.
-        sm_dict = self.filter_snps("VAL", validation, sm_dict, chromosome)
-        sm_dict = self.filter_snps("REF", validation, sm_dict, chromosome)
+        sm_dict = self.filter_snps(self.val_prefix, validation, sm_dict, chromosome)
+        sm_dict = self.filter_snps(self.ref_prefix, validation, sm_dict, chromosome)
 
-        print(sm_dict.keys())
+        # Remove anything not required to save on memory
+        self._clean_sm_dict(sm_dict)
+
+        # Construct the gibbs weights
+        self.construct_gibbs_weights(sm_dict)
+
+    def _clean_sm_dict(self, sm_dict):
+        number_of_snps, number_of_individuals = sm_dict[f"{self.ref_prefix}_{self.raw_snps}"].shape
+
+        sm_dict[f"{self.ref_prefix}_{self.snp_count}"] = number_of_snps
+        sm_dict[f"{self.ref_prefix}_{self.iid_count}"] = number_of_individuals
+
 
         # todo clean dict (of things like sm_lines) that we no longer need and setup parameters for static calls
         #  such as number of variables
+

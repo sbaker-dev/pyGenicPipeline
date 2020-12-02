@@ -30,7 +30,7 @@ class Input:
         self.load_type = self.args["Load_Type"]
         self.validation_size = self._set_validation_size(self.args["Validation_Size"])
 
-        # Set summary statistics information if required
+        # Set summary and filter statistics information if required
         self.zipped, self.sample_size = self._set_summary_stats()
         self._summary_headers = self._set_summary_headers()
         self.effect_type = self._set_effect_type(self.args["Summary_Effect_Type"])
@@ -38,6 +38,9 @@ class Input:
         self.ambiguous_snps, self.allowed_alleles, self.allele_flip = self._configure_alleles()
         self.maf_min = self._config["min_maf"]
         self.freq_discrepancy = self._config["max_freq_discrepancy"]
+
+        # Gibbs information
+        self.ld_radius = self.args["LD_Radius"]
 
         if (self.sm_case_freq is not None) or (self.sm_control_n is not None):
             raise NotImplementedError("Psychiatric Genomics Consortium Summary stats are untested and unfinished!")
@@ -590,3 +593,31 @@ class Input:
     def normalised_snps(self):
         """Key used for accessing Raw_Snps headers, groups or other attributes"""
         return "Normalised_Snps"
+
+    @property
+    def snp_count(self):
+        """Key used for accessing the number of snps in headers, groups or other attributes"""
+        return "Number of Snps"
+
+    @property
+    def iid_count(self):
+        """Key used for accessing the number of individuals in headers, groups or other attributes"""
+        return "Number of Individuals"
+
+    @property
+    def val_prefix(self):
+        """Key used for accessing the validation genotype data in headers, groups or other attributes"""
+        return "VAL"
+
+    @property
+    def ref_prefix(self):
+        """Key used for accessing the reference genotype data in headers, groups or other attributes"""
+        return "REF"
+
+    @property
+    def ld_scores(self):
+        return "LD_Scores"
+
+    @property
+    def ld_dict(self):
+        return "LD_Dict"
