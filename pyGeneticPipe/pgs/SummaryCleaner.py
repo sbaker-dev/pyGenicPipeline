@@ -74,8 +74,6 @@ class SummaryCleaner(Input):
 
             # For each line in the GWAS Summary file
             for index, line_byte in enumerate(file):
-                if index % 10000 == 0 and self.debug:
-                    print(f"{index}")
 
                 # Decode the line and extract the snp_id
                 line = mc.decode_line(line_byte, self.zipped)
@@ -383,7 +381,6 @@ class SummaryCleaner(Input):
         That the Validation_Size has been set
         """
         # Check parameters, validate that validation has been run, and that clean summary has not.
-        assert self.project_file, ec.missing_arg(self.operation, "Project_Name")
         assert self.summary_file, ec.missing_arg(self.operation, "Summary_Path")
         assert self.load_type, ec.missing_arg(self.operation, "Load_Type")
         assert self.load_directory, ec.missing_arg(self.operation, "Load_Directory")
