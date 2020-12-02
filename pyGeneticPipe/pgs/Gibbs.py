@@ -1,16 +1,23 @@
-from pyGeneticPipe.core.Input import Input
+from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils import misc as mc
+from pyGeneticPipe.core.Input import Input
 from csvObject import write_csv
 from decimal import Decimal
 from scipy import stats
 import numpy as np
+import time
 
 
 class Gibbs(Input):
     def __init__(self, args):
         super().__init__(args)
+        self.start_time = 0
 
     def construct_gibbs_weights(self, sm_dict, chromosome):
+
+        # Check mandatory args are set
+        self._assert_construct_gibbs_weights()
+        print(f"Constructing Weights for Chromosome {chromosome}")
 
         # Extract information on count data
         iid_count = sm_dict[f"{self.ref_prefix}_{self.iid_count}"]
@@ -24,8 +31,11 @@ class Gibbs(Input):
 
         # Update the betas via infinitesimal shrinkage using ld information
         updated_betas = self._infinitesimal_betas(sm_dict, estimated_herit, iid_count, snp_count)
+        print(f"Calculated LD and chromosome heritability in {round(time.time() - self.start_time, 2)} Seconds")
 
         for variant_fraction in self.gibbs_causal_fractions:
+            self.start_time = time.time()
+
             # Run the LDPred gibbs processor to calculate a beta value
             beta = self.gibbs_processor(snp_count, iid_count, updated_betas, estimated_herit, variant_fraction, sm_dict)
 
@@ -240,6 +250,9 @@ class Gibbs(Input):
         write_csv(self.working_dir, f"{chromosome}_weights_p{Decimal(variant_fraction):.2E}", self.gibbs_headers,
                   rows)
 
+        print(f"Construct weights file for Chromosome {chromosome} with variant fraction of {variant_fraction} in "
+              f"{round(time.time() - self.start_time, 2)} Seconds")
+
     @staticmethod
     def _get_constants(snp_i, const_dict):
         """Managing differing specifications of constant"""
@@ -247,3 +260,10 @@ class Gibbs(Input):
             return const_dict['snp_dict'][snp_i]
         else:
             return const_dict
+
+    def _assert_construct_gibbs_weights(self):
+        """Check mandatory args"""
+        assert self.working_dir, ec.missing_arg(self.operation, "Working_Directory")
+        assert self.ld_radius, ec.missing_arg(self.operation, "LD_Radius")
+
+        self.start_time = time.time()

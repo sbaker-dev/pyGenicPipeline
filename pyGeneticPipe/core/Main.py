@@ -5,7 +5,8 @@ from pyGeneticPipe.utils.misc import terminal_time
 from pyGeneticPipe.core.Input import Input
 from pyGeneticPipe.pgs.Gibbs import Gibbs
 from pyGeneticPipe.pgs.Score import Score
-from colorama import init
+from colorama import init, Fore
+import time
 
 
 class Main(ShellMaker, SummaryCleaner, FilterSnps, Gibbs, Score, Input):
@@ -33,13 +34,14 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, Gibbs, Score, Input):
             self.chromosome_construct_weights(self.multi_core_splitter)
 
         else:
-            valid_chromosomes = self._validation_chromosomes()
+            valid_chromosomes = self.validation_chromosomes()
             for chromosome in valid_chromosomes:
                 self.chromosome_construct_weights(chromosome)
 
     def chromosome_construct_weights(self, chromosome):
         """This takes the value of a current chromosome and constructs the weights described in pgs_construct_weights"""
         # Load the validation and core samples, as well as the indexer
+        start_time = time.time()
         load_path = str(self.select_file_on_chromosome(chromosome))
         validation, core = self.construct_validation(load_path)
 
@@ -56,6 +58,8 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, Gibbs, Score, Input):
 
         # Construct the gibbs weights
         self.construct_gibbs_weights(sm_dict, chromosome)
+        print(Fore.LIGHTCYAN_EX + f"Finished {self.operation} at from chromosome {chromosome} at {terminal_time()}."
+              f"Total time spent was {round(time.time() - start_time, 2)} Seconds\n")
 
     def _clean_sm_dict(self, sm_dict):
         number_of_snps, number_of_individuals = sm_dict[f"{self.ref_prefix}_{self.raw_snps}"].shape
