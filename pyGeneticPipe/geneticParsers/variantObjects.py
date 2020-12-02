@@ -1,19 +1,19 @@
 class Variant:
-    __slots__ = ["chromosome", "bp_position", "variant_id", "a1", "a2"]
+    __slots__ = ["chromosome", "bp_position", "snp_id", "a1", "a2"]
 
-    def __init__(self, chromosome, bp_position, variant_id, a1, a2):
+    def __init__(self, chromosome, bp_position, snp_id, a1, a2):
         """
         Contains variant information for bgen files, unlike Bim does not contain morgan position
         """
         self.chromosome = chromosome
         self.bp_position = int(bp_position)
-        self.variant_id = variant_id
+        self.snp_id = snp_id
         self.a1 = a1
         self.a2 = a2
 
     def __repr__(self):
         """Human Readable print"""
-        return f"{self.variant_id} - CHR{self.chromosome} - POS{self.bp_position} - A1-{self.a1}:A2-{self.a2}"
+        return f"{self.snp_id} - CHR{self.chromosome} - POS{self.bp_position} - A1-{self.a1}:A2-{self.a2}"
 
     def __getitem__(self, item):
         """Get an item from Variant"""
@@ -28,27 +28,27 @@ class Variant:
 
     def bgen_variant_id(self):
         """Bgen for pysnptools requires the variant and rs-id but in this case we just submit the same for both"""
-        return f"{self.variant_id},{self.variant_id}"
+        return f"{self.snp_id},{self.snp_id}"
 
 
 class BimVariant:
-    __slots__ = ["chromosome", "variant_id", "morgan_pos", "bp_position", "a1", "a2"]
+    __slots__ = ["chromosome", "snp_id", "morgan_pos", "bp_position", "a1", "a2"]
 
-    def __init__(self, chromosome, variant_id, morgan_pos, bp_position, a1, a2):
+    def __init__(self, chromosome, snp_id, morgan_pos, bp_position, a1, a2):
         """
         Holds information of a bim file in Object notation. Bim files contain a set 6 categories. Full specification:
 
         https://www.cog-genomics.org/plink2/formats#bim
         """
         self.chromosome = chromosome
-        self.variant_id = variant_id
+        self.snp_id = snp_id
         self.morgan_pos = float(morgan_pos)
         self.bp_position = int(bp_position)
         self.a1 = a1
         self.a2 = a2
 
     def __repr__(self):
-        return f"{self.variant_id} - CHR{self.chromosome} - BP:{self.bp_position}/MP:{self.morgan_pos} - " \
+        return f"{self.snp_id} - CHR{self.chromosome} - BP:{self.bp_position}/MP:{self.morgan_pos} - " \
                f"A1-{self.a1}:A2-{self.a2}"
 
     def to_variant(self):
@@ -59,7 +59,7 @@ class BimVariant:
         :return: Variant
         :rtype: Variant
         """
-        return Variant(self.chromosome, self.bp_position, self.variant_id, self.a1, self.a2)
+        return Variant(self.chromosome, self.bp_position, self.snp_id, self.a1, self.a2)
 
 
 class Nucleotide:
