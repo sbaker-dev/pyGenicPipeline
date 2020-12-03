@@ -131,9 +131,12 @@ class SummaryCleaner(Input):
         if not sm_dict:
             return None
         else:
-            # Calculate the frequencies and set info if it exists
+            # Calculate the frequencies and set info if it exists, remove sm_lines as we no longer require this
             sm_dict[self.freq] = np.array([self._sum_stats_frequencies(line) for line in sm_dict[self.sm_lines]])
             sm_dict[self.info] = self._validate_info(sm_dict[self.sm_lines])
+
+            # Remove the temporary flip status and summary nucleotides keys as we no longer need them
+            mc.cleanup_dict(sm_dict, ["Flip", self.nucleotide, self.sm_lines, self.p_value, self.effect_size])
             return sm_dict
 
     def _validation_equality(self, line_index, variant_key, summary_dict, line_type=None):

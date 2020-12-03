@@ -172,6 +172,12 @@ def posterior_mean(cd, b2, n):
         return 1.0
 
 
+def cleanup_dict(dict_to_clean, keys_to_remove):
+    """We will sometimes no longer need certain attributes, this will clean up the dict to save memory"""
+    for clean in keys_to_remove:
+        dict_to_clean.pop(clean, None)
+
+
 def error_dict_to_terminal(error_dict):
     """Print the error dict for this chromosome then reset the initialised to default 0"""
     for index, (k, v) in enumerate(zip(error_dict.keys(), error_dict.values())):
