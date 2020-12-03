@@ -19,6 +19,10 @@ class Variant:
         """Get an item from Variant"""
         return getattr(self, item)
 
+    def items(self):
+        """Return all the items in a list for this variant"""
+        return [self.chromosome, self.bp_position, self.snp_id, self.a1, self.a2]
+
     def nucleotide(self, as_list=False):
         """Return a tuple of a1 a2 as the nucleotide"""
         if as_list:
