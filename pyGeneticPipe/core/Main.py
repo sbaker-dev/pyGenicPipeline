@@ -2,14 +2,14 @@ from pyGeneticPipe.pgs.SummaryCleaner import SummaryCleaner
 from pyGeneticPipe.support.ShellMaker import ShellMaker
 from pyGeneticPipe.pgs.FilterSnps import FilterSnps
 from pyGeneticPipe.utils.misc import terminal_time
+from pyGeneticPipe.pgs.LDHerit import LDHerit
 from pyGeneticPipe.core.Input import Input
-from pyGeneticPipe.pgs.Gibbs import Gibbs
-from pyGeneticPipe.pgs.Score import Score
 from colorama import init, Fore
+from csvObject import write_csv
 import time
 
 
-class Main(ShellMaker, SummaryCleaner, FilterSnps, Gibbs, Score, Input):
+class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Input):
     def __init__(self, args):
         """
         This Class inherits all other classes that can be used, and then execute the job via getattr
@@ -21,7 +21,7 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, Gibbs, Score, Input):
             print(f"Starting {self.operation}: {terminal_time()}")
             getattr(Main, self.operation)(self)
 
-    def pgs_construct_weights(self):
+    def pgs_clean_and_coordinate(self):
         """
         This will clean and coordinate the summary statistics and merge it with our genetic data via Cleaners
         clean_summary_stats.
@@ -31,14 +31,14 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, Gibbs, Score, Input):
         _pgs_construct_scores
         """
         if self.multi_core_splitter:
-            self.chromosome_construct_weights(self.multi_core_splitter)
+            self.chromosome_clean_and_coordinate(self.multi_core_splitter)
 
         else:
             valid_chromosomes = self.validation_chromosomes()
             for chromosome in valid_chromosomes:
-                self.chromosome_construct_weights(chromosome)
+                self.chromosome_clean_and_coordinate(chromosome)
 
-    def chromosome_construct_weights(self, chromosome):
+    def chromosome_clean_and_coordinate(self, chromosome):
         """This takes the value of a current chromosome and constructs the weights described in pgs_construct_weights"""
         # Load the validation and core samples, as well as the indexer
         start_time = time.time()
@@ -53,19 +53,15 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, Gibbs, Score, Input):
         sm_dict = self.filter_snps(self.val_prefix, validation, sm_dict, chromosome)
         sm_dict = self.filter_snps(self.ref_prefix, validation, sm_dict, chromosome)
 
-        # Remove anything not required to save on memory
-        self._clean_sm_dict(sm_dict)
+        # Compute the chromosome specific ld scores and heritability
+        self.compute_ld_scores(sm_dict, len(sm_dict[self.sm_variants]), core.iid_count)
 
-        # Construct the gibbs weights
-        self.construct_gibbs_weights(sm_dict, chromosome)
-        print(Fore.LIGHTCYAN_EX + f"Finished {self.operation} at from chromosome {chromosome} at {terminal_time()}.\n"
-              f"Total time spent was {round(time.time() - start_time, 2)} Seconds\n")
+        # Construct rows to right out
+        rows_out = []
+        for v, log_odds, beta, std, ld in zip(sm_dict[self.sm_variants], sm_dict[self.log_odds], sm_dict[self.beta],
+                                              sm_dict[f"{self.ref_prefix}_{self.stds}"], sm_dict[self.ld_scores]):
+            rows_out.append(v.items() + [log_odds, beta, std[0], ld])
 
-    def _clean_sm_dict(self, sm_dict):
-        number_of_snps, number_of_individuals = sm_dict[f"{self.ref_prefix}_{self.raw_snps}"].shape
-
-        sm_dict[f"{self.ref_prefix}_{self.snp_count}"] = number_of_snps
-        sm_dict[f"{self.ref_prefix}_{self.iid_count}"] = number_of_individuals
-
-        # todo clean dict (of things like sm_lines) that we no longer need and setup parameters for static calls
-        #  such as number of variables
+        write_csv(self.working_dir, f"Cleaned_{chromosome}", self.clean_headers, rows_out)
+        print(Fore.LIGHTCYAN_EX + f"Finished {self.operation} for chromosome {chromosome} at {terminal_time()}.\n"
+                                  f"Total time spent was {round(time.time() - start_time, 2)} Seconds\n")

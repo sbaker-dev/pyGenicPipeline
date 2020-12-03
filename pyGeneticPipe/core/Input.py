@@ -34,6 +34,7 @@ class Input:
         self.ambiguous_snps, self.allowed_alleles, self.allele_flip = self._configure_alleles()
         self.maf_min = self._config["Min_Maf"]
         self.freq_discrepancy = self._config["Max_Freq_Discrepancy"]
+        self.clean_headers, self._clean_dict = self._set_cleaned_headers()
 
         # Gibbs information
         self.ld_radius = self.args["LD_Radius"]
@@ -399,15 +400,41 @@ class Input:
         else:
             return {"X": 23, "chr_x": 23, "chrom_x": 23}
 
+    def _set_cleaned_headers(self):
+        """Construct headers to be used for writing and reading cleaned files"""
+        cleaned_headers = [self.chromosome, self.bp_position, self.snp_id, self.effect_allele, self.alt_allele,
+                           self.log_odds, self.beta, self.stds, self.ld_scores]
+
+        cleaned_dict = {header: i for i, header in enumerate(cleaned_headers)}
+        return cleaned_headers, cleaned_dict
+
     def _set_gibbs_headers(self):
         """Construct the headers that will be used in the writing of weights"""
 
         gibbs_headers = [self.chromosome, self.bp_position, self.snp_id, self.effect_allele, self.alt_allele,
-                         self.raw_beta, self.ld_scores, self.gibbs_beta, self.effect_size]
+                         self.beta, self.log_odds, self.ld_scores, self.gibbs_beta, self.effect_size]
 
         gibbs_dict = {header: i for i, header in enumerate(gibbs_headers)}
 
         return gibbs_headers, gibbs_dict
+
+    def local_values(self, values, snp_index, number_of_snps):
+        """
+        We want to construct a window of -r + r around each a given list of values where r is the radius. However, the
+        first r and last N-r of the snps will not have r number of snps before or after them so we need to account for
+        this by:
+
+        Taking the maximum of (0, i-r) so that we never get a negative index
+        Taking the minimum of (n_snps, (i + radius + 1)) to ensure we never get an index out of range
+
+        :param values: A set of values to extract a local off
+        :param snp_index: Index
+        :param number_of_snps: total number of snps
+
+        :return: An array of shape snps of a maximum of 'radius' number of snps surrounding the current snp accessed via
+            index.
+        """
+        return values[max(0, snp_index - self.ld_radius): min(number_of_snps, (snp_index + self.ld_radius + 1))]
 
     @property
     def chromosome(self):
@@ -630,13 +657,15 @@ class Input:
         return "LD_Dict"
 
     @property
-    def raw_beta(self):
-        return "Raw_Beta"
-
-    @property
     def gibbs_beta(self):
+        """Key used for accessing Gibbs_Beta in headers, groups or other attributes"""
         return "Gibbs_Beta"
 
+    @property
     def w_ld_score(self):
+        """LD_Score header index in Weights file"""
         return self._gibbs_header_dict[self.ld_scores]
 
+    @property
+    def w_beta(self):
+        return self._gibbs_header_dict[self.beta]
