@@ -1,4 +1,7 @@
+from pyGeneticPipe.utils import error_codes as ec
+from pyGeneticPipe.utils import misc as mc
 from pyGeneticPipe.core.Input import Input
+import numpy as np
 
 
 class Score(Input):
@@ -6,8 +9,8 @@ class Score(Input):
         super().__init__(args)
 
     def construct_pgs(self):
+
         phenotype_map = self._construct_phenotype_dict()
-        print(phenotype_map)
         return
 
     def _construct_phenotype_dict(self):
@@ -25,3 +28,6 @@ class Score(Input):
             raise NotImplementedError("Covariates not yet supported")
 
         return core.iid
+
+    def _assert_construct_pgs(self):
+        assert self.ld_radius, ec.missing_arg(self.operation, "LD_Radius")

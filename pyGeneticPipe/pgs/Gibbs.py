@@ -24,7 +24,7 @@ class Gibbs(Input):
         snp_count = sm_dict[f"{self.ref_prefix}_{self.snp_count}"]
 
         # Calculate the mean ld score and construct a dict of ld reference
-        average_ld = self.compute_ld_scores(sm_dict, iid_count)
+        average_ld = self.compute_ld_scores(sm_dict, snp_count, iid_count)
 
         # Calculate the estimate heritability for this chromosome
         estimated_herit = self._estimate_heritability(sm_dict, average_ld, chromosome, iid_count, snp_count)
@@ -47,65 +47,6 @@ class Gibbs(Input):
         # Do the same for the infinitesimal model
         inf_beta = updated_betas / sm_dict[f"{self.ref_prefix}_{self.stds}"].flatten()
         self._write_weights(sm_dict, inf_beta, chromosome, "inf", None)
-
-    def compute_ld_scores(self, sm_dict, iid_count):
-        """
-        This will calculate the ld scores and create a dict of the ld reference for each snp in our normalised list of
-        snps
-        """
-        ld_scores = np.ones(sm_dict[f"{self.ref_prefix}_{self.snp_count}"])
-        ld_dict = {}
-
-        # todo Allow for genetic map
-        if "Genetic_Map" in sm_dict.keys():
-            raise NotImplementedError("Genetic Map Not Yet Implemented")
-        else:
-            norm_snps = sm_dict[f"{self.ref_prefix}_{self.norm_snps}"]
-            for i, snp in enumerate(norm_snps):
-                self.calculate_disequilibrium(i, snp, norm_snps, sm_dict, ld_scores, ld_dict, iid_count)
-
-        sm_dict[f"{self.ref_prefix}_{self.ld_scores}"] = ld_scores
-        sm_dict[f"{self.ref_prefix}_{self.ld_dict}"] = ld_dict
-        return np.mean(ld_scores)
-
-    def calculate_disequilibrium(self, snp_index, current_snp, norm_snps, sm_dict, ld_scores, ld_dict, iid_count):
-        """
-        This will calculate the disequilibrium, for when we don't have a genetic map.
-        """
-
-        # Create a window of normalised snps around the current snp with a maximum length of (self.ld_radius * 2) + 1
-        snps_in_ld = self.local_values(norm_snps, snp_index, sm_dict[f"{self.ref_prefix}_{self.snp_count}"])
-
-        # Calculate the distance dot product
-        distance_dp = np.dot(current_snp, snps_in_ld.T) / iid_count
-        ld_dict[snp_index] = mc.shrink_r2_matrix(distance_dp, iid_count)
-
-        # calculate the ld score
-        r2s = distance_dp ** 2
-        ld_scores[snp_index] = np.sum(r2s - ((1 - r2s) / (iid_count - 2)), dtype="float32")
-
-    def _estimate_heritability(self, sm_dict, average_ld, chromosome, iid_count, snp_count):
-        """
-        This will calculated the chromosome chi-squared lambda (maths from LDPred), and then take the maximum of 0.0001
-        or the computed heritability of
-
-        This chromosomes chi-sq lambda (or 1 if its less than 1 for reasons that are beyond me)
-        ---------------------------------------------------------------------------------------
-        Number of samples in the summary stats * (average ld score / number snps)
-
-        :return: estimated heritability (h2 in ldpred)
-        """
-        if self.heritability_calculated:
-            try:
-                return self.heritability_calculated[chromosome]
-            except KeyError:
-                raise Exception("You have said you will provided pre-calculated heritability but failed to find it for"
-                                f"chromosome {chromosome}")
-        else:
-            sum_beta_sq = np.sum(sm_dict[self.beta] ** 2)
-            char_chi_sq_lambda = np.mean((iid_count * sum_beta_sq) / snp_count)
-
-            return max(0.0001, (max(1.0, float(char_chi_sq_lambda)) - 1) / (iid_count * (average_ld / snp_count)))
 
     def _infinitesimal_betas(self, sm_dict, estimate_herit, iid_count, snp_count):
         """
@@ -139,7 +80,6 @@ class Gibbs(Input):
         avg_betas = np.zeros(snp_count)
         iter_order = np.arange(snp_count)
 
-        ld_dict = sm_dict[f"{self.ref_prefix}_{self.ld_dict}"]
         const_dict = self._const_dict_constructor(est_herit, variant_fraction, iid_count, snp_count)
 
         for k in range(self.gibbs_iter):
@@ -147,7 +87,7 @@ class Gibbs(Input):
             h2_est = max(0.00001, float(np.sum(currant_betas)))
 
             # Set alpha for the shrink
-            alpha = self.set_alpha(est_herit, h2_est, iid_count)
+            alpha = self._set_alpha(est_herit, h2_est, iid_count)
 
             rand_ps = np.random.random(snp_count)
             rand_norms = stats.norm.rvs(0.0, 1, size=snp_count) * const_dict['rv_scalars']
@@ -161,7 +101,7 @@ class Gibbs(Input):
                 local_betas[min(self.ld_radius, snp_i)] = 0.0
 
                 # Calculate the residual of beta hat from the dot product of the local LD matrix and local betas
-                res_beta_hat_i = sm_dict[self.beta][snp_i] - np.dot(ld_dict[snp_i], local_betas)
+                res_beta_hat_i = sm_dict[self.beta][snp_i] - np.dot(sm_dict[self.ld_dict][snp_i], local_betas)
                 b2 = res_beta_hat_i ** 2
 
                 # Calculate the posterior mean p
@@ -184,24 +124,6 @@ class Gibbs(Input):
 
         # Averaging over the posterior means instead of samples.
         return avg_betas / float(self.gibbs_iter - self.gibbs_burn_in)
-
-    def local_values(self, values, snp_index, number_of_snps):
-        """
-        We want to construct a window of -r + r around each a given list of values where r is the radius. However, the
-        first r and last N-r of the snps will not have r number of snps before or after them so we need to account for
-        this by:
-
-        Taking the maximum of (0, i-r) so that we never get a negative index
-        Taking the minimum of (n_snps, (i + radius + 1)) to ensure we never get an index out of range
-
-        :param values: A set of values to extract a local off
-        :param snp_index: Index
-        :param number_of_snps: total number of snps
-
-        :return: An array of shape snps of a maximum of 'radius' number of snps surrounding the current snp accessed via
-            index.
-        """
-        return values[max(0, snp_index - self.ld_radius): min(number_of_snps, (snp_index + self.ld_radius + 1))]
 
     def _const_dict_constructor(self, chromosome_heritability, cp, iid_count, snp_count):
         """A bunch of constants where constructed in ldpred for the gibbs processor which is duplicated here"""
@@ -229,7 +151,7 @@ class Gibbs(Input):
         const_dict['rv_scalars'] = rv_scalars
         return const_dict
 
-    def set_alpha(self, est_herit, h2_est, iid_count):
+    def _set_alpha(self, est_herit, h2_est, iid_count):
         """
         This allows a forced alpha shrink if estimates are way off compared to heritability estimates via gibbs tight
          which may improve MCMC convergence
@@ -260,10 +182,10 @@ class Gibbs(Input):
         nt2s = mc.variant_array("a2", sm_dict[self.sm_variants])
 
         # Construct a list of lists, where sub lists represent the rows in the csv file
-        rows = [[chromosome, pos, sid, nt1, nt2, raw_beta, ld_score, gibbs, ldpred_beta]
-                for pos, sid, nt1, nt2, raw_beta, ld_score, gibbs, ldpred_beta in zip(
-                bp_positions, snp_ids, nt1s, nt2s, sm_dict[self.log_odds],
-                sm_dict[f"{self.ref_prefix}_{self.ld_scores}"], gibbs_beta, effect_size)]
+        rows = [[chromosome, pos, sid, nt1, nt2, beta, log_odds, ld_score, gibbs, ldpred_beta]
+                for pos, sid, nt1, nt2, beta, log_odds, ld_score, gibbs, ldpred_beta in zip(
+                bp_positions, snp_ids, nt1s, nt2s, sm_dict[self.beta], sm_dict[self.log_odds],
+                sm_dict[self.ld_scores], gibbs_beta, effect_size)]
 
         # Write the file
         write_csv(self.working_dir, file_name, self.gibbs_headers, rows)
