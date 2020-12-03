@@ -41,11 +41,11 @@ class Gibbs(Input):
 
             # Compute the effect size then write to file
             effect_size = beta / sm_dict[f"{self.ref_prefix}_{self.stds}"].flatten()
-            self._write_weights(sm_dict, effect_size, chromosome, variant_fraction)
+            self._write_weights(sm_dict, effect_size, chromosome, variant_fraction, beta)
 
         # Do the same for the infinitesimal model
         inf_beta = updated_betas / sm_dict[f"{self.ref_prefix}_{self.stds}"].flatten()
-        self._write_weights(sm_dict, inf_beta, chromosome, "inf")
+        self._write_weights(sm_dict, inf_beta, chromosome, "inf", None)
 
     def compute_ld_scores(self, sm_dict, iid_count):
         """
@@ -238,7 +238,7 @@ class Gibbs(Input):
         else:
             return 1.0 - self.gibbs_zero_jump
 
-    def _write_weights(self, sm_dict, effect_size, chromosome, name):
+    def _write_weights(self, sm_dict, effect_size, chromosome, name, gibbs_beta):
         """
         This will format all of our data into a csv file and store it in the working directory
         """
@@ -249,6 +249,9 @@ class Gibbs(Input):
         else:
             file_name = f"{chromosome}_weights_{name}"
 
+        if not isinstance(gibbs_beta, np.ndarray):
+            gibbs_beta = ["NA" for _ in range(len(sm_dict[self.sm_variants]))]
+
         # Slice variant arrays into lists
         bp_positions = mc.variant_array(self.bp_position.lower(), sm_dict[self.sm_variants])
         snp_ids = mc.variant_array(self.snp_id.lower(), sm_dict[self.sm_variants])
@@ -256,10 +259,10 @@ class Gibbs(Input):
         nt2s = mc.variant_array("a2", sm_dict[self.sm_variants])
 
         # Construct a list of lists, where sub lists represent the rows in the csv file
-        rows = [[chromosome, pos, sid, nt1, nt2, raw_beta, sqr_gibbs_effects, ldpred_beta]
-                for pos, sid, nt1, nt2, raw_beta, sqr_gibbs_effects, ldpred_beta in zip(
+        rows = [[chromosome, pos, sid, nt1, nt2, raw_beta, ld_score, gibbs, ldpred_beta]
+                for pos, sid, nt1, nt2, raw_beta, ld_score, gibbs, ldpred_beta in zip(
                 bp_positions, snp_ids, nt1s, nt2s, sm_dict[self.log_odds],
-                sm_dict[f"{self.ref_prefix}_{self.ld_scores}"] ** 2, effect_size)]
+                sm_dict[f"{self.ref_prefix}_{self.ld_scores}"], gibbs_beta, effect_size)]
 
         # Write the file
         write_csv(self.working_dir, file_name, self.gibbs_headers, rows)

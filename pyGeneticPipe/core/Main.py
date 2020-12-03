@@ -58,7 +58,7 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, Gibbs, Score, Input):
 
         # Construct the gibbs weights
         self.construct_gibbs_weights(sm_dict, chromosome)
-        print(Fore.LIGHTCYAN_EX + f"Finished {self.operation} at from chromosome {chromosome} at {terminal_time()}."
+        print(Fore.LIGHTCYAN_EX + f"Finished {self.operation} at from chromosome {chromosome} at {terminal_time()}.\n"
               f"Total time spent was {round(time.time() - start_time, 2)} Seconds\n")
 
     def _clean_sm_dict(self, sm_dict):

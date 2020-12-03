@@ -31,4 +31,5 @@ allele_flip:
 Min_Maf: 0.01
 Max_Freq_Discrepancy: 0.1
 
-Gibbs_Headers: ["Chromosome", "Position", "RS_ID", "Effect_Allele", "Alt_Allele", "Raw_Beta", "SQ_Gibbs", "Effect_Size"]
+Gibbs_Headers: ["Chromosome", "Position", "RS_ID", "Effect_Allele", "Alt_Allele", "Raw_Beta", "LD_Score", "Gibbs_Beta",
+                "Effect_Size"]
