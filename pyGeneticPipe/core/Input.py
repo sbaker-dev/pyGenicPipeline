@@ -46,7 +46,7 @@ class Input:
         self.gibbs_zero_jump = 0.01
         self.gibbs_random_seed = 42
         self.gibbs_tight = None
-        self.gibbs_headers = self._config["Gibbs_Headers"]
+        self.gibbs_headers, self._gibbs_header_dict = self._set_gibbs_headers()
 
         # Score information
         self.covariates = self._validate_path(self.args["Covariates"])
@@ -399,6 +399,16 @@ class Input:
         else:
             return {"X": 23, "chr_x": 23, "chrom_x": 23}
 
+    def _set_gibbs_headers(self):
+        """Construct the headers that will be used in the writing of weights"""
+
+        gibbs_headers = [self.chromosome, self.bp_position, self.snp_id, self.effect_allele, self.alt_allele,
+                         self.raw_beta, self.ld_scores, self.gibbs_beta, self.effect_size]
+
+        gibbs_dict = {header: i for i, header in enumerate(gibbs_headers)}
+
+        return gibbs_headers, gibbs_dict
+
     @property
     def chromosome(self):
         """Key used for accessing Chromosome headers, groups or other attributes"""
@@ -462,7 +472,7 @@ class Input:
     @property
     def effect_size(self):
         """Key used for accessing Effect_size headers, groups or other attributes"""
-        return "Effect_size"
+        return "Effect_Size"
 
     @property
     def sm_effect_size(self):
@@ -611,8 +621,22 @@ class Input:
 
     @property
     def ld_scores(self):
+        """Key used for accessing LD_Scores in headers, groups or other attributes"""
         return "LD_Scores"
 
     @property
     def ld_dict(self):
+        """Key used for accessing LD_Dict in headers, groups or other attributes"""
         return "LD_Dict"
+
+    @property
+    def raw_beta(self):
+        return "Raw_Beta"
+
+    @property
+    def gibbs_beta(self):
+        return "Gibbs_Beta"
+
+    def w_ld_score(self):
+        return self._gibbs_header_dict[self.ld_scores]
+

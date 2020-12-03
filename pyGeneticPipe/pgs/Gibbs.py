@@ -31,7 +31,8 @@ class Gibbs(Input):
 
         # Update the betas via infinitesimal shrinkage using ld information
         updated_betas = self._infinitesimal_betas(sm_dict, estimated_herit, iid_count, snp_count)
-        print(f"Calculated LD and chromosome heritability in {round(time.time() - self.start_time, 2)} Seconds")
+        print(f"Calculated LD and chromosome heritability for chromosome {chromosome} in "
+              f"{round(time.time() - self.start_time, 2)} Seconds")
 
         for variant_fraction in self.gibbs_causal_fractions:
             self.start_time = time.time()

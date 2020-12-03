@@ -7,7 +7,7 @@ header_keys:
   Alt_Allele: ["ALT", "alt", "a2", "A2", "Allele2"]
   BP_Position: ["POS", "pos", "bp", "BP"]
   P_Value: ["PVAL", "pval", "p", "P", "P.2gc"]
-  Effect_size: ["LINREG", "OR"]
+  Effect_Size: ["LINREG", "OR"]
   Minor_Allele_Freq: ["REF_FRQ", "reffreq", "Freq.Hapmap.Ceu", "Freq.Allele1.HapMapCEU", "MAF", "Freq.Hapmap.Ceu"]
   Case_Freq: ["Case_Freq"]
   Control_Freq: ["Control_Freq"]
@@ -30,6 +30,3 @@ allele_flip:
 #todo These should be in args not config
 Min_Maf: 0.01
 Max_Freq_Discrepancy: 0.1
-
-Gibbs_Headers: ["Chromosome", "Position", "RS_ID", "Effect_Allele", "Alt_Allele", "Raw_Beta", "LD_Score", "Gibbs_Beta",
-                "Effect_Size"]

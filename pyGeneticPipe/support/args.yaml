@@ -271,13 +271,13 @@ custom_summary_header_keys:
   Alt_Allele: null
 
   # Base-Pair Position header, Mandatory
-  position: null
+  BP_Position: null
 
   # P value header, Mandatory
   P_Value: null
 
   # Effect Size header, Mandatory
-  Effect_size: null
+  Effect_Size: null
 
   # Minor Allele frequency (MAF) header, Optional
   Minor_Allele_Freq: null
