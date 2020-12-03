@@ -39,16 +39,13 @@ class Gibbs(Input):
             # Run the LDPred gibbs processor to calculate a beta value
             beta = self.gibbs_processor(snp_count, iid_count, updated_betas, estimated_herit, variant_fraction, sm_dict)
 
-            # Compute the effect size
+            # Compute the effect size then write to file
             effect_size = beta / sm_dict[f"{self.ref_prefix}_{self.stds}"].flatten()
+            self._write_weights(sm_dict, effect_size, chromosome, variant_fraction)
 
-            file_name = f"{chromosome}_weights_p{Decimal(variant_fraction):.2E}"
-            self._write_weights(sm_dict, effect_size, file_name, chromosome, with_gibbs=True, gibbs_effect_beta=beta)
-            print(f"Construct weights file for Chromosome {chromosome} with variant fraction of {variant_fraction} in "
-                  f"{round(time.time() - self.start_time, 2)} Seconds")
-
+        # Do the same for the infinitesimal model
         inf_beta = updated_betas / sm_dict[f"{self.ref_prefix}_{self.stds}"].flatten()
-        self._write_weights(sm_dict, inf_beta, f"{chromosome}_weights_inf", chromosome)
+        self._write_weights(sm_dict, inf_beta, chromosome, "inf")
 
     def compute_ld_scores(self, sm_dict, iid_count):
         """
@@ -66,6 +63,7 @@ class Gibbs(Input):
             for i, snp in enumerate(norm_snps):
                 self.calculate_disequilibrium(i, snp, norm_snps, sm_dict, ld_scores, ld_dict, iid_count)
 
+        sm_dict[f"{self.ref_prefix}_{self.ld_scores}"] = ld_scores
         sm_dict[f"{self.ref_prefix}_{self.ld_dict}"] = ld_dict
         return np.mean(ld_scores)
 
@@ -240,28 +238,33 @@ class Gibbs(Input):
         else:
             return 1.0 - self.gibbs_zero_jump
 
-    def _write_weights(self, sm_dict, effect_size, file_name, chromosome, with_gibbs=None, gibbs_effect_beta=None):
+    def _write_weights(self, sm_dict, effect_size, chromosome, name):
         """
         This will format all of our data into a csv file and store it in the working directory
         """
+        # todo This might be generalisable to scores as well if placed within Input
+        # Load name based on type
+        if isinstance(name, (float, int, np.int8, np.float32)):
+            file_name = f"{chromosome}_weights_p{Decimal(name):.2E}"
+        else:
+            file_name = f"{chromosome}_weights_{name}"
+
+        # Slice variant arrays into lists
         bp_positions = mc.variant_array(self.bp_position.lower(), sm_dict[self.sm_variants])
         snp_ids = mc.variant_array(self.snp_id.lower(), sm_dict[self.sm_variants])
         nt1s = mc.variant_array("a1", sm_dict[self.sm_variants])
         nt2s = mc.variant_array("a2", sm_dict[self.sm_variants])
 
-        if with_gibbs:
-            headers = self.gibbs_headers + ["Gibbs_Beta"]
-            rows = [[chromosome, pos, sid, nt1, nt2, raw_beta, ldpred_beta, gibbs_beta]
-                    for pos, sid, nt1, nt2, raw_beta, ldpred_beta, gibbs_beta in zip(
-                    bp_positions, snp_ids, nt1s, nt2s, sm_dict[self.log_odds], effect_size, gibbs_effect_beta)]
+        # Construct a list of lists, where sub lists represent the rows in the csv file
+        rows = [[chromosome, pos, sid, nt1, nt2, raw_beta, sqr_gibbs_effects, ldpred_beta]
+                for pos, sid, nt1, nt2, raw_beta, sqr_gibbs_effects, ldpred_beta in zip(
+                bp_positions, snp_ids, nt1s, nt2s, sm_dict[self.log_odds],
+                sm_dict[f"{self.ref_prefix}_{self.ld_scores}"] ** 2, effect_size)]
 
-        else:
-            headers = self.gibbs_headers
-            rows = [[chromosome, pos, sid, nt1, nt2, raw_beta, ldpred_beta]
-                    for pos, sid, nt1, nt2, raw_beta, ldpred_beta in zip(
-                    bp_positions, snp_ids, nt1s, nt2s, sm_dict[self.log_odds], effect_size)]
-
-        write_csv(self.working_dir, file_name, headers, rows)
+        # Write the file
+        write_csv(self.working_dir, file_name, self.gibbs_headers, rows)
+        print(f"Construct weights file for Chromosome {chromosome} for {file_name} in "
+              f"{round(time.time() - self.start_time, 2)} Seconds")
 
     @staticmethod
     def _get_constants(snp_i, const_dict):
