@@ -7,6 +7,7 @@ import numpy as np
 import pickle
 import gzip
 import re
+import os
 
 
 class Input:
@@ -27,6 +28,7 @@ class Input:
         self.validation_size = self._set_validation_size(self.args["Validation_Size"])
 
         # Set summary and filter statistics information if required
+        self._make_sub_directory("Cleaned")
         self.zipped, self.sample_size = self._set_summary_stats()
         self._summary_headers = self._set_summary_headers()
         self.effect_type = self._set_effect_type(self.args["Summary_Effect_Type"])
@@ -407,6 +409,13 @@ class Input:
 
         cleaned_dict = {header: i for i, header in enumerate(cleaned_headers)}
         return cleaned_headers, cleaned_dict
+
+    def _make_sub_directory(self, name):
+        try:
+            os.mkdir(Path(self.working_dir, name))
+        except FileExistsError:
+            pass
+
 
     def _set_gibbs_headers(self):
         """Construct the headers that will be used in the writing of weights"""

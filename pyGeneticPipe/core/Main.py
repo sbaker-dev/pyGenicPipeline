@@ -6,6 +6,7 @@ from pyGeneticPipe.pgs.LDHerit import LDHerit
 from pyGeneticPipe.core.Input import Input
 from colorama import init, Fore
 from csvObject import write_csv
+from pathlib import Path
 import time
 
 
@@ -62,6 +63,6 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Input):
                                               sm_dict[f"{self.ref_prefix}_{self.stds}"], sm_dict[self.ld_scores]):
             rows_out.append(v.items() + [log_odds, beta, std[0], ld])
 
-        write_csv(self.working_dir, f"Cleaned_{chromosome}", self.clean_headers, rows_out)
+        write_csv(Path(self.working_dir, "Cleaned"), f"Cleaned_{chromosome}", self.clean_headers, rows_out)
         print(Fore.LIGHTCYAN_EX + f"Finished {self.operation} for chromosome {chromosome} at {terminal_time()}.\n"
                                   f"Total time spent was {round(time.time() - start_time, 2)} Seconds\n")
