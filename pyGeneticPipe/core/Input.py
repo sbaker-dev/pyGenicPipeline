@@ -32,8 +32,8 @@ class Input:
         self.effect_type = self._set_effect_type(self.args["Summary_Effect_Type"])
         self.z_scores = self._set_z_scores(self.args["Z_Scores"])
         self.ambiguous_snps, self.allowed_alleles, self.allele_flip = self._configure_alleles()
-        self.maf_min = self._config["min_maf"]
-        self.freq_discrepancy = self._config["max_freq_discrepancy"]
+        self.maf_min = self._config["Min_Maf"]
+        self.freq_discrepancy = self._config["Max_Freq_Discrepancy"]
 
         # Gibbs information
         self.ld_radius = self.args["LD_Radius"]
@@ -47,6 +47,9 @@ class Input:
         self.gibbs_random_seed = 42
         self.gibbs_tight = None
         self.gibbs_headers = self._config["Gibbs_Headers"]
+
+        # Score information
+        self.covariates = self._validate_path(self.args["Covariates"])
 
         if (self.sm_case_freq is not None) or (self.sm_control_n is not None):
             raise NotImplementedError("Psychiatric Genomics Consortium Summary stats are untested and unfinished!")
@@ -221,7 +224,7 @@ class Input:
 
         assert len(header_indexes) < 2, ec.ambiguous_header(sum_header, headers, summary_headers[sum_header])
         if len(header_indexes) == 0:
-            assert sum_header not in self._config["mandatory_headers"], ec.mandatory_header(
+            assert sum_header not in self._config["Mandatory_Headers"], ec.mandatory_header(
                 sum_header, headers, summary_headers[sum_header])
             return None
         else:

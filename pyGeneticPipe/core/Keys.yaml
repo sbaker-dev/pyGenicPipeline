@@ -1,4 +1,4 @@
-mandatory_headers: ["SNP_ID", "Effect_Allele", "Alt_Allele", "Effect_size", "P_Value"]
+Mandatory_Headers: ["SNP_ID", "Effect_Allele", "Alt_Allele", "Effect_size", "P_Value"]
 
 header_keys:
   Chromosome: ["CHR", "chr", "hg19chrc"]
@@ -28,7 +28,7 @@ allele_flip:
   'C': 'G'
 
 #todo These should be in args not config
-min_maf: 0.01
-max_freq_discrepancy: 0.1
+Min_Maf: 0.01
+Max_Freq_Discrepancy: 0.1
 
 Gibbs_Headers: ["Chromosome", "Position", "RSID", "Effect Allele", "Alt Allele", "Raw_Beta", "Beta"]
