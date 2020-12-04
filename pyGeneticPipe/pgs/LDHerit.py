@@ -81,9 +81,9 @@ class LDHerit(Input):
         load_path = str(self.select_file_on_chromosome(chromosome, self.gen_directory, self.gen_type))
 
         # Isolate the genetic load file according to summary, and use this to isolate number of individuals
-        validation, core = self.construct_validation(load_path)
+        _, core = self.construct_validation(load_path)
 
-        return chromosome, core.iid_count, load_file.column_length
+        return chromosome, load_file.column_length, core.iid_count
 
     def compute_ld_scores(self, sm_dict, snp_count, iid_count, ld_dict=False):
         """
