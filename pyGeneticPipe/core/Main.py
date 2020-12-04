@@ -40,6 +40,18 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Input):
             for chromosome in valid_chromosomes:
                 self.chromosome_clean_and_coordinate(chromosome)
 
+    def pgs_scores(self):
+        """
+        This will construct pgs scores based on the cleaned data produced from pgs_clean_and_coordinate and the genome
+        type file create from genome_wide_heritability.
+        """
+        if self.multi_core_splitter:
+            self.pgs_chromosome_scores(self.multi_core_splitter)
+        else:
+            valid_chromosomes = self.validation_chromosomes()
+            for chromosome in valid_chromosomes:
+                self.pgs_chromosome_scores(chromosome)
+
     def chromosome_clean_and_coordinate(self, chromosome):
         """This takes the value of a current chromosome and constructs the weights described in pgs_construct_weights"""
         # Load the validation and core samples, as well as the indexer
@@ -67,3 +79,14 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Input):
         write_csv(self.clean_directory, f"Cleaned_{chromosome}", self.clean_headers, rows_out)
         print(Fore.LIGHTCYAN_EX + f"Finished {self.operation} for chromosome {chromosome} at {terminal_time()}.\n"
                                   f"Total time spent was {round(time.time() - start_time, 2)} Seconds\n")
+
+    def pgs_chromosome_scores(self, chromosome):
+
+        load_path = self.select_file_on_chromosome(chromosome, self.clean_directory, ".csv")
+
+        # Construct the dict of values we need for this run from our cleaned data
+        load_file = CsvObject(load_path, self.cleaned_types, set_columns=True)
+        sm_dict = {header: data for header, data in zip(self.clean_headers, load_file.column_data)}
+
+        print(sm_dict)
+
