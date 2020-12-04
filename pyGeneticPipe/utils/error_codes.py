@@ -131,6 +131,12 @@ def snp_overflow(summary_length, validation_length):
            f"\nYet Found Summary: {len(summary_length)} Validation: {validation_length}"
 
 
+def all_missing(attributes_str, operation):
+    return f"ERROR NO VALUES FOUND FOR {operation}\n" \
+           f"{attributes_str} = 0"
+
+
+
 # bed file codes
 def bed_magic_violation(file_name, magic):
     return f"INVALID BED FILE for file at path: {file_name}\n" \
@@ -141,6 +147,3 @@ def bed_matrix_order(file_name, order):
     return f"INVALID BED FILE ORDER for bed file at path: {file_name}\n" \
            f"Bed files have the third byte relate to the order, a 00 relating to sample and 01 variant yet found " \
            f"BED file matrix order {order}"
-
-
-
