@@ -60,22 +60,28 @@ class ArgMaker:
     @property
     def split_bed_by_chromosome(self):
         """Returns the arguments the user needs to set for split_bed_by_chromosome"""
-        return self._yaml_parameters["split_bed_by_chromosome"]
+        return self._make_working_dict("split_bed_by_chromosome")
 
     @property
     def convert_to_bgen(self):
         """Returns the arguments the user needs to set for convert_to_bgen"""
-        return self._yaml_parameters["convert_to_bgen"]
-
-    @property
-    def clean_summary_statistics(self):
-        """Returns the arguments the user needs to set for clean_summary_statistics """
-        return self._yaml_parameters["clean_summary_statistics"]
+        return self._make_working_dict("convert_to_bgen")
 
     @property
     def _arg_descriptions(self):
         """So we can replicate comments in write file"""
         return self._yaml_parameters["Arg_Descriptions"]
+
+    def _make_working_dict(self, key):
+        """This will construct the working dict of args that the user needs to submit for a given operation"""
+        working_dict = {"Mandatory": self._get_operation_dict(self._yaml_parameters[f"{key}_M"]),
+                        "Optional": self._get_operation_dict(self._yaml_parameters[f"{key}_O"])}
+        working_dict["Mandatory"]["Operation"] = key
+        return working_dict
+
+    def _get_operation_dict(self, operation_keys):
+        """Isolate the keys from all operational args that we need for this operation"""
+        return {key: value for key, value in zip(self.all_args.keys(), self.all_args.values()) if key in operation_keys}
 
     @staticmethod
     def _create_yaml_file(operation, write_directory):

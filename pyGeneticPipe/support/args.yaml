@@ -4,6 +4,7 @@
 # args passed via the GUI have meet the minimum requirements for the method.
 
 
+
 all_args:
 
   ## LOAD ARGUMENTS
@@ -136,121 +137,35 @@ Arg_Descriptions:
 
   HapMap3: If the user wants to only use HapMap3 snps then they need to provide a file to those snps
 
+
+
+
 # Valid operations
 Operations:
 
   # This will generate a shell script using plink to split a bed file into the respective chromosomes
   split_bed_by_chromosome: false
 
-  # This will read in a validation file for each chromosome, .bed or .bgen, and create a group within the h5py file to
-  # store this information for further runs, such as clean_summary_statistics
-  create_validation_group: false
-
   # This will create a script to utilise qctoolv2 to convert plink .bed to .bgen files.
   convert_to_bgen: false
 
-  # This will clean summary statistics using a validation set of snps. create_validation_group required to run before
-  # this
-  clean_summary_statistics: false
 
 
 # Mandatory arguments for convert_to_bgen
-convert_to_bgen:
+convert_to_bgen_M: ["Working_Directory", "Load_File", "Operation", "Job_Scheduler", "Partition", "QCTool_Path",
+                    "BGENIX_Path"]
 
-  # Where you want the h5py file or any other files to be written
-  Working_Directory: null
+# Optional arguments for convert_to_bgen
+convert_to_bgen_O: ["Nodes", "Job_Time", "Job_Memory",]
 
-  # Some operations will require a path to a set file
-  Load_File: null
 
-  # The operation to be run, can take a string if the method name or a dict of operations where only one element is true
-  Operation: convert_to_bgen
 
-  # Takes the values of slurm, qsub, and local
-  Job_Scheduler: null
-
-  # Partition to use when using slurm
-  Partition: null
-
-  # Number of nodes to use, defaults to 1
-  Nodes: 1
-
-  # Job time via Job_Scheduler
-  Job_Time: "00:05:00"
-
-  # Amount of memory to allocate via Job_Memory, defaults to 100m
-  Job_Memory: "100m"
-
-  # Path to qctoolv2 on sever, has a default based on bc4 bristol
-  QCTool_Path: "apps/qctool/2.0rc4"
-
-  # Path to the compiled bgenix folder in build/apps/bgenix
-  BGENIX_Path: null
 
 # Mandatory arguments for split_bed_by_chromosome
-split_bed_by_chromosome:
+split_bed_by_chromosome_M: ["Working_Directory", "Load_File", "Operation", "Job_Scheduler", "Partition", "Plink_Path"]
 
-  # Where you want the h5py file or any other files to be written
-  Working_Directory: null
-
-  # Some operations will require a path to a set file
-  Load_File: null
-
-  # The operation to be run, can take a string if the method name or a dict of operations where only one element is true
-  Operation: split_bed_by_chromosome
-
-  # Takes the values of slurm, qsub, and local
-  Job_Scheduler: null
-
-  # Partition to use when using slurm
-  Partition: null
-
-  # Number of nodes to use, defaults to 1
-  Nodes: 1
-
-  # Job time via Job_Scheduler
-  Job_Time: "00:05:00"
-
-  # Amount of memory to allocate via Job_Memory, defaults to 100m
-  Job_Memory: "100m"
-
-  # Path to plink on sever, has a default based on bc4 bristol
-  Plink_Path: "apps/plink/2.00"
-
-clean_summary_statistics:
-  # The name of this project, allows for multiple projects stored in one directory as it will be used to name the h5py
-  # file that stores information of subsequent steps
-  Project_Name: null
-
-  # If override is set to True, then the h5py file will be destroyed on run and re-created
-  Override: false
-
-  # Where you want the h5py file or any other files to be written
-  Working_Directory: null
-
-  # The operation to be run, can take a string if the method name or a dict of operations where only one element is true
-  Operation: clean_summary_statistics
-
-  # A path to summary statistics, which will be handled differently than other files
-  Summary_Path: null
-
-  # The number of samples in the summary statistics
-  Summary_Sample_Size: null
-
-  # If the user has summary header information not within our own testing list, then they can add it here
-  Custom_Summary_Header: null
-
-  # If the user has frequencies within the summary staistics file
-  Summary_Frequency: null
-
-  # The effect type within the summary statistics file
-  Summary_Effect_Type: null
-
-  # If the user wants to compute z scores from summary file
-  Z_Scores: null
-
-  # If the user wants to only use HapMap3 snps then they need to provide a file to those snps
-  HapMap3: null
+# Optional arguments for split_bed_by_chromosome
+split_bed_by_chromosome_O: ["Nodes", "Job_Time", "Job_Memory"]
 
 
 
