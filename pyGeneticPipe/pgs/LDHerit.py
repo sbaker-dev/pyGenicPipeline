@@ -21,7 +21,7 @@ class LDHerit(Input):
         """
 
         config_dict = {}
-        cumulative_ld, sum_sq_beta, total_snps = self.heritability_by_chromosome(config_dict)
+        cumulative_ld, sum_sq_beta, total_snps = self._heritability_by_chromosome(config_dict)
 
         # Check that we successfully found our genome wide attributes
         assert all([total_snps, sum_sq_beta, total_snps]) > 0, ec.all_missing(
@@ -44,7 +44,7 @@ class LDHerit(Input):
         # Construct config file
         ArgMaker().write_yaml_config_dict(config_dict, self.working_dir, "genome_wide_config")
 
-    def heritability_by_chromosome(self, config_dict):
+    def _heritability_by_chromosome(self, config_dict):
         """
         This will calculate the heritability for each chromosome cumulatively the values for the genome-wide
         calculation
@@ -59,7 +59,7 @@ class LDHerit(Input):
             chromosome, n_snps, n_iid = self._chromosome_from_load(load_file)
 
             # Calculate the heritability and average LD at a chromosome level
-            heritability, average_ld = self.chromosome_heritability(load_file, chromosome, n_snps)
+            heritability, average_ld = self._chromosome_heritability(load_file, chromosome, n_snps)
 
             # Cumulate ld, snps, and sum square beta
             cumulative_ld += np.sum(load_file.column_data[self.c_ld_score])
@@ -123,7 +123,7 @@ class LDHerit(Input):
         r2s = distance_dp ** 2
         ld_scores[snp_index] = np.sum(r2s - ((1 - r2s) / (iid_count - 2)), dtype="float32")
 
-    def chromosome_heritability(self, load_file, chromosome, snp_count):
+    def _chromosome_heritability(self, load_file, chromosome, snp_count):
         """
         This will calculated the chromosome chi-squared lambda (maths from LDPred), and then take the maximum of 0.0001
         or the computed heritability of
