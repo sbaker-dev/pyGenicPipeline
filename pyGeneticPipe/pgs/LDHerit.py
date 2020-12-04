@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 
 
-class LDHerit(Input, ArgMaker):
+class LDHerit(Input):
     def __init__(self, args):
         super().__init__(args)
 
@@ -15,6 +15,10 @@ class LDHerit(Input, ArgMaker):
                              "Genome-Wide Heritability": 0.0}
 
     def genome_wide_heritability(self):
+        """
+        Once we have cleaned our data sets, we can store the genome wide data along side with some individual
+        chromosome information that does not take the form of lists, in a yaml config file.
+        """
 
         config_dict = {}
         cumulative_ld, sum_sq_beta, total_snps = self.heritability_by_chromosome(config_dict)
@@ -28,7 +32,8 @@ class LDHerit(Input, ArgMaker):
         chi_square_lambda = np.mean(self.sample_size * sum_sq_beta / float(total_snps))
         gw_h2_ld_score_est = max(0.0001, (max(1.0, float(chi_square_lambda)) - 1.0) /
                                  (self.sample_size * (average_gw_ld_score / total_snps)))
-        config_dict["Genome"] = {"Avg_LD": average_gw_ld_score, "Heritability": gw_h2_ld_score_est}
+        config_dict["Genome"] = {"Avg_LD": average_gw_ld_score, "Heritability": gw_h2_ld_score_est, "Description":
+                                 "Genome-wide Statistics"}
 
         # Log information to terminal
         self._genome_dict["Lambda Inflation"] = round(float(chi_square_lambda), 7)
@@ -37,6 +42,7 @@ class LDHerit(Input, ArgMaker):
         mc.error_dict_to_terminal(self._genome_dict)
 
         # Construct config file
+        ArgMaker().write_yaml_config_dict(config_dict, self.working_dir, "genome_wide_config")
 
     def heritability_by_chromosome(self, config_dict):
         """
@@ -62,7 +68,7 @@ class LDHerit(Input, ArgMaker):
 
             # Store Values for config file
             chromosome_values = {"Heritability": heritability, "Snp_Count": n_snps, "IID_Count": n_iid,
-                                 "Avg_LD": average_ld}
+                                 "Avg_LD": average_ld, "Description": f"Chromosome {chromosome}"}
             config_dict[chromosome] = chromosome_values
         return cumulative_ld, sum_sq_beta, total_snps
 

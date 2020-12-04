@@ -9,7 +9,7 @@ class ArgMaker:
         self._yaml_parameters = load_yaml(Path(Path(__file__).parent, "args.yaml"))
         self.line_width = 120
 
-    def write_args(self, args_dict, write_directory, validation=True):
+    def write_yaml_args(self, args_dict, write_directory, validation=True):
         """
         This will write a .yaml file contain all the parameters, split by mandatory and not required, for the current
         operation.
@@ -39,6 +39,16 @@ class ArgMaker:
         file.close()
         print(f"Constructed file for {args_dict['Mandatory']['Operation']}")
 
+    def write_yaml_config_dict(self, config_dict, write_directory, operation):
+        """Write a dict of one level of separation"""
+        file = self._create_yaml_file(operation, write_directory)
+        for key, values in zip(config_dict.keys(), config_dict.values()):
+            if "Description" in values.keys():
+                self._write_header(file, values["Description"])
+
+            file.write(f"{key}: \n")
+            self._write_args(file, config_dict, key, spacing=1, write_descriptions=False)
+
     def _make_working_dict(self, key):
         """This will construct the working dict of args that the user needs to submit for a given operation"""
         working_dict = {"Mandatory": self._get_operation_dict(self._yaml_parameters[f"{key}_M"]),
@@ -54,10 +64,12 @@ class ArgMaker:
         """Write a header with a message and trailing # up to the line length"""
         file.write(f"# {message} " + f"".join(["#" for _ in range(self.line_width - (len(message) + 3))]) + "\n\n")
 
-    def _write_args(self, file, args_dict, args_type, spacing=0):
+    def _write_args(self, file, args_dict, args_type, spacing=0, write_descriptions=True):
         """For a given sub type of args, write the value if set of null otherwise"""
         for key, value in zip(args_dict[args_type].keys(), args_dict[args_type].values()):
-            self._write_description(file, self._arg_descriptions[key])
+            if write_descriptions:
+                self._write_description(file, self._arg_descriptions[key])
+
             if value:
                 file.write(f"{''.join([' ' for _ in range(spacing)])}" + f"{key}: {value}\n\n")
             else:
