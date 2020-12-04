@@ -136,6 +136,17 @@ def all_missing(attributes_str, operation):
            f"{attributes_str} = 0"
 
 
+def ld_radius_to_large():
+    return "Warning: LD radius seems small in comparision to average LD score!\nConsider using a smaller radius or" \
+           " less snps"
+
+
+def heritability_to_large():
+    return "Warning: Estimated Genome-wide Heritability is suspiciously large suggesting the sampple may be incorrect" \
+           " or snps are enriched for heritability.\nYou may assign a dict of type chromosome: heritability to " \
+           "heritability_calculated if you wish to override computed heritability"
+
+
 # bed file codes
 def bed_magic_violation(file_name, magic):
     return f"INVALID BED FILE for file at path: {file_name}\n" \

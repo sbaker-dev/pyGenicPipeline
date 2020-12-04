@@ -3,6 +3,7 @@ from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils import misc as mc
 from pyGeneticPipe.core.Input import Input
 from csvObject import CsvObject
+from colorama import Fore
 from pathlib import Path
 import numpy as np
 
@@ -36,7 +37,12 @@ class LDHerit(Input):
                                  f"{self.genome_key}_{self.herit}": gw_h2_ld_score_est,
                                  "Genome_Description": "Genome-wide Statistics"}
 
-        # Log information to terminal
+        # Log warnings if applicable then print information to terminal
+        if gw_h2_ld_score_est > self.ld_radius / 10.0:
+            print(Fore.RED + ec.ld_radius_to_large())
+        if gw_h2_ld_score_est > 1:
+            print(Fore.RED + ec.heritability_to_large())
+
         self._genome_dict["Lambda Inflation"] = round(float(chi_square_lambda), 7)
         self._genome_dict["Mean LD Score"] = round(float(average_gw_ld_score), 7)
         self._genome_dict["Genome-Wide Heritability"] = round(float(gw_h2_ld_score_est), 7)
