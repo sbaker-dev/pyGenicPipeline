@@ -3,9 +3,11 @@ from pyGeneticPipe.support.ShellMaker import ShellMaker
 from pyGeneticPipe.pgs.FilterSnps import FilterSnps
 from pyGeneticPipe.utils.misc import terminal_time
 from pyGeneticPipe.pgs.LDHerit import LDHerit
+from pyGeneticPipe.utils import misc as mc
 from pyGeneticPipe.core.Input import Input
+from csvObject import write_csv, CsvObject
 from colorama import init, Fore
-from csvObject import write_csv
+from pathlib import Path
 import time
 
 
@@ -42,7 +44,7 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Input):
         """This takes the value of a current chromosome and constructs the weights described in pgs_construct_weights"""
         # Load the validation and core samples, as well as the indexer
         start_time = time.time()
-        load_path = str(self.select_file_on_chromosome(chromosome))
+        load_path = str(self.select_file_on_chromosome(chromosome, self.gen_directory, self.gen_type))
         validation, core = self.construct_validation(load_path)
 
         # Then we need to take these samples to construct valid snps, these snps are extract for this chromosome from

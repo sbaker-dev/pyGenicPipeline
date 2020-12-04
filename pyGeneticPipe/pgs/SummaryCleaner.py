@@ -350,12 +350,12 @@ class SummaryCleaner(Input):
         """
 
         #  Set validation and core sets of sids based on the load type
-        if self.load_type == ".bed":
+        if self.gen_type == ".bed":
             validation = validation.sid
             core = core.sid
             indexer = [BimObject(load_path).construct_index(), BimObject(load_path)]
 
-        elif self.load_type == ".bgen":
+        elif self.gen_type == ".bgen":
             # Bgen files store [variant id, rsid], we just want the rsid hence the [1]; see https://bit.ly/2J0C1kC
             validation = [snp.split(",")[1] for snp in validation.sid]
             core = [snp.split(",")[1] for snp in core.sid]
@@ -385,8 +385,8 @@ class SummaryCleaner(Input):
         """
         # Check parameters, validate that validation has been run, and that clean summary has not.
         assert self.summary_file, ec.missing_arg(self.operation, "Summary_Path")
-        assert self.load_type, ec.missing_arg(self.operation, "Load_Type")
-        assert self.load_directory, ec.missing_arg(self.operation, "Load_Directory")
+        assert self.gen_type, ec.missing_arg(self.operation, "Load_Type")
+        assert self.gen_directory, ec.missing_arg(self.operation, "Load_Directory")
         assert self.validation_size, ec.missing_arg(self.operation, "Validation_Size")
 
         return time.time()
@@ -402,7 +402,7 @@ class SummaryCleaner(Input):
         """
         index_dict, indexer = indexer
 
-        if self.load_type == ".bgen":
+        if self.gen_type == ".bgen":
             return indexer.get_variant(index_dict[variant_id])
         else:
             return indexer.get_variant(index_dict[variant_id], True)

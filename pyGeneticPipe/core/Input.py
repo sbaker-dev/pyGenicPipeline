@@ -21,10 +21,10 @@ class Input:
 
         # The project file for this project
         self.summary_file = self._validate_path(self.args["Summary_Path"])
-        self.load_directory = self._validate_path(self.args["Load_Directory"])
+        self.gen_directory = self._validate_path(self.args["Load_Directory"])
         self.hap_map_3 = self._load_local_data("HapMap3")
         self.lr_ld_path = self._load_local_data("Filter_Long_Range_LD")
-        self.load_type = self.args["Load_Type"]
+        self.gen_type = self.args["Load_Type"]
         self.validation_size = self._set_validation_size(self.args["Validation_Size"])
 
         # Set summary and filter statistics information if required
@@ -158,9 +158,9 @@ class Input:
         """
 
         valid_chromosomes = []
-        for file in mc.directory_iterator(self.load_directory):
-            if Path(self.load_directory, file).suffix == self.load_type:
-                valid_chromosomes.append(int(re.sub(r'[\D]', "", Path(self.load_directory, file).stem)))
+        for file in mc.directory_iterator(self.gen_directory):
+            if Path(self.gen_directory, file).suffix == self.gen_type:
+                valid_chromosomes.append(int(re.sub(r'[\D]', "", Path(self.gen_directory, file).stem)))
         valid_chromosomes.sort()
         return valid_chromosomes
 
@@ -202,18 +202,21 @@ class Input:
 
         return np.unique(ok_chromosomes)
 
-    def select_file_on_chromosome(self, chromosome):
+    @staticmethod
+    def select_file_on_chromosome(chromosome, load_directory, load_type):
         """
         For a given chromosome, get the respective file
+        :param load_type:
+        :param load_directory:
         :param chromosome: Current chromosome to be loaded
         :return: Path to the current file as a Path from pathlib
         """
-        for file in mc.directory_iterator(self.load_directory):
-            if Path(self.load_directory, file).suffix == self.load_type:
-                if int(re.sub(r'[\D]', "", Path(self.load_directory, file).stem)) == chromosome:
-                    return Path(self.load_directory, file)
+        for file in mc.directory_iterator(load_directory):
+            if Path(load_directory, file).suffix == load_type:
+                if int(re.sub(r'[\D]', "", Path(load_directory, file).stem)) == chromosome:
+                    return Path(load_directory, file)
 
-        raise Exception(f"Failed to find any relevant file for {chromosome} in {self.load_directory}")
+        raise Exception(f"Failed to find any relevant file for {chromosome} in {load_directory}")
 
     def _check_header(self, sum_header, headers, summary_headers):
         """
@@ -311,13 +314,13 @@ class Input:
 
         # todo Before splitting in to validation and core, allow a sample size modifier to remove people (ie for ukb)
         # Set validation and core sets of sids based on the load type
-        if self.load_type == ".bed":
+        if self.gen_type == ".bed":
             validation_size = self._set_validation_sample_size(Bed(load_path, count_A1=True).iid_count)
             validation = Bed(load_path, count_A1=True)[:validation_size, :]
             core = Bed(load_path, count_A1=True)[validation_size:, :]
             return validation, core
 
-        elif self.load_type == ".bgen":
+        elif self.gen_type == ".bgen":
             # Bgen files store [variant id, rsid], we just want the rsid hence the [1]; see https://bit.ly/2J0C1kC
             validation_size = self._set_validation_sample_size(Bgen(load_path).iid_count)
             validation = Bgen(load_path)[:validation_size, :]

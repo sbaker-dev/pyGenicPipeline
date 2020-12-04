@@ -70,16 +70,16 @@ class FilterSnps(Input):
         ordered_common = gen_file[:, gen_file.sid_to_index(self._extract_variant_name(sm_dict))].read().val
 
         # bed returns 2, 1, 0 rather than 0, 1, 2 although it says its 0, 1, 2; so this inverts it
-        if self.load_type == ".bed":
+        if self.gen_type == ".bed":
             return np.array([abs(snp - 2) for snp in ordered_common.T])
 
         # We have a [1, 0, 0], [0, 1, 0], [0, 0, 1] array return for 0, 1, 2 respectively. So if we multiple the arrays
         # by their index position and then sum them we get [0, 1, 2]
-        elif self.load_type == ".bgen":
+        elif self.gen_type == ".bgen":
             return sum(np.array([snp * i for i, snp in enumerate(ordered_common.T)]))
 
         else:
-            raise Exception(f"Critical Error: Unknown load type {self.load_type} found in _isolate_dosage")
+            raise Exception(f"Critical Error: Unknown load type {self.gen_type} found in _isolate_dosage")
 
     def _extract_variant_name(self, sm_dict):
         """
@@ -92,13 +92,13 @@ class FilterSnps(Input):
         :param sm_dict: dict of clean information
         :return: list of snp names
         """
-        if self.load_type == ".bed":
+        if self.gen_type == ".bed":
             return [variant.variant_id for variant in sm_dict[self.sm_variants]]
-        elif self.load_type == ".bgen":
+        elif self.gen_type == ".bgen":
             print("Bgen load type, so need to restructure return type ... will take a bit longer longer!")
             return [variant.bgen_variant_id() for variant in sm_dict[self.sm_variants]]
         else:
-            raise Exception(f"Critical Error: Unknown load type {self.load_type} found in _isolate_dosage")
+            raise Exception(f"Critical Error: Unknown load type {self.gen_type} found in _isolate_dosage")
 
     def _summary_frequencies(self, sm_dict, gen_type):
         """
@@ -171,5 +171,5 @@ class FilterSnps(Input):
 
     def _assert_filter_snps(self):
         """Different files require different load type operations, so load type must be set"""
-        assert self.load_type, ec.missing_arg(self.operation, "Load_Type")
+        assert self.gen_type, ec.missing_arg(self.operation, "Load_Type")
         return time.time()

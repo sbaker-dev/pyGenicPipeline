@@ -79,7 +79,7 @@ class LDHerit(Input):
         """
         # Isolate the chromosome from the first row of data
         chromosome = load_file.row_data[0][self.c_chromosome]
-        load_path = str(self.select_file_on_chromosome(chromosome))
+        load_path = str(self.select_file_on_chromosome(chromosome, self.gen_directory, self.gen_type))
 
         # Isolate the genetic load file according to summary, and use this to isolate number of individuals
         validation, core = self.construct_validation(load_path)

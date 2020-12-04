@@ -16,7 +16,7 @@ class Score(Input):
     def _construct_phenotype_dict(self):
         # Isolate a file within our sample
         valid_chromosomes = self.validation_chromosomes()
-        load_path = str(self.select_file_on_chromosome(valid_chromosomes[0]))
+        load_path = str(self.select_file_on_chromosome(valid_chromosomes[0], self.gen_directory, self.gen_type))
 
         # Construct the validation and reference sample
         # todo: we want to construct a score for everyone, but based on reference validation sample of individuals?
