@@ -230,8 +230,8 @@ class SummaryCleaner(Input):
         else:
             # probability density function
             pdf = stats.norm.ppf(sm_dict[self.p_value] / 2.0)
-            sm_dict[self.beta] = np.array([np.sign(beta) * (pdf / np.sqrt(self.sample_size))
-                                           for beta, pdf in zip(sm_dict[self.effect_size], pdf)])
+            sm_dict[self.beta] = np.array([np.sign(beta_t) * (pdf / np.sqrt(self.sample_size))
+                                           for beta_t, pdf in zip(sm_dict[self.log_odds], pdf)])
 
     def _validate_nucleotides(self, sm_dict):
         """
