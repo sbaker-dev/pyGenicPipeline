@@ -8,6 +8,7 @@ from pyGeneticPipe.pgs.Gibbs import Gibbs
 from pysnptools.distreader import Bgen
 from csvObject import write_csv
 from colorama import init, Fore
+import numpy as np
 import time
 
 
@@ -110,7 +111,7 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Input):
         https://choishingwan.github.io/PRS-Tutorial/
         """
         # Load the validation and core samples, as well as the indexer
-        chromosome = self.multi_core_splitter
+        chromosome = 1
         self.gm = {**self.gm[chromosome], **self.gm[self.genome_key]}
         load_path = str(self.select_file_on_chromosome(chromosome, self.gen_directory, self.gen_type))
         core = Bgen(load_path)
@@ -131,6 +132,15 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Input):
         self.gm[self.count_snp] = 5693
         self.gm[self.count_iid] = 483
         self.gm[self.herit] = 0.04553305821357676
+        self.gibbs_causal_fractions = [1]
 
         # Construct the Weight
         self.construct_gibbs_weights(sm_dict, chromosome)
+
+        print(sm_dict[self.inf_dec])
+        print(np.sum(sm_dict[self.inf_dec]))
+        # 0.11157818410953191 ish
+
+        print(sm_dict[self.gibbs][self.gibbs_causal_fractions[0]])
+        print(np.sum(sm_dict[self.gibbs][self.gibbs_causal_fractions[0]]))
+        # 0.21582699762327068 ish

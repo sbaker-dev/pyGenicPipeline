@@ -1,13 +1,9 @@
 from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils import misc as mc
 from pyGeneticPipe.core.Input import Input
-from csvObject import write_csv
-from decimal import Decimal
 from scipy import stats
 import numpy as np
 import time
-
-import sys
 
 
 class Gibbs(Input):
@@ -24,34 +20,25 @@ class Gibbs(Input):
         # Update the betas via infinitesimal shrinkage using ld information to use as the start value for the variant
         # fraction method used within Gibbs
         inf_betas = self._infinitesimal_betas(sm_dict)
-        print(inf_betas)
         print(f"Calculated LD and chromosome heritability for chromosome {chromosome} in "
               f"{round(time.time() - self.start_time, 2)} Seconds")
 
+        sm_dict[self.gibbs] = {}
         for variant_fraction in self.gibbs_causal_fractions:
             self.start_time = time.time()
 
             # Run the LDPred gibbs processor to calculate a beta value
             beta = self.gibbs_processor(inf_betas, variant_fraction, sm_dict)
-
-            print(beta)
-
             sum_sq_beta = np.sum(beta ** 2)
+            if sum_sq_beta > self.gm[f"{self.genome_key}_{self.herit}"]:
+                print(f"Warning: Sum Squared beta is much large than estimated heritability suggesting a lack of "
+                      f"convergence of Gibbs\n"
+                      f"{sum_sq_beta} > {self.gm[f'{self.genome_key}_{self.herit}']}")
 
-            print(sum_sq_beta)
-        #     if sum_sq_beta > self.gm[f"{self.genome_key}_{self.herit}"]:
-        #         print(f"Warning: Sum Squared beta is much large than estimated hertiability suggesting a lack of "
-        #               f"convergence of Gibbs\n"
-        #               f"{sum_sq_beta} > {self.gm[f'{self.genome_key}_{self.herit}']}")
-        #
-        #     # Compute the effect size then write to file
-        #     print(sum_sq_beta)
-        #     print(beta)
-        #
-            effect_size = beta / sm_dict[f"{self.ref_prefix}_{self.stds}"].flatten()
-            print(effect_size)
-            # self._write_weights(sm_dict, effect_size, chromosome, variant_fraction, beta)
-            sys.exit()
+            # Compute the effect size then write to file
+            sm_dict[self.gibbs][variant_fraction] = beta / sm_dict[f"{self.ref_prefix}_{self.stds}"].flatten()
+            print(f"Construct weights file for Chromosome {chromosome} variant fraction of {variant_fraction} in "
+                  f"{round(time.time() - self.start_time, 2)} Seconds")
 
         # Do the same for the infinitesimal model
         sm_dict[self.inf_dec] = inf_betas / sm_dict[f"{self.ref_prefix}_{self.stds}"].flatten()
@@ -175,37 +162,6 @@ class Gibbs(Input):
             return min(1.0 - self.gibbs_zero_jump, 1.0 / h2_est, (est_herit + 1.0 / np.sqrt(self.sample_size)) / h2_est)
         else:
             return 1.0 - self.gibbs_zero_jump
-
-    def _write_weights(self, sm_dict, effect_size, chromosome, name, gibbs_beta):
-        """
-        This will format all of our data into a csv file and store it in the working directory
-        """
-        # todo This might be generalisable to scores as well if placed within Input
-        # Load name based on type
-        if isinstance(name, (float, int, np.int8, np.float32)):
-            file_name = f"{chromosome}_weights_p{Decimal(name):.2E}"
-        else:
-            file_name = f"{chromosome}_weights_{name}"
-
-        if not isinstance(gibbs_beta, np.ndarray):
-            gibbs_beta = ["NA" for _ in range(len(sm_dict[self.sm_variants]))]
-
-        # Slice variant arrays into lists
-        bp_positions = mc.variant_array(self.bp_position.lower(), sm_dict[self.sm_variants])
-        snp_ids = mc.variant_array(self.snp_id.lower(), sm_dict[self.sm_variants])
-        nt1s = mc.variant_array("a1", sm_dict[self.sm_variants])
-        nt2s = mc.variant_array("a2", sm_dict[self.sm_variants])
-
-        # Construct a list of lists, where sub lists represent the rows in the csv file
-        rows = [[chromosome, pos, sid, nt1, nt2, beta, log_odds, ld_score, gibbs, ldpred_beta]
-                for pos, sid, nt1, nt2, beta, log_odds, ld_score, gibbs, ldpred_beta in zip(
-                bp_positions, snp_ids, nt1s, nt2s, sm_dict[self.beta], sm_dict[self.log_odds],
-                sm_dict[self.ld_scores], gibbs_beta, effect_size)]
-
-        # Write the file
-        write_csv(self.working_dir, file_name, self.gibbs_headers, rows)
-        print(f"Construct weights file for Chromosome {chromosome} for {file_name} in "
-              f"{round(time.time() - self.start_time, 2)} Seconds")
 
     @staticmethod
     def _get_constants(snp_i, const_dict):
