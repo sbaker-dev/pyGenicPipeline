@@ -206,8 +206,8 @@ class Input:
     def select_file_on_chromosome(chromosome, load_directory, load_type):
         """
         For a given chromosome, get the respective file
-        :param load_type:
-        :param load_directory:
+        :param load_type: The suffix of the file you want to validate against
+        :param load_directory: The directory to iterate through
         :param chromosome: Current chromosome to be loaded
         :return: Path to the current file as a Path from pathlib
         """
@@ -457,6 +457,11 @@ class Input:
             return mc.load_yaml(genome_path)
         else:
             return None
+
+    @property
+    def cleaned_types(self):
+        """The types of each column in the cleaned data"""
+        return [int, int, str, str, str, float, float, float, float]
 
     @property
     def chromosome(self):
