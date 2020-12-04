@@ -80,17 +80,23 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Input):
 
     def pgs_chromosome_scores(self, chromosome):
 
-        load_path = self.select_file_on_chromosome(chromosome, self.clean_directory, ".csv")
+        # Assert we have the genome file form genome_wide_heritability, set dict to of this chromosome and genome
+        assert self.genomic, "missing g"
+        self.genomic = {**self.genomic[chromosome], **self.genomic[self.genome_key]}
 
         # Construct the dict of values we need for this run from our cleaned data
+        load_path = self.select_file_on_chromosome(chromosome, self.clean_directory, ".csv")
         sm_dict = self.sm_dict_from_csv(load_path)
 
         # Load the genetic core
         load_path = self.select_file_on_chromosome(chromosome, self.gen_directory, self.gen_type)
         _, core = self.construct_validation(load_path)
 
+        # Create the normalised snps
         sm_dict = self.filter_snps(self.ref_prefix, core, sm_dict, chromosome)
+
+        # Compute the ld scores and dict
+        self.compute_ld_scores(sm_dict, self.genomic[self.count_snp], self.genomic[self.count_iid], ld_dict=True)
+
         print(sm_dict.keys())
-
-
         # print(sm_dict)
