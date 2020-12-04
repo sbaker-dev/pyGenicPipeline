@@ -18,7 +18,7 @@ class SummaryCleaner(Input):
         self._sum_error_dict = {"Removal case": "Count", "Invalid_Snps": 0, f"Miss Matching {self.chromosome}": 0,
                                 f"Miss Matching {self.bp_position}": 0, f"Non Finite {self.effect_size}": 0,
                                 f"Non Finite {self.p_value}": 0, f"Non Finite {self.standard_errors}": 0,
-                                "Ambiguous_SNP": 0, "Non_Allowed_Allele": 0, "Non_Matching": 0}
+                                "Ambiguous_SNP": 0, "Non_Allowed_Allele": 0, "Flipped": 0, "Non_Matching": 0}
         self._summary_last_position = 0
 
     def clean_summary_statistics(self, chromosome, load_path, validation, core):
@@ -277,7 +277,9 @@ class SummaryCleaner(Input):
         sm_dict["Flip"] = np.array([self._flip_nucleotide(var_nuc, sm_nuc) for var_nuc, sm_nuc in
                                     zip(sm_dict[self.sm_variants], sm_dict[self.nucleotide])])
         filter_flipped = np.array([False if flipped == 0 else True for flipped in sm_dict["Flip"]])
-        self._sum_error_dict["Non_Matching"] = len(filter_flipped) - np.sum(filter_flipped)
+        self._sum_error_dict["Non_Matching"] = int(np.sum([1 if f == 0 else 0 for f in sm_dict["Flip"]]))
+        self._sum_error_dict["Flipped"] = int(np.sum([1 if f == -1 else 0 for f in sm_dict["Flip"]]))
+
         if not mc.filter_array(sm_dict, filter_flipped):
             return None
 
