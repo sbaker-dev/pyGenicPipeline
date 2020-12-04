@@ -3,11 +3,9 @@ from pyGeneticPipe.support.ShellMaker import ShellMaker
 from pyGeneticPipe.pgs.FilterSnps import FilterSnps
 from pyGeneticPipe.utils.misc import terminal_time
 from pyGeneticPipe.pgs.LDHerit import LDHerit
-from pyGeneticPipe.utils import misc as mc
 from pyGeneticPipe.core.Input import Input
-from csvObject import write_csv, CsvObject
+from csvObject import write_csv
 from colorama import init, Fore
-from pathlib import Path
 import time
 
 
@@ -72,9 +70,9 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Input):
 
         # Construct rows to right out
         rows_out = []
-        for v, log_odds, beta, std, ld in zip(sm_dict[self.sm_variants], sm_dict[self.log_odds], sm_dict[self.beta],
-                                              sm_dict[f"{self.ref_prefix}_{self.stds}"], sm_dict[self.ld_scores]):
-            rows_out.append(v.items() + [log_odds, beta, std[0], ld])
+        for v, log_odds, beta, freq, ld in zip(sm_dict[self.sm_variants], sm_dict[self.log_odds], sm_dict[self.beta],
+                                               sm_dict[self.freq], sm_dict[self.ld_scores]):
+            rows_out.append(v.items() + [log_odds, beta, freq, ld])
 
         write_csv(self.clean_directory, f"Cleaned_{chromosome}", self.clean_headers, rows_out)
         print(Fore.LIGHTCYAN_EX + f"Finished {self.operation} for chromosome {chromosome} at {terminal_time()}.\n"
@@ -85,8 +83,14 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Input):
         load_path = self.select_file_on_chromosome(chromosome, self.clean_directory, ".csv")
 
         # Construct the dict of values we need for this run from our cleaned data
-        load_file = CsvObject(load_path, self.cleaned_types, set_columns=True)
-        sm_dict = {header: data for header, data in zip(self.clean_headers, load_file.column_data)}
+        sm_dict = self.sm_dict_from_csv(load_path)
 
-        print(sm_dict)
+        # Load the genetic core
+        load_path = self.select_file_on_chromosome(chromosome, self.gen_directory, self.gen_type)
+        _, core = self.construct_validation(load_path)
 
+        sm_dict = self.filter_snps(self.ref_prefix, core, sm_dict, chromosome)
+        print(sm_dict.keys())
+
+
+        # print(sm_dict)

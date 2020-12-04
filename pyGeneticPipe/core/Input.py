@@ -1,7 +1,9 @@
+from pyGeneticPipe.geneticParsers.variantObjects import Variant
 from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils import misc as mc
 from pysnptools.distreader import Bgen
 from pysnptools.snpreader import Bed
+from csvObject import CsvObject
 from pathlib import Path
 import numpy as np
 import pickle
@@ -395,6 +397,26 @@ class Input:
         else:
             return [1, 0.3, 0.1, 0.03, 0.01, 0.003, 0.001]
 
+    def sm_dict_from_csv(self, load_path):
+        """
+        Load a saved cleaned file from summary statistics for a given chromosome found at the load_path provided, and
+        use this to construct the sm_dict we pass between methods
+        """
+        load_file = CsvObject(load_path, self.cleaned_types, set_columns=True)
+
+        chromo = load_file.column_data[self._clean_dict[self.chromosome]]
+        bp_pos = load_file.column_data[self._clean_dict[self.bp_position]]
+        snp_id = load_file.column_data[self._clean_dict[self.snp_id]]
+        effect = load_file.column_data[self._clean_dict[self.effect_allele]]
+        alt = load_file.column_data[self._clean_dict[self.alt_allele]]
+        log = load_file.column_data[self._clean_dict[self.log_odds]]
+        beta = load_file.column_data[self._clean_dict[self.beta]]
+        freq = load_file.column_data[self._clean_dict[self.freq]]
+
+        sm_variants = [Variant(ch, bp, sn, ef, al) for ch, bp, sn, ef, al in zip(chromo, bp_pos, snp_id, effect, alt)]
+        return {self.sm_variants: np.array(sm_variants), self.log_odds: np.array(log), self.beta: np.array(beta),
+                self.freq: np.array(freq)}
+
     @property
     def _chromosome_map(self):
         """
@@ -410,7 +432,7 @@ class Input:
     def _set_cleaned_headers(self):
         """Construct headers to be used for writing and reading cleaned files"""
         cleaned_headers = [self.chromosome, self.bp_position, self.snp_id, self.effect_allele, self.alt_allele,
-                           self.log_odds, self.beta, self.stds, self.ld_scores]
+                           self.log_odds, self.beta, self.freq, self.ld_scores]
 
         cleaned_dict = {header: i for i, header in enumerate(cleaned_headers)}
         return cleaned_headers, cleaned_dict

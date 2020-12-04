@@ -167,7 +167,7 @@ class FilterSnps(Input):
         sm_dict[f"{gen_type}_{self.norm_snps}"] = normalised_snps
 
         # Cleanup the dict
-        mc.cleanup_dict(sm_dict, [f"{gen_type}_{cleaner}" for cleaner in [self.mean, self.raw_snps, self.freq]])
+        mc.cleanup_dict(sm_dict, [f"{gen_type}_{cleaner}" for cleaner in [self.mean, self.raw_snps]])
 
     def _assert_filter_snps(self):
         """Different files require different load type operations, so load type must be set"""
