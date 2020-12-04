@@ -42,7 +42,7 @@ class Input:
         self.clean_headers, self._clean_dict = self._set_cleaned_headers()
 
         # Gibbs information
-        self.genomic = self._set_genome()
+        self.gm = self._set_genome()
         self.ld_radius = self.args["LD_Radius"]
         self.heritability_calculated = self.args["Heritability_Calculated"]
         self.gibbs_causal_fractions = self._set_causal_fractions()
@@ -739,3 +739,8 @@ class Input:
     def genome_key(self):
         """Key used for accessing Genome wide data in headers, groups or other attributes"""
         return "Genome"
+
+    @property
+    def inf_dec(self):
+        """Key used for accessing Infinitesimal data in headers, groups or other attributes"""
+        return "infinitesimal"

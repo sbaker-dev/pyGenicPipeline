@@ -4,12 +4,14 @@ from pyGeneticPipe.pgs.FilterSnps import FilterSnps
 from pyGeneticPipe.utils.misc import terminal_time
 from pyGeneticPipe.pgs.LDHerit import LDHerit
 from pyGeneticPipe.core.Input import Input
+from pyGeneticPipe.pgs.Gibbs import Gibbs
+from pysnptools.distreader import Bgen
 from csvObject import write_csv
 from colorama import init, Fore
 import time
 
 
-class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Input):
+class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Input):
     def __init__(self, args):
         """
         This Class inherits all other classes that can be used, and then execute the job via getattr
@@ -81,8 +83,8 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Input):
     def pgs_chromosome_scores(self, chromosome):
 
         # Assert we have the genome file form genome_wide_heritability, set dict to of this chromosome and genome
-        assert self.genomic, "missing g"
-        self.genomic = {**self.genomic[chromosome], **self.genomic[self.genome_key]}
+        assert self.gm, "missing g"
+        self.gm = {**self.gm[chromosome], **self.gm[self.genome_key]}
 
         # Construct the dict of values we need for this run from our cleaned data
         load_path = self.select_file_on_chromosome(chromosome, self.clean_directory, ".csv")
@@ -96,7 +98,39 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Input):
         sm_dict = self.filter_snps(self.ref_prefix, core, sm_dict, chromosome)
 
         # Compute the ld scores and dict
-        self.compute_ld_scores(sm_dict, self.genomic[self.count_snp], self.genomic[self.count_iid], ld_dict=True)
+        self.compute_ld_scores(sm_dict, self.gm[self.count_snp], self.gm[self.count_iid], ld_dict=True)
+
+        self.construct_gibbs_weights(sm_dict, chromosome)
 
         print(sm_dict.keys())
-        # print(sm_dict)
+
+    def debug_cross_check(self):
+        """
+        This is designed to allow us to cross check with LDPred, following the data from:
+        https://choishingwan.github.io/PRS-Tutorial/
+        """
+        # Load the validation and core samples, as well as the indexer
+        chromosome = self.multi_core_splitter
+        self.gm = {**self.gm[chromosome], **self.gm[self.genome_key]}
+        load_path = str(self.select_file_on_chromosome(chromosome, self.gen_directory, self.gen_type))
+        core = Bgen(load_path)
+        validation = Bgen(load_path)
+
+        # Then we need to take these samples to construct valid snps, these snps are extract for this chromosome from
+        # our summary stats, and then cleaned for possible errors.
+        sm_dict = self.clean_summary_statistics(chromosome, load_path, validation, core)
+
+        # Filter our genetic types for snps, such as those that have undesirable frequencies.
+        # sm_dict = self.filter_snps(self.val_prefix, validation, sm_dict, chromosome)
+        sm_dict = self.filter_snps(self.ref_prefix, core, sm_dict, chromosome)
+
+        # Compute the chromosome specific ld scores and heritability
+        self.compute_ld_scores(sm_dict, len(sm_dict[self.sm_variants]), core.iid_count, ld_dict=True)
+
+        # Mirror test environment gm
+        self.gm[self.count_snp] = 5693
+        self.gm[self.count_iid] = 483
+        self.gm[self.herit] = 0.04553305821357676
+
+        # Construct the Weight
+        self.construct_gibbs_weights(sm_dict, chromosome)

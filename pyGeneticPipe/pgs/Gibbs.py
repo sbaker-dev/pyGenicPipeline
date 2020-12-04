@@ -19,56 +19,66 @@ class Gibbs(Input):
         self._assert_construct_gibbs_weights()
         print(f"Constructing Weights for Chromosome {chromosome}")
 
-        # Extract information on count data
-        iid_count = sm_dict[f"{self.ref_prefix}_{self.iid_count}"]
-        snp_count = sm_dict[f"{self.ref_prefix}_{self.snp_count}"]
-
-        # Calculate the mean ld score and construct a dict of ld reference
-        average_ld = self.compute_ld_scores(sm_dict, snp_count, iid_count)
-
-        # Calculate the estimate heritability for this chromosome
-        estimated_herit = self._estimate_heritability(sm_dict, average_ld, chromosome, iid_count, snp_count)
-
-        # Update the betas via infinitesimal shrinkage using ld information
-        updated_betas = self._infinitesimal_betas(sm_dict, estimated_herit, iid_count, snp_count)
+        # Update the betas via infinitesimal shrinkage using ld information to use as the start value for the variant
+        # fraction method used within Gibbs
+        inf_betas = self._infinitesimal_betas(sm_dict)
+        print(inf_betas)
         print(f"Calculated LD and chromosome heritability for chromosome {chromosome} in "
               f"{round(time.time() - self.start_time, 2)} Seconds")
 
-        for variant_fraction in self.gibbs_causal_fractions:
-            self.start_time = time.time()
-
-            # Run the LDPred gibbs processor to calculate a beta value
-            beta = self.gibbs_processor(snp_count, iid_count, updated_betas, estimated_herit, variant_fraction, sm_dict)
-
-            # Compute the effect size then write to file
-            effect_size = beta / sm_dict[f"{self.ref_prefix}_{self.stds}"].flatten()
-            self._write_weights(sm_dict, effect_size, chromosome, variant_fraction, beta)
+        # for variant_fraction in self.gibbs_causal_fractions:
+        #     self.start_time = time.time()
+        #
+        #     # Run the LDPred gibbs processor to calculate a beta value
+        #     beta = self.gibbs_processor(inf_betas, variant_fraction, sm_dict)
+        #
+        #
+        #     sum_sq_beta = np.sum(beta ** 2)
+        #     if sum_sq_beta > self.gm[f"{self.genome_key}_{self.herit}"]:
+        #         print(f"Warning: Sum Squared beta is much large than estimated hertiability suggesting a lack of "
+        #               f"convergence of Gibbs\n"
+        #               f"{sum_sq_beta} > {self.gm[f'{self.genome_key}_{self.herit}']}")
+        #
+        #     # Compute the effect size then write to file
+        #     print(sum_sq_beta)
+        #     print(beta)
+        #
+        #     effect_size = beta / sm_dict[f"{self.ref_prefix}_{self.stds}"].flatten()
+        #     print(effect_size)
+        #     # self._write_weights(sm_dict, effect_size, chromosome, variant_fraction, beta)
+        #     sys.exit()
 
         # Do the same for the infinitesimal model
-        inf_beta = updated_betas / sm_dict[f"{self.ref_prefix}_{self.stds}"].flatten()
-        self._write_weights(sm_dict, inf_beta, chromosome, "inf", None)
+        sm_dict[self.inf_dec] = inf_betas / sm_dict[f"{self.ref_prefix}_{self.stds}"].flatten()
 
-    def _infinitesimal_betas(self, sm_dict, estimate_herit, iid_count, snp_count):
+    def _infinitesimal_betas(self, sm_dict):
         """
         Apply the infinitesimal shrink w LD (which requires LD information), from LDPred directly (mostly).
 
         """
         ld_window = self.ld_radius * 2
+        snp_count = self.gm[self.count_snp]
+        iid_count = self.gm[self.count_iid]
 
         updated_betas = np.empty(snp_count)
         for wi in range(0, snp_count, ld_window):
-            window_snps = mc.snps_in_window(sm_dict[f"{self.ref_prefix}_{self.norm_snps}"], wi, snp_count, ld_window)
-
-            dis = mc.shrink_r2_matrix(np.dot(window_snps, window_snps.T) / iid_count, iid_count)
-
-            # numpy.eye is just an identity matrix
-            a = np.array(((snp_count / estimate_herit) * np.eye(min(snp_count, (wi + (self.ld_radius * 2))) - wi))
-                         + (iid_count / 1.0) * dis)
-
-            # Update the betas for this window
             start_i = wi
             stop_i = min(snp_count, wi + ld_window)
-            updated_betas[start_i: stop_i] = np.dot(np.linalg.pinv(a) * iid_count, sm_dict[self.beta][start_i: stop_i])
+            current_window = stop_i - start_i
+
+            # Load the snps in this window
+            window_snps = mc.snps_in_window(sm_dict[f"{self.ref_prefix}_{self.norm_snps}"], wi, snp_count, ld_window)
+
+            # Load the disequilibrium (D in LDPred)?
+            dis = mc.shrink_r2_matrix(np.dot(window_snps, window_snps.T) / iid_count, iid_count)
+
+            # numpy.eye is just an identity matrix, don't know what A standards for in LDPred
+            a = np.array(((snp_count / self.gm[self.herit]) * np.eye(current_window)) + (self.sample_size / 1.0) * dis)
+
+            # Update the betas
+            updated_betas[start_i: stop_i] = np.dot(np.linalg.pinv(a) * self.sample_size,
+                                                    sm_dict[self.beta][start_i: stop_i])
+
         return updated_betas
 
     def gibbs_processor(self, snp_count, iid_count, start_betas, est_herit, variant_fraction, sm_dict):
