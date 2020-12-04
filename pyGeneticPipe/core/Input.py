@@ -29,6 +29,7 @@ class Input:
 
         # Set summary and filter statistics information if required
         self._make_sub_directory("Cleaned")
+        self.clean_directory = Path(self.working_dir, "Cleaned")
         self.zipped, self.sample_size = self._set_summary_stats()
         self._summary_headers = self._set_summary_headers()
         self.effect_type = self._set_effect_type(self.args["Summary_Effect_Type"])
@@ -411,11 +412,11 @@ class Input:
         return cleaned_headers, cleaned_dict
 
     def _make_sub_directory(self, name):
+        """Making sub directories within the working directory"""
         try:
             os.mkdir(Path(self.working_dir, name))
         except FileExistsError:
             pass
-
 
     def _set_gibbs_headers(self):
         """Construct the headers that will be used in the writing of weights"""
@@ -671,10 +672,14 @@ class Input:
         return "Gibbs_Beta"
 
     @property
-    def w_ld_score(self):
-        """LD_Score header index in Weights file"""
-        return self._gibbs_header_dict[self.ld_scores]
+    def c_chromosome(self):
+        return self._clean_dict[self.chromosome]
 
     @property
-    def w_beta(self):
-        return self._gibbs_header_dict[self.beta]
+    def c_ld_score(self):
+        """LD_Score header index in Weights file"""
+        return self._clean_dict[self.ld_scores]
+
+    @property
+    def c_beta(self):
+        return self._clean_dict[self.beta]
