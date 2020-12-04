@@ -136,7 +136,6 @@ def all_missing(attributes_str, operation):
            f"{attributes_str} = 0"
 
 
-
 # bed file codes
 def bed_magic_violation(file_name, magic):
     return f"INVALID BED FILE for file at path: {file_name}\n" \

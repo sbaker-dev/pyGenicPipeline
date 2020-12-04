@@ -1,3 +1,5 @@
+from pyGeneticPipe.support.ArgMaker import ArgMaker
+from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils import misc as mc
 from pyGeneticPipe.core.Input import Input
 from csvObject import CsvObject
@@ -5,7 +7,7 @@ from pathlib import Path
 import numpy as np
 
 
-class LDHerit(Input):
+class LDHerit(Input, ArgMaker):
     def __init__(self, args):
         super().__init__(args)
 
@@ -14,7 +16,33 @@ class LDHerit(Input):
 
     def genome_wide_heritability(self):
 
-        chromosome_dict = {}
+        config_dict = {}
+        cumulative_ld, sum_sq_beta, total_snps = self.heritability_by_chromosome(config_dict)
+
+        # Check that we successfully found our genome wide attributes
+        assert all([total_snps, sum_sq_beta, total_snps]) > 0, ec.all_missing(
+            "Total_Snps = Sum_Sq_Beta = Cumulative_LD", "genome_wide_heritability")
+
+        # Calculate genome wide heritability
+        average_gw_ld_score = cumulative_ld / float(total_snps)
+        chi_square_lambda = np.mean(self.sample_size * sum_sq_beta / float(total_snps))
+        gw_h2_ld_score_est = max(0.0001, (max(1.0, float(chi_square_lambda)) - 1.0) /
+                                 (self.sample_size * (average_gw_ld_score / total_snps)))
+        config_dict["Genome"] = {"Avg_LD": average_gw_ld_score, "Heritability": gw_h2_ld_score_est}
+
+        # Log information to terminal
+        self._genome_dict["Lambda Inflation"] = round(float(chi_square_lambda), 7)
+        self._genome_dict["Mean LD Score"] = round(float(average_gw_ld_score), 7)
+        self._genome_dict["Genome-Wide Heritability"] = round(float(gw_h2_ld_score_est), 7)
+        mc.error_dict_to_terminal(self._genome_dict)
+
+        # Construct config file
+
+    def heritability_by_chromosome(self, config_dict):
+        """
+        This will calculate the heritability for each chromosome cumulatively the values for the genome-wide
+        calculation
+        """
         cumulative_ld = sum_sq_beta = total_snps = 0
         for file in mc.directory_iterator(self.clean_directory):
             load_file = CsvObject(Path(self.clean_directory, file),
@@ -24,30 +52,19 @@ class LDHerit(Input):
             # Isolate the generic information
             chromosome, n_snps, n_iid = self._chromosome_from_load(load_file)
 
-            # Calculate the heritability at a chromosome level
-            chromosome_dict[chromosome] = self.chromosome_heritability(load_file, chromosome, n_snps)
+            # Calculate the heritability and average LD at a chromosome level
+            heritability, average_ld = self.chromosome_heritability(load_file, chromosome, n_snps)
 
             # Cumulate ld, snps, and sum square beta
             cumulative_ld += np.sum(load_file.column_data[self.c_ld_score])
             total_snps += n_snps
             sum_sq_beta += np.sum(np.array(load_file.column_data[self.c_beta]) ** 2)
 
-        # Check that we successfully found our genome wide attributes
-        assert all([total_snps, sum_sq_beta, total_snps]) > 0, "EE"
-
-        # Calculate genome wide heritability
-        average_gw_ld_score = cumulative_ld / float(total_snps)
-        chi_square_lambda = np.mean(self.sample_size * sum_sq_beta / float(total_snps))
-        gw_h2_ld_score_est = max(0.0001, (max(1.0, float(chi_square_lambda)) - 1.0) /
-                                 (self.sample_size * (average_gw_ld_score / total_snps)))
-
-        # Log information to terminal
-        self._genome_dict["Lambda Inflation"] = round(float(chi_square_lambda), 7)
-        self._genome_dict["Mean LD Score"] = round(float(average_gw_ld_score), 7)
-        self._genome_dict["Genome-Wide Heritability"] = round(float(gw_h2_ld_score_est), 7)
-        mc.error_dict_to_terminal(self._genome_dict)
-
-        # Construct config file
+            # Store Values for config file
+            chromosome_values = {"Heritability": heritability, "Snp_Count": n_snps, "IID_Count": n_iid,
+                                 "Avg_LD": average_ld}
+            config_dict[chromosome] = chromosome_values
+        return cumulative_ld, sum_sq_beta, total_snps
 
     def _chromosome_from_load(self, load_file):
         """
@@ -120,6 +137,7 @@ class LDHerit(Input):
         else:
             average_ld = np.mean(load_file.column_data[self.c_ld_score])
             sum_beta_sq = np.sum(np.array(load_file.column_data[self.c_beta]) ** 2)
-            char_chi_sq_lambda = np.mean((self.sample_size * sum_beta_sq) / snp_count)
-            return max(0.0001,
-                       (max(1.0, float(char_chi_sq_lambda)) - 1) / (self.sample_size * (average_ld / snp_count)))
+            chi_sq_lambda = np.mean((self.sample_size * sum_beta_sq) / snp_count)
+
+            herit = max(0.0001, (max(1.0, float(chi_sq_lambda)) - 1) / (self.sample_size * (average_ld / snp_count)))
+            return herit, average_ld
