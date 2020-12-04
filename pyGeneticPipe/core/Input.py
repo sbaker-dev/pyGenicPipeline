@@ -40,6 +40,7 @@ class Input:
         self.clean_headers, self._clean_dict = self._set_cleaned_headers()
 
         # Gibbs information
+        self.genome = self._set_genome()
         self.ld_radius = self.args["LD_Radius"]
         self.heritability_calculated = self.args["Heritability_Calculated"]
         self.gibbs_causal_fractions = self._set_causal_fractions()
@@ -445,6 +446,14 @@ class Input:
             index.
         """
         return values[max(0, snp_index - self.ld_radius): min(number_of_snps, (snp_index + self.ld_radius + 1))]
+
+    def _set_genome(self):
+        """Load the genome file if it has been produced, else return None"""
+        genome_path = Path(self.working_dir, "genome_wide_config.yaml")
+        if genome_path.exists():
+            return mc.load_yaml(genome_path)
+        else:
+            return None
 
     @property
     def chromosome(self):
