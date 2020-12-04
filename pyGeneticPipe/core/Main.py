@@ -6,7 +6,6 @@ from pyGeneticPipe.pgs.LDHerit import LDHerit
 from pyGeneticPipe.core.Input import Input
 from colorama import init, Fore
 from csvObject import write_csv
-from pathlib import Path
 import time
 
 
@@ -52,7 +51,7 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Input):
 
         # Filter our genetic types for snps, such as those that have undesirable frequencies.
         sm_dict = self.filter_snps(self.val_prefix, validation, sm_dict, chromosome)
-        sm_dict = self.filter_snps(self.ref_prefix, validation, sm_dict, chromosome)
+        sm_dict = self.filter_snps(self.ref_prefix, core, sm_dict, chromosome)
 
         # Compute the chromosome specific ld scores and heritability
         self.compute_ld_scores(sm_dict, len(sm_dict[self.sm_variants]), core.iid_count)
@@ -63,6 +62,6 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Input):
                                               sm_dict[f"{self.ref_prefix}_{self.stds}"], sm_dict[self.ld_scores]):
             rows_out.append(v.items() + [log_odds, beta, std[0], ld])
 
-        write_csv(Path(self.working_dir, "Cleaned"), f"Cleaned_{chromosome}", self.clean_headers, rows_out)
+        write_csv(self.clean_directory, f"Cleaned_{chromosome}", self.clean_headers, rows_out)
         print(Fore.LIGHTCYAN_EX + f"Finished {self.operation} for chromosome {chromosome} at {terminal_time()}.\n"
                                   f"Total time spent was {round(time.time() - start_time, 2)} Seconds\n")

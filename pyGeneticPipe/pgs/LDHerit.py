@@ -108,7 +108,7 @@ class LDHerit(Input):
     def _calculate_disequilibrium(self, snp_index, current_snp, norm_snps, ld_scores, iid_count, snp_count,
                                   ld_dict=None):
         """
-        This will calculate the disequilibrium, for when we don't have a genetic map.
+        This will calculate the disequilibrium of the snps in a given radius window
         """
 
         # Create a window of normalised snps around the current snp with a maximum length of (self.ld_radius * 2) + 1
@@ -128,7 +128,7 @@ class LDHerit(Input):
         This will calculated the chromosome chi-squared lambda (maths from LDPred), and then take the maximum of 0.0001
         or the computed heritability of
 
-        This chromosomes chi-sq lambda (or 1 if its less than 1 for reasons that are beyond me)
+        This chromosomes 1 - chi-sq lambda (or 1 if its less than 1 for reasons that are beyond me)
         ---------------------------------------------------------------------------------------
         Number of samples in the summary stats * (average ld score / number snps)
 
