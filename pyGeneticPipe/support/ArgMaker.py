@@ -1,11 +1,13 @@
 from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils.misc import load_yaml
 from pathlib import Path
+import textwrap
 
 
 class ArgMaker:
     def __init__(self):
         self._yaml_parameters = load_yaml(Path(Path(__file__).parent, "args.yaml"))
+        self.line_width = 120
 
     def write_args(self, args_dict, write_directory, validation=True):
         """
@@ -15,37 +17,70 @@ class ArgMaker:
         # If validation, because the args have been set within python via dict replacement, then check all mandatory
         # args have been set
         if validation:
-            for key, value in zip(args_dict.keys(), args_dict.values()):
-                assert value, ec.missing_arg(args_dict["Operation"], key)
+            for key, value in zip(args_dict["Mandatory"].keys(), args_dict["Mandatory"].values()):
+                assert value, ec.missing_arg(args_dict["Mandatory"]["Operation"], key)
 
         # Create the .yaml stub
-        file = self._create_yaml_file(args_dict["Operation"], write_directory)
+        file = self._create_yaml_file(args_dict["Mandatory"]["Operation"], write_directory)
 
-        # Mandatory args:
-        file.write("# MANDATORY ARGS - IF ANY ARE NONE JOB WILL NOT RUN ###############################################"
-                   "#####################\n\n")
-        for key, value in zip(args_dict.keys(), args_dict.values()):
-            file.write(f"# {self._arg_descriptions[key]}\n")
+        # Write Mandatory args
+        self._write_header(file, "MANDATORY ARGS - IF ANY ARE NONE JOB WILL NOT RUN")
+        self._write_args(file, args_dict, "Mandatory")
+
+        # Write Optional args
+        self._write_header(file, "OPTIONAL ARGS - NOT STRICTLY REQUIRED TO RUN BUT ALTERS OPERATION")
+        self._write_args(file, args_dict, "Optional")
+
+        # Write require to run the system, but needed for this operation
+        self._write_header(file, "SYSTEM ARGS - WILL NOT BE USED FOR THIS OPERATION BUT REQUIRED TO EXIST IN FILE")
+        loaded_keys = list(args_dict["Mandatory"].keys()) + list(args_dict["Optional"].keys())
+        args_dict["System"] = {key: None for key in self.all_args if key not in loaded_keys}
+        self._write_args(file, args_dict, "System")
+        file.close()
+        print(f"Constructed file for {args_dict['Mandatory']['Operation']}")
+
+    def _make_working_dict(self, key):
+        """This will construct the working dict of args that the user needs to submit for a given operation"""
+        working_dict = {"Mandatory": self._get_operation_dict(self._yaml_parameters[f"{key}_M"]),
+                        "Optional": self._get_operation_dict(self._yaml_parameters[f"{key}_O"])}
+        working_dict["Mandatory"]["Operation"] = key
+        return working_dict
+
+    def _get_operation_dict(self, operation_keys):
+        """Isolate the keys from all operational args that we need for this operation"""
+        return {key: value for key, value in zip(self.all_args.keys(), self.all_args.values()) if key in operation_keys}
+
+    def _write_header(self, file, message):
+        """Write a header with a message and trailing # up to the line length"""
+        file.write(f"# {message} " + f"".join(["#" for _ in range(self.line_width - (len(message) + 3))]) + "\n\n")
+
+    def _write_args(self, file, args_dict, args_type):
+        """For a given sub type of args, write the value if set of null otherwise"""
+        for key, value in zip(args_dict[args_type].keys(), args_dict[args_type].values()):
+            self._write_description(file, self._arg_descriptions[key])
             if value:
                 file.write(f"{key}: {value}\n\n")
             else:
                 file.write(f"{key}: null\n\n")
 
-        # todo need to allow for option args
+        file.write("\n\n")
 
-        # Not Required for this job but will need to set via Input
-        file.write("# NOT REQUIRED ARGUMENTS ##########################################################################"
-                   "#####################\n")
-        file.write("# These arguments are not required for this job, but are required to exist as None within this "
-                   "file\n\n")
+    def _write_description(self, file, description_text):
+        """Some descriptions need to be wrapped"""
+        text_lines = textwrap.wrap(description_text, self.line_width - 2)
+        for line in text_lines:
+            file.write(f"# {line}\n")
 
-        for key in self.all_args:
-            if key not in args_dict.keys():
-                file.write(f"# {self._arg_descriptions[key]}\n")
-                file.write(f"{key}: null\n\n")
-
-        file.close()
-        print(f"Constructed file for {args_dict['Operation']}")
+    @staticmethod
+    def _create_yaml_file(operation, write_directory):
+        """
+        Create a number yaml file with a magic number for the current operation
+        """
+        path_to_file = Path(write_directory)
+        assert path_to_file.exists(), ec
+        file = open(Path(write_directory, f"{operation}.yaml"), "w")
+        file.write("# Generated by pyGeneticPipe/support/ArgMaker.py\n\n")
+        return file
 
     @property
     def operations(self):
@@ -71,26 +106,3 @@ class ArgMaker:
     def _arg_descriptions(self):
         """So we can replicate comments in write file"""
         return self._yaml_parameters["Arg_Descriptions"]
-
-    def _make_working_dict(self, key):
-        """This will construct the working dict of args that the user needs to submit for a given operation"""
-        working_dict = {"Mandatory": self._get_operation_dict(self._yaml_parameters[f"{key}_M"]),
-                        "Optional": self._get_operation_dict(self._yaml_parameters[f"{key}_O"])}
-        working_dict["Mandatory"]["Operation"] = key
-        return working_dict
-
-    def _get_operation_dict(self, operation_keys):
-        """Isolate the keys from all operational args that we need for this operation"""
-        return {key: value for key, value in zip(self.all_args.keys(), self.all_args.values()) if key in operation_keys}
-
-    @staticmethod
-    def _create_yaml_file(operation, write_directory):
-        """
-        Create a number yaml file with a magic number for the current operation
-        """
-        path_to_file = Path(write_directory)
-        assert path_to_file.exists(), ec
-        file = open(Path(write_directory, f"{operation}.yaml"), "w")
-        file.write("# 48656c6c73696e67\n")
-        file.write("# Generated by pyGeneticPipe/support/ArgMaker.py\n\n")
-        return file
