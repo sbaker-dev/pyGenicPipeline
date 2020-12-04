@@ -32,8 +32,9 @@ class LDHerit(Input):
         chi_square_lambda = np.mean(self.sample_size * sum_sq_beta / float(total_snps))
         gw_h2_ld_score_est = max(0.0001, (max(1.0, float(chi_square_lambda)) - 1.0) /
                                  (self.sample_size * (average_gw_ld_score / total_snps)))
-        config_dict["Genome"] = {"Avg_LD": average_gw_ld_score, "Heritability": gw_h2_ld_score_est, "Description":
-                                 "Genome-wide Statistics"}
+        config_dict["Genome"] = {f"{self.genome_key}_{self.avg_ld}": average_gw_ld_score,
+                                 f"{self.genome_key}_{self.herit}": gw_h2_ld_score_est,
+                                 "Genome_Description": "Genome-wide Statistics"}
 
         # Log information to terminal
         self._genome_dict["Lambda Inflation"] = round(float(chi_square_lambda), 7)
@@ -65,8 +66,8 @@ class LDHerit(Input):
             sum_sq_beta += np.sum(np.array(load_file.column_data[self.c_beta]) ** 2)
 
             # Store Values for config file
-            chromosome_values = {"Heritability": heritability, "Snp_Count": n_snps, "IID_Count": n_iid,
-                                 "Avg_LD": average_ld, "Description": f"Chromosome {chromosome}"}
+            chromosome_values = {self.herit: heritability, self.count_snp: n_snps, self.count_iid: n_iid,
+                                 self.avg_ld: average_ld, "Description": f"Chromosome {chromosome}"}
             config_dict[chromosome] = chromosome_values
         return cumulative_ld, sum_sq_beta, total_snps
 

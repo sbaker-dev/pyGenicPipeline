@@ -42,7 +42,7 @@ class Input:
         self.clean_headers, self._clean_dict = self._set_cleaned_headers()
 
         # Gibbs information
-        self.genome = self._set_genome()
+        self.genomic = self._set_genome()
         self.ld_radius = self.args["LD_Radius"]
         self.heritability_calculated = self.args["Heritability_Calculated"]
         self.gibbs_causal_fractions = self._set_causal_fractions()
@@ -404,13 +404,13 @@ class Input:
         """
         load_file = CsvObject(load_path, self.cleaned_types, set_columns=True)
 
-        chromo = load_file.column_data[self._clean_dict[self.chromosome]]
+        chromo = load_file.column_data[self.c_chromosome]
         bp_pos = load_file.column_data[self._clean_dict[self.bp_position]]
         snp_id = load_file.column_data[self._clean_dict[self.snp_id]]
         effect = load_file.column_data[self._clean_dict[self.effect_allele]]
         alt = load_file.column_data[self._clean_dict[self.alt_allele]]
         log = load_file.column_data[self._clean_dict[self.log_odds]]
-        beta = load_file.column_data[self._clean_dict[self.beta]]
+        beta = load_file.column_data[self.c_beta]
         freq = load_file.column_data[self._clean_dict[self.freq]]
 
         sm_variants = [Variant(ch, bp, sn, ef, al) for ch, bp, sn, ef, al in zip(chromo, bp_pos, snp_id, effect, alt)]
@@ -676,14 +676,24 @@ class Input:
         return "Normalised_Snps"
 
     @property
-    def snp_count(self):
+    def count_snp(self):
         """Key used for accessing the number of snps in headers, groups or other attributes"""
-        return "Number of Snps"
+        return "Snp_Count"
 
     @property
-    def iid_count(self):
+    def count_iid(self):
         """Key used for accessing the number of individuals in headers, groups or other attributes"""
-        return "Number of Individuals"
+        return "IID_Count"
+
+    @property
+    def avg_ld(self):
+        """Key used for accessing Average LD in headers, groups or other attributes"""
+        return "Avg_LD"
+
+    @property
+    def herit(self):
+        """Key used for accessing Heritability in headers, groups or other attributes"""
+        return "Heritability"
 
     @property
     def val_prefix(self):
@@ -712,13 +722,20 @@ class Input:
 
     @property
     def c_chromosome(self):
+        """Chromosome header index in Cleaned Data file"""
         return self._clean_dict[self.chromosome]
 
     @property
     def c_ld_score(self):
-        """LD_Score header index in Weights file"""
+        """LD_Score header index in Cleaned Data file"""
         return self._clean_dict[self.ld_scores]
 
     @property
     def c_beta(self):
+        """Beta header index in Cleaned Data file"""
         return self._clean_dict[self.beta]
+
+    @property
+    def genome_key(self):
+        """Key used for accessing Genome wide data in headers, groups or other attributes"""
+        return "Genome"
