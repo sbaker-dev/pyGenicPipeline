@@ -54,14 +54,14 @@ class ArgMaker:
         """Write a header with a message and trailing # up to the line length"""
         file.write(f"# {message} " + f"".join(["#" for _ in range(self.line_width - (len(message) + 3))]) + "\n\n")
 
-    def _write_args(self, file, args_dict, args_type):
+    def _write_args(self, file, args_dict, args_type, spacing=0):
         """For a given sub type of args, write the value if set of null otherwise"""
         for key, value in zip(args_dict[args_type].keys(), args_dict[args_type].values()):
             self._write_description(file, self._arg_descriptions[key])
             if value:
-                file.write(f"{key}: {value}\n\n")
+                file.write(f"{''.join([' ' for _ in range(spacing)])}" + f"{key}: {value}\n\n")
             else:
-                file.write(f"{key}: null\n\n")
+                file.write(f"{''.join([' ' for _ in range(spacing)])}" + f"{key}: null\n\n")
 
         file.write("\n\n")
 
