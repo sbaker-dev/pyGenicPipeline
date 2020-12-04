@@ -7,6 +7,8 @@ from scipy import stats
 import numpy as np
 import time
 
+import sys
+
 
 class Gibbs(Input):
     def __init__(self, args):
@@ -26,14 +28,17 @@ class Gibbs(Input):
         print(f"Calculated LD and chromosome heritability for chromosome {chromosome} in "
               f"{round(time.time() - self.start_time, 2)} Seconds")
 
-        # for variant_fraction in self.gibbs_causal_fractions:
-        #     self.start_time = time.time()
-        #
-        #     # Run the LDPred gibbs processor to calculate a beta value
-        #     beta = self.gibbs_processor(inf_betas, variant_fraction, sm_dict)
-        #
-        #
-        #     sum_sq_beta = np.sum(beta ** 2)
+        for variant_fraction in self.gibbs_causal_fractions:
+            self.start_time = time.time()
+
+            # Run the LDPred gibbs processor to calculate a beta value
+            beta = self.gibbs_processor(inf_betas, variant_fraction, sm_dict)
+
+            print(beta)
+
+            sum_sq_beta = np.sum(beta ** 2)
+
+            print(sum_sq_beta)
         #     if sum_sq_beta > self.gm[f"{self.genome_key}_{self.herit}"]:
         #         print(f"Warning: Sum Squared beta is much large than estimated hertiability suggesting a lack of "
         #               f"convergence of Gibbs\n"
@@ -43,10 +48,10 @@ class Gibbs(Input):
         #     print(sum_sq_beta)
         #     print(beta)
         #
-        #     effect_size = beta / sm_dict[f"{self.ref_prefix}_{self.stds}"].flatten()
-        #     print(effect_size)
-        #     # self._write_weights(sm_dict, effect_size, chromosome, variant_fraction, beta)
-        #     sys.exit()
+            effect_size = beta / sm_dict[f"{self.ref_prefix}_{self.stds}"].flatten()
+            print(effect_size)
+            # self._write_weights(sm_dict, effect_size, chromosome, variant_fraction, beta)
+            sys.exit()
 
         # Do the same for the infinitesimal model
         sm_dict[self.inf_dec] = inf_betas / sm_dict[f"{self.ref_prefix}_{self.stds}"].flatten()
@@ -81,33 +86,33 @@ class Gibbs(Input):
 
         return updated_betas
 
-    def gibbs_processor(self, snp_count, iid_count, start_betas, est_herit, variant_fraction, sm_dict):
+    def gibbs_processor(self, start_betas, variant_fraction, sm_dict):
         """LDPred Gibbs Sampler"""
         # Set random seed to stabilize results
         np.random.seed(self.gibbs_random_seed)
         currant_betas = np.copy(start_betas)
-        curr_post_means = np.zeros(snp_count)
-        avg_betas = np.zeros(snp_count)
-        iter_order = np.arange(snp_count)
+        curr_post_means = np.zeros(self.gm[self.count_snp])
+        avg_betas = np.zeros(self.gm[self.count_snp])
+        iter_order = np.arange(self.gm[self.count_snp])
 
-        const_dict = self._const_dict_constructor(est_herit, variant_fraction, iid_count, snp_count)
+        const_dict = self._const_dict_constructor(variant_fraction)
 
         for k in range(self.gibbs_iter):
             # calculate the chromosome heritability with the current betas
-            h2_est = max(0.00001, float(np.sum(currant_betas)))
+            h2_est = max(0.00001, float(np.sum(currant_betas ** 2)))
 
             # Set alpha for the shrink
-            alpha = self._set_alpha(est_herit, h2_est, iid_count)
+            alpha = self._set_alpha(self.gm[self.herit], h2_est)
 
-            rand_ps = np.random.random(snp_count)
-            rand_norms = stats.norm.rvs(0.0, 1, size=snp_count) * const_dict['rv_scalars']
+            rand_ps = np.random.random(self.gm[self.count_snp])
+            rand_norms = stats.norm.rvs(0.0, 1, size=self.gm[self.count_snp]) * const_dict['rv_scalars']
 
             for i, snp_i in enumerate(iter_order):
                 # Figure out what sample size and constants to use
                 cd = self._get_constants(snp_i, const_dict)
 
                 # Local (most recently updated) effect estimates
-                local_betas = self.local_values(currant_betas, snp_i, snp_count)
+                local_betas = self.local_values(currant_betas, snp_i, self.gm[self.count_snp])
                 local_betas[min(self.ld_radius, snp_i)] = 0.0
 
                 # Calculate the residual of beta hat from the dot product of the local LD matrix and local betas
@@ -115,7 +120,7 @@ class Gibbs(Input):
                 b2 = res_beta_hat_i ** 2
 
                 # Calculate the posterior mean p
-                postp = mc.posterior_mean(cd, b2, iid_count)
+                postp = mc.posterior_mean(cd, b2, self.sample_size)
 
                 curr_post_means[snp_i] = cd['hdmp_hdmpn'] * postp * res_beta_hat_i
 
@@ -135,25 +140,25 @@ class Gibbs(Input):
         # Averaging over the posterior means instead of samples.
         return avg_betas / float(self.gibbs_iter - self.gibbs_burn_in)
 
-    def _const_dict_constructor(self, chromosome_heritability, cp, iid_count, snp_count):
+    def _const_dict_constructor(self, variant_fraction):
         """A bunch of constants where constructed in ldpred for the gibbs processor which is duplicated here"""
-        causal_variants = snp_count * cp
-        herit_by_cv = (chromosome_heritability / causal_variants)
-        rv_scalars = np.zeros(snp_count)
+        causal_variants = self.gm[self.count_snp] * variant_fraction
+        herit_by_cv = (self.gm[self.herit] / causal_variants)
+        rv_scalars = np.zeros(self.gm[self.count_snp])
         const_dict = {'Mp': causal_variants, 'hdmp': herit_by_cv}
 
-        if iid_count is not None:
+        if self.sample_size is not None:
             # NOTE M = Number of snps and CP is the fraction of causal variants (CV)
-            hdmpn = herit_by_cv + 1.0 / iid_count
+            hdmpn = herit_by_cv + 1.0 / self.sample_size
             hdmp_hdmpn = (herit_by_cv / hdmpn)
-            c_const = (cp / np.sqrt(hdmpn))
-            d_const = (1.0 - cp) / (np.sqrt(1.0 / iid_count))
+            c_const = (variant_fraction / np.sqrt(hdmpn))
+            d_const = (1.0 - variant_fraction) / (np.sqrt(1.0 / self.sample_size))
 
             const_dict['hdmpn'] = hdmpn
             const_dict['hdmp_hdmpn'] = hdmp_hdmpn
             const_dict['c_const'] = c_const
             const_dict['d_const'] = d_const
-            rv_scalars[:] = self.gibbs_shrink * np.sqrt(hdmp_hdmpn * (1.0 / iid_count))
+            rv_scalars[:] = self.gibbs_shrink * np.sqrt(hdmp_hdmpn * (1.0 / self.sample_size))
 
         else:
             raise NotImplementedError("Case control should have been caught by now but if not it isn't implemented")
@@ -161,13 +166,13 @@ class Gibbs(Input):
         const_dict['rv_scalars'] = rv_scalars
         return const_dict
 
-    def _set_alpha(self, est_herit, h2_est, iid_count):
+    def _set_alpha(self, est_herit, h2_est):
         """
         This allows a forced alpha shrink if estimates are way off compared to heritability estimates via gibbs tight
          which may improve MCMC convergence
         """
         if self.gibbs_tight:
-            return min(1.0 - self.gibbs_zero_jump, 1.0 / h2_est, (est_herit + 1.0 / np.sqrt(iid_count)) / h2_est)
+            return min(1.0 - self.gibbs_zero_jump, 1.0 / h2_est, (est_herit + 1.0 / np.sqrt(self.sample_size)) / h2_est)
         else:
             return 1.0 - self.gibbs_zero_jump
 
