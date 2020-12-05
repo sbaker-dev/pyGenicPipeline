@@ -1,4 +1,4 @@
-from pyGeneticPipe.geneticParsers.variantObjects import BimVariant
+from pyGeneticPipe.geneticParsers.variantObjects import BimVariant, FamId
 from pyGeneticPipe.utils import error_codes as ec
 from pathlib import Path
 
@@ -7,6 +7,7 @@ class PlinkObject:
     def __init__(self, genetic_path):
         self.bed_file, self.bim_file, self.fam_file = self.validate_paths(genetic_path)
         self.bim_file = open(self.bim_file, "r")
+        self.fam_file = open(self.fam_file, "r")
 
     def construct_bim_index(self):
         """
@@ -21,6 +22,7 @@ class PlinkObject:
             cumulative_seek += len(line)
 
         self.bim_file.close()
+        self.fam_file.close()
         return indexer
 
     def get_variant(self, seek, as_variant=False):
@@ -37,6 +39,18 @@ class PlinkObject:
             return BimVariant(chromosome, variant_id, morgan_pos, bp_position, a1, a2).to_variant()
         else:
             return BimVariant(chromosome, variant_id, morgan_pos, bp_position, a1, a2)
+
+    def get_family_identifiers(self):
+        """
+        This will iterate through the fam file and extract the information
+        """
+        fam_data = []
+        for line in self.fam_file:
+            fid, iid, i_fid, i_mid, sex, phenotype = line.split()
+            fam_data.append(FamId(fid, iid, i_fid, i_mid, sex, phenotype))
+
+        self.fam_file.close()
+        return fam_data
 
     @staticmethod
     def validate_paths(genetic_path):
