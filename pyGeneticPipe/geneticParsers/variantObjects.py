@@ -30,7 +30,7 @@ class Variant:
         else:
             return self.a1, self.a2
 
-    def bgen_variant_id(self):
+    def bgen_snp_id(self):
         """Bgen for pysnptools requires the variant and rs-id but in this case we just submit the same for both"""
         return f"{self.snp_id},{self.snp_id}"
 

@@ -93,10 +93,10 @@ class FilterSnps(Input):
         :return: list of snp names
         """
         if self.gen_type == ".bed":
-            return [variant.variant_id for variant in sm_dict[self.sm_variants]]
+            return [variant.snp_id for variant in sm_dict[self.sm_variants]]
         elif self.gen_type == ".bgen":
             print("Bgen load type, so need to restructure return type ... will take a bit longer longer!")
-            return [variant.bgen_variant_id() for variant in sm_dict[self.sm_variants]]
+            return [variant.bgen_snp_id() for variant in sm_dict[self.sm_variants]]
         else:
             raise Exception(f"Critical Error: Unknown load type {self.gen_type} found in _isolate_dosage")
 
