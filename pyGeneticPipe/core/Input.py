@@ -28,6 +28,7 @@ class Input:
         self.lr_ld_path = self._load_local_data("Filter_Long_Range_LD")
         self.gen_type = self.args["Load_Type"]
         self.validation_size = self._set_validation_size(self.args["Validation_Size"])
+        self.population_percent = 1
 
         # Set summary and filter statistics information if required
         self._make_sub_directory("Cleaned")
@@ -301,7 +302,16 @@ class Input:
         :return: Integer of the number of samples required in the validation sample
         :rtype: int
         """
-        return int(full_sample_size * self.validation_size)
+        return int((full_sample_size * self.population_percent) * self.validation_size)
+
+    def gen_reference(self, load_path):
+        """Get the pysnptools reference via the load type"""
+        if self.gen_type == ".bed":
+            return Bed(load_path, count_A1=True)
+        elif self.gen_type == ".bgen":
+            return Bgen(load_path)
+        else:
+            raise Exception("Unknown load type set")
 
     def construct_validation(self, load_path):
         """
@@ -316,21 +326,11 @@ class Input:
 
         # todo Before splitting in to validation and core, allow a sample size modifier to remove people (ie for ukb)
         # Set validation and core sets of sids based on the load type
-        if self.gen_type == ".bed":
-            validation_size = self._set_validation_sample_size(Bed(load_path, count_A1=True).iid_count)
-            validation = Bed(load_path, count_A1=True)[:validation_size, :]
-            core = Bed(load_path, count_A1=True)[validation_size:, :]
-            return validation, core
+        validation_size = self._set_validation_sample_size(self.gen_reference(load_path).iid_count)
+        validation = self.gen_reference(load_path)[:validation_size, :]
+        core = self.gen_reference(load_path)[validation_size:, :]
 
-        elif self.gen_type == ".bgen":
-            # Bgen files store [variant id, rsid], we just want the rsid hence the [1]; see https://bit.ly/2J0C1kC
-            validation_size = self._set_validation_sample_size(Bgen(load_path).iid_count)
-            validation = Bgen(load_path)[:validation_size, :]
-            core = Bgen(load_path)[validation_size:, :]
-            return validation, core
-
-        else:
-            raise Exception("Unknown load type set")
+        return validation, core
 
     def _set_effect_type(self, effect_type):
         """

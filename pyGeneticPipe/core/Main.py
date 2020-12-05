@@ -114,8 +114,8 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Input):
         chromosome = 1
         self.gm = {**self.gm[chromosome], **self.gm[self.genome_key]}
         load_path = str(self.select_file_on_chromosome(chromosome, self.gen_directory, self.gen_type))
-        core = Bgen(load_path)
-        validation = Bgen(load_path)
+        core = self.gen_reference(load_path)
+        validation = self.gen_reference(load_path)
 
         # Then we need to take these samples to construct valid snps, these snps are extract for this chromosome from
         # our summary stats, and then cleaned for possible errors.
@@ -144,3 +144,8 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Input):
         print(sm_dict[self.gibbs][self.gibbs_causal_fractions[0]])
         print(np.sum(sm_dict[self.gibbs][self.gibbs_causal_fractions[0]]))
         # 0.21582699762327068 ish
+
+        print(sm_dict.keys())
+
+
+        print()

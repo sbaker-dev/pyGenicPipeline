@@ -12,6 +12,10 @@ class Gibbs(Input):
         self.start_time = 0
 
     def construct_gibbs_weights(self, sm_dict, chromosome):
+        """
+        THis will construct weights for both the infinitesimal and variant fraction models, with the latter being run
+        via a Gibbs processor. Both methods from LDPred
+        """
 
         # Check mandatory args are set
         self._assert_construct_gibbs_weights()
