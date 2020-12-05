@@ -67,7 +67,7 @@ class BimVariant:
 
 
 class FamId:
-    __slots__ = ["fid", "iid", "father_id", "mother_id", "sex", "phenotype"]
+    __slots__ = ["fid", "iid", "f_id", "m_id", "sex", "phenotype"]
 
     def __init__(self, fid, iid, father_id, mother_id, sex, phenotype):
         """
@@ -75,14 +75,18 @@ class FamId:
         """
         self.fid = fid
         self.iid = iid
-        self.father_id = father_id
-        self.mother_id = mother_id
+        self.f_id = father_id
+        self.m_id = mother_id
         self.sex = sex
         self.phenotype = phenotype
 
     def __repr__(self):
         """Add some basic print information"""
         return f"{self.iid}: Sex - {self.sex}"
+
+    def __getitem__(self, item):
+        """Get an item from Variant"""
+        return getattr(self, item)
 
     @property
     def valid(self):
