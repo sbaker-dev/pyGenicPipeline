@@ -80,6 +80,10 @@ class FamId:
         self.sex = sex
         self.phenotype = phenotype
 
+    def __repr__(self):
+        """Add some basic print information"""
+        return f"{self.iid}: Sex - {self.sex}"
+
     @property
     def valid(self):
         """If we have valid information for this ID"""
