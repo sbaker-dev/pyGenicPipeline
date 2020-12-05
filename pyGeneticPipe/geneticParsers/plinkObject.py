@@ -8,7 +8,7 @@ class PlinkObject:
         self.bed_file, self.bim_file, self.fam_file = self.validate_paths(genetic_path)
         self.bim_file = open(self.bim_file, "r")
 
-    def construct_index(self):
+    def construct_bim_index(self):
         """
         Bim files need to be index via seek, so we can extract a given snp loci without having to store all of this of
         then in memory

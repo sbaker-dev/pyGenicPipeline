@@ -1,6 +1,4 @@
 from pyGeneticPipe.geneticParsers.variantObjects import Variant, Nucleotide
-from pyGeneticPipe.geneticParsers.plinkObject import PlinkObject
-from pyGeneticPipe.geneticParsers.bgenObject import BgenObject
 from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils import misc as mc
 from pyGeneticPipe.core.Input import Input
@@ -65,7 +63,7 @@ class SummaryCleaner(Input):
         summary line is within our validation and core sample sets of snps. If this is the case, then we will add the
         line to sm_line as well as a Variant object of the current snp valid snp to sm_variants
         """
-        validation_snps, core_snps, indexer = self._load_variants(load_path, validation, core)
+        validation_snps, core_snps, indexer = self.load_variants(load_path, validation, core)
 
         sm_variants = []
         sm_line = []
@@ -338,41 +336,6 @@ class SummaryCleaner(Input):
             infos = np.empty(len(sm_line))
             infos.fill(-1)
         return infos
-
-    def _load_variants(self, load_path, validation, core):
-        """
-        Load variants, for .bgen or plink files, as a set of snps that exist within the current chromosome. Uses the
-        validation percentage to construct a validation group, and returns the set of snps for each group. If hap_map_3
-        is enabled, it will strip out snps not in hap_map_3.
-
-        We will also need a way to index out the variant information, so we set the indexer according to the load type
-
-        :param load_path: Current Chromosome file
-        :return: Set of the validation and core set
-        """
-
-        #  Set validation and core sets of sids based on the load type
-        if self.gen_type == ".bed":
-            validation = validation.sid
-            core = core.sid
-            indexer = [PlinkObject(load_path).construct_index(), PlinkObject(load_path)]
-
-        elif self.gen_type == ".bgen":
-            # Bgen files store [variant id, rsid], we just want the rsid hence the [1]; see https://bit.ly/2J0C1kC
-            validation = [snp.split(",")[1] for snp in validation.sid]
-            core = [snp.split(",")[1] for snp in core.sid]
-            indexer = [BgenObject(load_path).index_of_snps(), BgenObject(load_path)]
-
-        else:
-            raise Exception("Unknown load type set")
-
-        # If we only want the hap_map_3 snps then check each snp against the set of hap_map_3
-        if self.hap_map_3:
-            hap_map_3_snps = self.load_hap_map_3()
-            validation = [snp for snp in validation if snp in hap_map_3_snps]
-            core = [snp for snp in core if snp in hap_map_3_snps]
-
-        return set(validation), set(core), indexer
 
     def _assert_clean_summary_statistics(self):
         """
