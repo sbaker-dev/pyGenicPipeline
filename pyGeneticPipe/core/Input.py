@@ -783,4 +783,35 @@ class Input:
 
     @property
     def gibbs(self):
+        """Key used for accessing Gibbs data in headers, groups or other attributes"""
         return "Gibbs"
+
+    @property
+    def fam(self):
+        """Key used for accessing the FamID Variants in headers, groups or other attributes"""
+        return "Family"
+
+    @property
+    def iid(self):
+        """Key used for accessing the Individual Identifiers in headers, groups or other attributes"""
+        return "IID"
+
+    @property
+    def fid(self):
+        """Key used for accessing the Family Identifiers in headers, groups or other attributes"""
+        return "FID"
+
+    @property
+    def f_id(self):
+        """Key used for accessing the Fathers Identifiers in headers, groups or other attributes"""
+        return "F_ID"
+
+    @property
+    def m_id(self):
+        """Key used for accessing the Mothers Identifiers in headers, groups or other attributes"""
+        return "F_ID"
+
+    @property
+    def sex(self):
+        """Key used for accessing the Sex in headers, groups or other attributes"""
+        return "Sex"

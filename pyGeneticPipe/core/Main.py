@@ -5,14 +5,14 @@ from pyGeneticPipe.utils.misc import terminal_time
 from pyGeneticPipe.pgs.LDHerit import LDHerit
 from pyGeneticPipe.core.Input import Input
 from pyGeneticPipe.pgs.Gibbs import Gibbs
-from pysnptools.distreader import Bgen
+from pyGeneticPipe.pgs.Score import Score
 from csvObject import write_csv
 from colorama import init, Fore
 import numpy as np
 import time
 
 
-class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Input):
+class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input):
     def __init__(self, args):
         """
         This Class inherits all other classes that can be used, and then execute the job via getattr
@@ -145,7 +145,4 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Input):
         print(np.sum(sm_dict[self.gibbs][self.gibbs_causal_fractions[0]]))
         # 0.21582699762327068 ish
 
-        print(sm_dict.keys())
-
-
-        print()
+        self.construct_pgs(sm_dict, chromosome)
