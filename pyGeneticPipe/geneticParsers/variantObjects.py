@@ -66,6 +66,29 @@ class BimVariant:
         return Variant(self.chromosome, self.bp_position, self.snp_id, self.a1, self.a2)
 
 
+class FamId:
+    __slots__ = ["fid", "iid", "father_id", "mother_id", "sex", "phenotype"]
+
+    def __init__(self, fid, iid, father_id, mother_id, sex, phenotype):
+        """
+        Holds information About family Identifiers
+        """
+        self.fid = fid
+        self.iid = iid
+        self.father_id = father_id
+        self.mother_id = mother_id
+        self.sex = sex
+        self.phenotype = phenotype
+
+    @property
+    def valid(self):
+        """If we have valid information for this ID"""
+        if (self.phenotype == -9) or (self.sex == 0):
+            return False
+        else:
+            return True
+
+
 class Nucleotide:
     def __init__(self, a1, a2):
         """
