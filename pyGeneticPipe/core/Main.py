@@ -96,7 +96,7 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input)
         _, core = self.construct_validation(load_path)
 
         # Create the normalised snps
-        sm_dict = self.filter_snps(self.ref_prefix, core, sm_dict, chromosome)
+        sm_dict = self.filter_snps(self.core_prefix, core, sm_dict, chromosome)
 
         # Compute the ld scores and dict
         self.compute_ld_scores(sm_dict, self.gm[self.count_snp], self.gm[self.count_iid], ld_dict=True)
@@ -114,19 +114,21 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input)
         chromosome = 1
         self.gm = {**self.gm[chromosome], **self.gm[self.genome_key]}
         load_path = str(self.select_file_on_chromosome(chromosome, self.gen_directory, self.gen_type))
-        core = self.gen_reference(load_path)
+        ref = self.gen_reference(load_path)
         validation = self.gen_reference(load_path)
+        core = self.gen_reference(load_path)
 
         # Then we need to take these samples to construct valid snps, these snps are extract for this chromosome from
         # our summary stats, and then cleaned for possible errors.
-        sm_dict = self.clean_summary_statistics(chromosome, load_path, validation, core)
+        sm_dict = self.clean_summary_statistics(chromosome, load_path, validation, ref)
 
         # Filter our genetic types for snps, such as those that have undesirable frequencies.
         # sm_dict = self.filter_snps(self.val_prefix, validation, sm_dict, chromosome)
-        sm_dict = self.filter_snps(self.ref_prefix, core, sm_dict, chromosome)
+        sm_dict = self.filter_snps(self.ref_prefix, ref, sm_dict, chromosome)
+        sm_dict = self.filter_snps(self.core_prefix, core, sm_dict, chromosome)
 
         # Compute the chromosome specific ld scores and heritability
-        self.compute_ld_scores(sm_dict, len(sm_dict[self.sm_variants]), core.iid_count, ld_dict=True)
+        self.compute_ld_scores(sm_dict, len(sm_dict[self.sm_variants]), ref.iid_count, ld_dict=True)
 
         # Mirror test environment gm
         self.gm[self.count_snp] = 5693
@@ -134,15 +136,18 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input)
         self.gm[self.herit] = 0.04553305821357676
         self.gibbs_causal_fractions = [1]
 
+        # This is the start of scores
+
         # Construct the Weight
         self.construct_gibbs_weights(sm_dict, chromosome)
 
+        # 0.11157818410953191 ish
         print(sm_dict[self.inf_dec])
         print(np.sum(sm_dict[self.inf_dec]))
-        # 0.11157818410953191 ish
 
+        # 0.21582699762327068 ish
         print(sm_dict[self.gibbs][self.gibbs_causal_fractions[0]])
         print(np.sum(sm_dict[self.gibbs][self.gibbs_causal_fractions[0]]))
-        # 0.21582699762327068 ish
 
-        self.construct_pgs(sm_dict, chromosome)
+        # Construct the Poly-genetic Scores
+        self.construct_pgs(sm_dict, core, load_path)

@@ -742,6 +742,11 @@ class Input:
         return "REF"
 
     @property
+    def core_prefix(self):
+        """Key used for accessing the Whole genotype data in headers, groups or other attributes"""
+        return "CORE"
+
+    @property
     def ld_scores(self):
         """Key used for accessing LD_Scores in headers, groups or other attributes"""
         return "LD_Scores"
@@ -815,3 +820,7 @@ class Input:
     def sex(self):
         """Key used for accessing the Sex in headers, groups or other attributes"""
         return "Sex"
+
+    @property
+    def pc(self):
+        return "PC"
