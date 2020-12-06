@@ -345,6 +345,47 @@ class Input:
         else:
             return None
 
+    def isolate_raw_snps(self, gen_file, sm_dict):
+        """
+        This will isolate the raw snps for a given bed or bgen file
+
+        :param gen_file: Genetic file you wish to load from
+        :param sm_dict: dict of clean information
+        :return: raw snps
+        """
+        ordered_common = gen_file[:, gen_file.sid_to_index(self._extract_variant_name(sm_dict))].read().val
+
+        # bed returns 2, 1, 0 rather than 0, 1, 2 although it says its 0, 1, 2; so this inverts it
+        if self.gen_type == ".bed":
+            return np.array([abs(snp - 2) for snp in ordered_common.T])
+
+        # We have a [1, 0, 0], [0, 1, 0], [0, 0, 1] array return for 0, 1, 2 respectively. So if we multiple the arrays
+        # by their index position and then sum them we get [0, 1, 2]
+        elif self.gen_type == ".bgen":
+            return sum(np.array([snp * i for i, snp in enumerate(ordered_common.T)]))
+
+        else:
+            raise Exception(f"Critical Error: Unknown load type {self.gen_type} found in _isolate_dosage")
+
+    def _extract_variant_name(self, sm_dict):
+        """
+        Different file types have different naming standards.
+
+        .bed: ["rs123", "rs124", ... "rsN"]
+        .bgen: ["rs123,rs123", "rs124,rs124", ... "rsN,rsN"]
+
+        This will standardise the names to be a list of type equivalent to bed
+        :param sm_dict: dict of clean information
+        :return: list of snp names
+        """
+        if self.gen_type == ".bed":
+            return [variant.snp_id for variant in sm_dict[self.sm_variants]]
+        elif self.gen_type == ".bgen":
+            print("Bgen load type, so need to restructure return type ... will take a bit longer longer!")
+            return [variant.bgen_snp_id() for variant in sm_dict[self.sm_variants]]
+        else:
+            raise Exception(f"Critical Error: Unknown load type {self.gen_type} found in _isolate_dosage")
+
     def _set_z_scores(self, set_z_scores):
         """
         If the user wants to compute z scores, then standard_errors most be set but otherwise it isn't a mandatory
@@ -740,11 +781,6 @@ class Input:
     def ref_prefix(self):
         """Key used for accessing the reference genotype data in headers, groups or other attributes"""
         return "REF"
-
-    @property
-    def core_prefix(self):
-        """Key used for accessing the Whole genotype data in headers, groups or other attributes"""
-        return "CORE"
 
     @property
     def ld_scores(self):

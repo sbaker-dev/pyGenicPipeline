@@ -19,7 +19,10 @@ class Score(Input):
         # Create a list of length number of individuals
         individual_prs = np.zeros(len(sc_dict[self.iid]))
 
-        print(individual_prs.shape)
+        # Raw snps
+        raw_snps = self.isolate_raw_snps(core, sm_dict)
+
+        print(raw_snps[0])
 
         # todo multiple the 'beta' by the raw snp [(0, 1, 2) * -1]
 

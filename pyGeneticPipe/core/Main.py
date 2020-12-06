@@ -125,7 +125,6 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input)
         # Filter our genetic types for snps, such as those that have undesirable frequencies.
         # sm_dict = self.filter_snps(self.val_prefix, validation, sm_dict, chromosome)
         sm_dict = self.filter_snps(self.ref_prefix, ref, sm_dict, chromosome)
-        sm_dict = self.filter_snps(self.core_prefix, core, sm_dict, chromosome)
 
         # Compute the chromosome specific ld scores and heritability
         self.compute_ld_scores(sm_dict, len(sm_dict[self.sm_variants]), ref.iid_count, ld_dict=True)

@@ -25,7 +25,7 @@ class FilterSnps(Input):
         print(f"\nStarting the filtering for {gen_type}")
 
         # Load the raw snps from the .bed or .bgen file and use it to isolate statistical information
-        raw_snps = self._isolate_raw_snps(gen_file, sm_dict)
+        raw_snps = self.isolate_raw_snps(gen_file, sm_dict)
         sm_dict[f"{gen_type}_{self.mean}"] = np.mean(raw_snps, 1, dtype='float32')
         sm_dict[f"{gen_type}_{self.stds}"] = np.std(raw_snps, 1, dtype='float32')
         sm_dict[f"{gen_type}_{self.freq}"] = np.sum(raw_snps, 1, dtype='float32') / (2 * float(gen_file.iid_count))
@@ -58,47 +58,6 @@ class FilterSnps(Input):
         t1 = mc.error_dict_to_terminal(self._filter_error_dict)
         print(f"Cleaned summary stats for Chromosome {chromosome} in {round(t1 - t0, 2)} Seconds\n")
         return sm_dict
-
-    def _isolate_raw_snps(self, gen_file, sm_dict):
-        """
-        This will isolate the raw snps for a given bed or bgen file
-
-        :param gen_file: Genetic file you wish to load from
-        :param sm_dict: dict of clean information
-        :return: raw snps
-        """
-        ordered_common = gen_file[:, gen_file.sid_to_index(self._extract_variant_name(sm_dict))].read().val
-
-        # bed returns 2, 1, 0 rather than 0, 1, 2 although it says its 0, 1, 2; so this inverts it
-        if self.gen_type == ".bed":
-            return np.array([abs(snp - 2) for snp in ordered_common.T])
-
-        # We have a [1, 0, 0], [0, 1, 0], [0, 0, 1] array return for 0, 1, 2 respectively. So if we multiple the arrays
-        # by their index position and then sum them we get [0, 1, 2]
-        elif self.gen_type == ".bgen":
-            return sum(np.array([snp * i for i, snp in enumerate(ordered_common.T)]))
-
-        else:
-            raise Exception(f"Critical Error: Unknown load type {self.gen_type} found in _isolate_dosage")
-
-    def _extract_variant_name(self, sm_dict):
-        """
-        Different file types have different naming standards.
-
-        .bed: ["rs123", "rs124", ... "rsN"]
-        .bgen: ["rs123,rs123", "rs124,rs124", ... "rsN,rsN"]
-
-        This will standardise the names to be a list of type equivalent to bed
-        :param sm_dict: dict of clean information
-        :return: list of snp names
-        """
-        if self.gen_type == ".bed":
-            return [variant.snp_id for variant in sm_dict[self.sm_variants]]
-        elif self.gen_type == ".bgen":
-            print("Bgen load type, so need to restructure return type ... will take a bit longer longer!")
-            return [variant.bgen_snp_id() for variant in sm_dict[self.sm_variants]]
-        else:
-            raise Exception(f"Critical Error: Unknown load type {self.gen_type} found in _isolate_dosage")
 
     def _summary_frequencies(self, sm_dict, gen_type):
         """
