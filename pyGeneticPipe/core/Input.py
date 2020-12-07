@@ -59,7 +59,8 @@ class Input:
         self.gibbs_headers, self._gibbs_header_dict = self._set_gibbs_headers()
 
         # Score information
-        self.covariates = self._validate_path(self.args["Covariates"])
+        self.phenotype_file = self._validate_path(self.args["Phenotype"])
+        self.covariates_file = self._validate_path(self.args["Covariates"])
 
         if (self.sm_case_freq is not None) or (self.sm_control_n is not None):
             raise NotImplementedError("Psychiatric Genomics Consortium Summary stats are untested and unfinished!")
@@ -860,3 +861,11 @@ class Input:
     @property
     def pc(self):
         return "PC"
+
+    @property
+    def prs(self):
+        return "PRS"
+
+    @property
+    def phenotype(self):
+        return "Phenotype"
