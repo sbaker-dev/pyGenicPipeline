@@ -57,6 +57,7 @@ class Input:
         self.gibbs_random_seed = 42
         self.gibbs_tight = None
         self.gibbs_headers, self._gibbs_header_dict = self._set_gibbs_headers()
+        self.gibbs_breaker = True
 
         # Score information
         self._make_sub_directory("Chromosome_Scores")

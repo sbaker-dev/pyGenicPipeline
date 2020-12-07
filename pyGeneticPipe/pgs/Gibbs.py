@@ -24,24 +24,31 @@ class Gibbs(Input):
         # Update the betas via infinitesimal shrinkage using ld information to use as the start value for the variant
         # fraction method used within Gibbs
         inf_betas = self._infinitesimal_betas(sm_dict)
-        print(f"Calculated LD and chromosome heritability for chromosome {chromosome} in "
-              f"{round(time.time() - self.start_time, 2)} Seconds")
+        print(f"Calculated infinitesimal for chromosome {chromosome} in {round(time.time() - self.start_time, 2)}"
+              f" Seconds\n")
 
         for variant_fraction in self.gibbs_causal_fractions:
             self.start_time = time.time()
 
             # Run the LDPred gibbs processor to calculate a beta value
             beta = self.gibbs_processor(inf_betas, variant_fraction, sm_dict)
+
+            # Use the genome wide heritability to validate our sum_sq_betas, if we don't have enough causal variants at
+            # this level we might end up with a lack of convergence
             sum_sq_beta = np.sum(beta ** 2)
             if sum_sq_beta > self.gm[f"{self.genome_key}_{self.herit}"]:
-                print(f"Warning: Sum Squared beta is much large than estimated heritability suggesting a lack of "
-                      f"convergence of Gibbs\n"
-                      f"{sum_sq_beta} > {self.gm[f'{self.genome_key}_{self.herit}']}")
+                ec.gibbs_convergence(variant_fraction, self.gm[self.count_snp], sum_sq_beta,
+                                     self.gm[f'{self.genome_key}_{self.herit}'])
+
+                # If True do not save this estimate and stop processing all future estimates, else save regardless
+                if self.gibbs_breaker:
+                    print("Gibbs_Breaker is turned on, so stopping")
+                    break
 
             # Compute the effect size then write to file
             sm_dict[f"{self.gibbs}_{variant_fraction}"] = beta / sm_dict[f"{self.ref_prefix}_{self.stds}"].flatten()
             print(f"Construct weights file for Chromosome {chromosome} variant fraction of {variant_fraction} in "
-                  f"{round(time.time() - self.start_time, 2)} Seconds")
+                  f"{round(time.time() - self.start_time, 2)} Seconds\n")
 
         # Do the same for the infinitesimal model
         sm_dict[self.inf_dec] = inf_betas / sm_dict[f"{self.ref_prefix}_{self.stds}"].flatten()

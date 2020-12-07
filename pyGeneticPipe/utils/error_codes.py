@@ -147,6 +147,12 @@ def heritability_to_large():
            "heritability_calculated if you wish to override computed heritability"
 
 
+def gibbs_convergence(variant_fraction, snp_count, sum_sq_beta, genome_herit):
+    print(f"Warning: Sum Squared beta is much large than estimated heritability suggesting a lack of "
+          f"convergence of Gibbs.\nCasual Variants used at Variant Fraction {variant_fraction}: "
+          f"{variant_fraction * snp_count}\nSum Squared Beta > Genome Heritability: {sum_sq_beta} > {genome_herit}")
+
+
 # bed file codes
 def bed_magic_violation(file_name, magic):
     return f"INVALID BED FILE for file at path: {file_name}\n" \
