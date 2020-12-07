@@ -58,18 +58,18 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input)
         # Load the validation and core samples, as well as the indexer
         start_time = time.time()
         load_path = str(self.select_file_on_chromosome(chromosome, self.gen_directory, self.gen_type))
-        validation, core = self.construct_validation(load_path)
+        validation, ref = self.construct_validation(load_path)
 
         # Then we need to take these samples to construct valid snps, these snps are extract for this chromosome from
         # our summary stats, and then cleaned for possible errors.
-        sm_dict = self.clean_summary_statistics(chromosome, load_path, validation, core)
+        sm_dict = self.clean_summary_statistics(chromosome, load_path, validation, ref)
 
         # Filter our genetic types for snps, such as those that have undesirable frequencies.
         sm_dict = self.filter_snps(self.val_prefix, validation, sm_dict, chromosome)
-        sm_dict = self.filter_snps(self.ref_prefix, core, sm_dict, chromosome)
+        sm_dict = self.filter_snps(self.ref_prefix, ref, sm_dict, chromosome)
 
         # Compute the chromosome specific ld scores and heritability
-        self.compute_ld_scores(sm_dict, len(sm_dict[self.sm_variants]), core.iid_count)
+        self.compute_ld_scores(sm_dict, len(sm_dict[self.sm_variants]), ref.iid_count)
 
         # Construct rows to right out
         rows_out = []
@@ -91,17 +91,21 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input)
         load_path = self.select_file_on_chromosome(chromosome, self.clean_directory, ".csv")
         sm_dict = self.sm_dict_from_csv(load_path)
 
-        # Load the genetic core
+        # Load the genetic reference as was in the first stage
         load_path = self.select_file_on_chromosome(chromosome, self.gen_directory, self.gen_type)
-        _, core = self.construct_validation(load_path)
+        _, ref = self.construct_validation(load_path)
 
         # Create the normalised snps
-        sm_dict = self.filter_snps(self.core_prefix, core, sm_dict, chromosome)
+        sm_dict = self.filter_snps(self.ref_prefix, ref, sm_dict, chromosome)
 
         # Compute the ld scores and dict
         self.compute_ld_scores(sm_dict, self.gm[self.count_snp], self.gm[self.count_iid], ld_dict=True)
 
+        # Construct the weighted betas for each snp for use in construction of scores
         self.construct_gibbs_weights(sm_dict, chromosome)
+
+        # Construct the Poly-genetic Scores
+        self.construct_chromosome_pgs(sm_dict, load_path)
 
         print(sm_dict.keys())
 
@@ -116,7 +120,6 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input)
         load_path = str(self.select_file_on_chromosome(chromosome, self.gen_directory, self.gen_type))
         ref = self.gen_reference(load_path)
         validation = self.gen_reference(load_path)
-        core = self.gen_reference(load_path)
 
         # Then we need to take these samples to construct valid snps, these snps are extract for this chromosome from
         # our summary stats, and then cleaned for possible errors.
@@ -136,7 +139,6 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input)
         self.gibbs_causal_fractions = [1]
 
         # This is the start of scores
-
         # Construct the Weight
         self.construct_gibbs_weights(sm_dict, chromosome)
 
@@ -149,4 +151,4 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input)
         print(np.sum(sm_dict[f"{self.gibbs}_{self.gibbs_causal_fractions[0]}"]))
 
         # Construct the Poly-genetic Scores
-        self.construct_chromosome_pgs(sm_dict, core, load_path)
+        self.construct_chromosome_pgs(sm_dict, load_path)

@@ -324,16 +324,16 @@ class Input:
         core set
 
         :param load_path: Path to the relevant load file
-        :return: The validation and core sample class holders
+        :return: The validation and ref sample class holders
         """
 
         # todo Before splitting in to validation and core, allow a sample size modifier to remove people (ie for ukb)
         # Set validation and core sets of sids based on the load type
         validation_size = self._set_validation_sample_size(self.gen_reference(load_path).iid_count)
         validation = self.gen_reference(load_path)[:validation_size, :]
-        core = self.gen_reference(load_path)[validation_size:, :]
+        ref = self.gen_reference(load_path)[validation_size:, :]
 
-        return validation, core
+        return validation, ref
 
     def _set_effect_type(self, effect_type):
         """
@@ -404,7 +404,7 @@ class Input:
         else:
             return None
 
-    def load_variants(self, load_path, validation, core):
+    def load_variants(self, load_path, validation, ref):
         """
         Load variants, for .bgen or plink files, as a set of snps that exist within the current chromosome. Uses the
         validation percentage to construct a validation group, and returns the set of snps for each group. If hap_map_3
@@ -418,13 +418,13 @@ class Input:
         #  Set validation and core sets of sids based on the load type
         if self.gen_type == ".bed":
             validation = validation.sid
-            core = core.sid
+            ref = ref.sid
             indexer = [PlinkObject(load_path).construct_bim_index(), PlinkObject(load_path)]
 
         elif self.gen_type == ".bgen":
             # Bgen files store [variant id, rsid], we just want the rsid hence the [1]; see https://bit.ly/2J0C1kC
             validation = [snp.split(",")[1] for snp in validation.sid]
-            core = [snp.split(",")[1] for snp in core.sid]
+            ref = [snp.split(",")[1] for snp in ref.sid]
             indexer = [BgenObject(load_path).index_of_snps(), BgenObject(load_path)]
 
         else:
@@ -434,9 +434,9 @@ class Input:
         if self.hap_map_3:
             hap_map_3_snps = self.load_hap_map_3()
             validation = [snp for snp in validation if snp in hap_map_3_snps]
-            core = [snp for snp in core if snp in hap_map_3_snps]
+            ref = [snp for snp in ref if snp in hap_map_3_snps]
 
-        return set(validation), set(core), indexer
+        return set(validation), set(ref), indexer
 
     def load_hap_map_3(self):
         """

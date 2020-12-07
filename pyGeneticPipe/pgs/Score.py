@@ -13,7 +13,7 @@ class Score(Input):
 
         self._score_error_dict = {"Missing Phenotype": 0, "Miss Matched Sex": 0}
 
-    def construct_chromosome_pgs(self, sm_dict, core, load_path):
+    def construct_chromosome_pgs(self, sm_dict, load_path):
         """
         This will construct the pgs from the weights construct with the Gibbs, the infinitesimal or gibbs estimated
         outcomes.
@@ -21,6 +21,9 @@ class Score(Input):
 
         # Validation we have the necessary information for the scores
         self._assert_construct_pgs()
+
+        # Load the reference to the full sample of ID's
+        core = self.gen_reference(load_path)
 
         # Construct a dict of arrays of our ID's
         ph_dict = self._genetic_phenotypes(core, load_path)

@@ -19,7 +19,7 @@ class SummaryCleaner(Input):
                                 "Ambiguous_SNP": 0, "Non_Allowed_Allele": 0, "Flipped": 0, "Non_Matching": 0}
         self._summary_last_position = 0
 
-    def clean_summary_statistics(self, chromosome, load_path, validation, core):
+    def clean_summary_statistics(self, chromosome, load_path, validation, ref):
         """
         This will take the summary statistics and access the validatable snps, found by cross referencing the genetic
         validation and core samples, and clean them of possible errors. It then returns a ordered on base pair position
@@ -31,7 +31,7 @@ class SummaryCleaner(Input):
 
         # Clean the summary lines to only include validatable snps from our genetic samples that exit in this chromosome
         core_snps, sm_line, sm_variants, validation_snps = self._valid_snps_lines_and_variants(
-            chromosome, core, load_path, validation)
+            chromosome, ref, load_path, validation)
 
         # Construct the summary dict with our summary lines and Variants objects of our valid snps
         sm_dict = {self.sm_lines: np.array(sm_line), self.sm_variants: np.array(sm_variants)}
@@ -57,13 +57,13 @@ class SummaryCleaner(Input):
         print(f"Cleaned summary stats for Chromosome {chromosome} in {round(t1 - t0, 2)} Seconds\n")
         return sm_dict
 
-    def _valid_snps_lines_and_variants(self, chromosome, core, load_path, validation):
+    def _valid_snps_lines_and_variants(self, chromosome, ref, load_path, validation):
         """
         We will load our variants from our validation and core samples and use those to check if the snp found in the
         summary line is within our validation and core sample sets of snps. If this is the case, then we will add the
         line to sm_line as well as a Variant object of the current snp valid snp to sm_variants
         """
-        validation_snps, core_snps, indexer = self.load_variants(load_path, validation, core)
+        validation_snps, core_snps, indexer = self.load_variants(load_path, validation, ref)
 
         sm_variants = []
         sm_line = []
