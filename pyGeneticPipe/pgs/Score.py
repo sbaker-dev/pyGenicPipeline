@@ -2,7 +2,7 @@ from pyGeneticPipe.geneticParsers.plinkObject import PlinkObject
 from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils import misc as mc
 from pyGeneticPipe.core.Input import Input
-from csvObject import CsvObject
+from csvObject import CsvObject, write_csv
 import numpy as np
 import time
 
@@ -13,7 +13,7 @@ class Score(Input):
 
         self._score_error_dict = {"Missing Phenotype": 0, "Miss Matched Sex": 0}
 
-    def construct_chromosome_pgs(self, sm_dict, load_path):
+    def construct_chromosome_pgs(self, sm_dict, load_path, chromosome):
         """
         This will construct the pgs from the weights construct with the Gibbs, the infinitesimal or gibbs estimated
         outcomes.
@@ -39,8 +39,13 @@ class Score(Input):
             if self.gibbs in variant_fraction:
                 self._calculate_score(sm_dict, ph_dict, variant_fraction, raw_snps)
 
+        # Validate we have all elements of equal length to the number of id's in core
+        for key in ph_dict.keys():
+            assert len(ph_dict[key]) == core.iid_count
+
         # Write to file
-        print(ph_dict.keys())
+        rows = [[v[i] for v in ph_dict.values()] for i in range(core.iid_count)]
+        write_csv(self.scores_directory, f"Scores_{chromosome}", list(ph_dict.keys()), rows)
 
     def compile_pgs(self):
 

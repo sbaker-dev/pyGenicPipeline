@@ -33,8 +33,8 @@ class Input:
         self.population_percent = 1
 
         # Set summary and filter statistics information if required
-        self._make_sub_directory("Cleaned")
-        self.clean_directory = Path(self.working_dir, "Cleaned")
+        self._make_sub_directory("Chromosome_Cleaned")
+        self.clean_directory = Path(self.working_dir, "Chromosome_Cleaned")
         self.zipped, self.sample_size = self._set_summary_stats()
         self._summary_headers = self._set_summary_headers()
         self.effect_type = self._set_effect_type(self.args["Summary_Effect_Type"])
@@ -59,6 +59,8 @@ class Input:
         self.gibbs_headers, self._gibbs_header_dict = self._set_gibbs_headers()
 
         # Score information
+        self._make_sub_directory("Chromosome_Scores")
+        self.scores_directory = Path(self.working_dir, "Chromosome_Scores")
         self.phenotype_file = self._validate_path(self.args["Phenotype"])
         self.covariates_file = self._validate_path(self.args["Covariates"])
 
