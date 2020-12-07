@@ -88,11 +88,11 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input)
         self.gm = {**self.gm[chromosome], **self.gm[self.genome_key]}
 
         # Construct the dict of values we need for this run from our cleaned data
-        load_path = self.select_file_on_chromosome(chromosome, self.clean_directory, ".csv")
+        load_path = str(self.select_file_on_chromosome(chromosome, self.clean_directory, ".csv"))
         sm_dict = self.sm_dict_from_csv(load_path)
 
         # Load the genetic reference as was in the first stage
-        load_path = self.select_file_on_chromosome(chromosome, self.gen_directory, self.gen_type)
+        load_path = str(self.select_file_on_chromosome(chromosome, self.gen_directory, self.gen_type))
         _, ref = self.construct_validation(load_path)
 
         # Create the normalised snps
@@ -106,8 +106,6 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input)
 
         # Construct the Poly-genetic Scores
         self.construct_chromosome_pgs(sm_dict, load_path, chromosome)
-
-        print(sm_dict.keys())
 
     def debug_cross_check(self):
         """
