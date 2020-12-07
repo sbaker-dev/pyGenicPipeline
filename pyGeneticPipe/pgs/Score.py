@@ -11,6 +11,8 @@ class Score(Input):
     def __init__(self, args):
         super().__init__(args)
 
+        self._score_error_dict = {"Missing Phenotype": 0, "Miss Matched Sex": 0}
+
     def construct_pgs(self, sm_dict, core, load_path):
         """
         This will construct the pgs from the weights construct with the Gibbs, the infinitesimal or gibbs estimated
@@ -106,15 +108,22 @@ class Score(Input):
         ph_dict[key] = np.array([np.sum(row) for row in ((-1 * raw_snps) * weights).T])
 
     def _filter_ids(self, ph_dict):
+        """
+        Whilst we automatically construct scores for everyone, we may not have ids for everyone so we now need to clean
+        our data for potential problems such as individuals lacking a raw phenotype or sex mismatching.
+        """
         # Load the phenotype information
-        phenotype = self._load_phenotype(ph_dict)
+        self._load_phenotype(ph_dict)
 
+        # Filter out any miss matching sex
         if self.sex in ph_dict.keys():
             ph_dict[self.sex] = ph_dict[self.sex].astype(int)
             sex_filter = np.array([True if s != 0 else False for s in ph_dict[self.sex].astype(int)])
+            self._score_error_dict["Miss Matched Sex"] = len(sex_filter) - np.sum(sex_filter)
             mc.filter_array(ph_dict, sex_filter)
 
     def _load_phenotype(self, ph_dict):
+        """Load the raw phenotype values, and filter anyone out who does have a value in phenotype array"""
 
         ids = []
         phenotypes = []
@@ -125,17 +134,31 @@ class Score(Input):
 
             id_index = headers.index(self.iid.lower())
 
+            # For each line of phenotype information
             for line in file:
                 line = line.split()
-                ids.append(line[id_index])
-                phenotypes.append(line[id_index + 1])
+                try:
+                    # If the phenotype is numeric, not zero, -9 (plink error code, and is a finite value then we will
+                    # keep these individuals otherwise we will filter them out.
+                    value = float(line[id_index] + 1)
+                    if (value != 0) and (value != -9) and np.isfinite(value):
+                        # We do tell users to put the phenotype next to the iid but maybe change this?
+                        phenotypes.append(float(line[id_index + 1]))
+                        ids.append(line[id_index])
+
+                # Value may be non-numeric (Ie NA) so skip if a type error occurs
+                except TypeError:
+                    pass
 
             file.close()
 
+        # Keep individuals within our phenotype dict if they are within the phenotype file, filter out otherwise
         phenotype_filter = [True if i in ids else False for i in ph_dict[self.iid]]
         mc.filter_array(ph_dict, phenotype_filter)
+        self._score_error_dict["Missing Phenotype"] = len(phenotype_filter) - np.sum(phenotype_filter)
 
-        return np.array(phenotypes)
+        # Log the phenotype information to dict so we can construct the 'raw' values
+        ph_dict[self.phenotype] = np.array(phenotypes)
 
     def _assert_construct_pgs(self):
         """Assert that the information required to run is present"""
