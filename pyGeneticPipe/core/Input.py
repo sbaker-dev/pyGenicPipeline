@@ -784,6 +784,10 @@ class Input:
         return "REF"
 
     @property
+    def core_prefix(self):
+        return "CORE"
+
+    @property
     def ld_scores(self):
         """Key used for accessing LD_Scores in headers, groups or other attributes"""
         return "LD_Scores"
@@ -861,10 +865,6 @@ class Input:
     @property
     def pc(self):
         return "PC"
-
-    @property
-    def prs(self):
-        return "PRS"
 
     @property
     def phenotype(self):

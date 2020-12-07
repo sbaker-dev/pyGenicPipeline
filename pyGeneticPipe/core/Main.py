@@ -145,8 +145,8 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input)
         print(np.sum(sm_dict[self.inf_dec]))
 
         # 0.21582699762327068 ish
-        print(sm_dict[self.gibbs][self.gibbs_causal_fractions[0]])
-        print(np.sum(sm_dict[self.gibbs][self.gibbs_causal_fractions[0]]))
+        print(sm_dict[f"{self.gibbs}_{self.gibbs_causal_fractions[0]}"])
+        print(np.sum(sm_dict[f"{self.gibbs}_{self.gibbs_causal_fractions[0]}"]))
 
         # Construct the Poly-genetic Scores
         self.construct_pgs(sm_dict, core, load_path)

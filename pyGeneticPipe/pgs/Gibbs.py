@@ -27,7 +27,6 @@ class Gibbs(Input):
         print(f"Calculated LD and chromosome heritability for chromosome {chromosome} in "
               f"{round(time.time() - self.start_time, 2)} Seconds")
 
-        sm_dict[self.gibbs] = {}
         for variant_fraction in self.gibbs_causal_fractions:
             self.start_time = time.time()
 
@@ -40,7 +39,7 @@ class Gibbs(Input):
                       f"{sum_sq_beta} > {self.gm[f'{self.genome_key}_{self.herit}']}")
 
             # Compute the effect size then write to file
-            sm_dict[self.gibbs][variant_fraction] = beta / sm_dict[f"{self.ref_prefix}_{self.stds}"].flatten()
+            sm_dict[f"{self.gibbs}_{variant_fraction}"] = beta / sm_dict[f"{self.ref_prefix}_{self.stds}"].flatten()
             print(f"Construct weights file for Chromosome {chromosome} variant fraction of {variant_fraction} in "
                   f"{round(time.time() - self.start_time, 2)} Seconds")
 
