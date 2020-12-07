@@ -12,7 +12,9 @@ class Score(Input):
 
     def construct_pgs(self, sm_dict, core, load_path):
 
+        # Construct a dict of arrays of our phenotype information
         ph_dict = self._construct_phenotype_dict(core, load_path)
+
         print(sm_dict.keys())
         print(ph_dict.keys())
 
@@ -22,8 +24,19 @@ class Score(Input):
         # Raw snps
         raw_snps = self.isolate_raw_snps(core, sm_dict)
 
-        print(len(raw_snps))
-        print(len(sm_dict[self.sm_variants]))
+        # Restructure infidencimal to be a vector array
+        inf = sm_dict[self.inf_dec]
+        inf.shape = (len(sm_dict[self.inf_dec]), 1)
+
+        individual_prs = np.array([np.sum(row) for row in ((-1 * raw_snps) * inf).T])
+        print(individual_prs.shape)
+        print(individual_prs[0])
+
+        print(sm_dict.keys())
+
+        #
+        # print(individual_prs)
+        # print(individual_prs.shape)
 
         # todo multiple the 'beta' by the raw snp [(0, 1, 2) * -1]
 
