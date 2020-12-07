@@ -26,12 +26,13 @@ class Score(Input):
         # Load the raw snps that have been isolated Raw snps
         raw_snps = self.isolate_raw_snps(core, sm_dict)
 
-        # Restructure infinitesimal to be a vector array
-        inf = sm_dict[self.inf_dec]
-        inf.shape = (len(sm_dict[self.inf_dec]), 1)
+        # Calculate scores for the infinitesimal model
+        self._calculate_score(sm_dict, ph_dict, self.inf_dec, raw_snps)
 
-        # Calculate the PRS for the individuals
-        ph_dict[self.prs] = np.array([np.sum(row) for row in ((-1 * raw_snps) * inf).T])
+        # Now do the same for each model calculated by Gibbs
+        for variant_fraction in sm_dict.keys():
+            if self.gibbs in variant_fraction:
+                self._calculate_score(sm_dict, ph_dict, variant_fraction, raw_snps)
 
         # Filter out individuals without defined sex, phenotypes or other invalidator information
         self._filter_ids(ph_dict)
@@ -89,6 +90,20 @@ class Score(Input):
             raise Exception("Unknown load type set")
 
         return ph_dict
+
+    @staticmethod
+    def _calculate_score(sm_dict, ph_dict, key, raw_snps):
+        """
+        Here we load the weights calculated and re-structure the 1 dimensional list to be a vector array. We then use
+        this vector array of beta values from weights alongside the raw snps to calculate the effect of each snp based
+        on the nucleotide of the individuals (0, 1 or 2) to compute a score for this key.
+        """
+        # Restructure weights to be a vector array
+        weights = sm_dict[key]
+        weights.shape = (len(sm_dict[key]), 1)
+
+        # Calculate the PRS for the individuals
+        ph_dict[key] = np.array([np.sum(row) for row in ((-1 * raw_snps) * weights).T])
 
     def _filter_ids(self, ph_dict):
         # Load the phenotype information
