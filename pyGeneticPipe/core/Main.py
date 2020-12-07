@@ -149,4 +149,4 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input)
         print(np.sum(sm_dict[f"{self.gibbs}_{self.gibbs_causal_fractions[0]}"]))
 
         # Construct the Poly-genetic Scores
-        self.construct_pgs(sm_dict, core, load_path)
+        self.construct_chromosome_pgs(sm_dict, core, load_path)

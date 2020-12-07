@@ -825,7 +825,7 @@ class Input:
     @property
     def inf_dec(self):
         """Key used for accessing Infinitesimal data in headers, groups or other attributes"""
-        return "infinitesimal"
+        return "Infinitesimal"
 
     @property
     def gibbs(self):

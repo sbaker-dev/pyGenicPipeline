@@ -13,7 +13,7 @@ class Score(Input):
 
         self._score_error_dict = {"Missing Phenotype": 0, "Miss Matched Sex": 0}
 
-    def construct_pgs(self, sm_dict, core, load_path):
+    def construct_chromosome_pgs(self, sm_dict, core, load_path):
         """
         This will construct the pgs from the weights construct with the Gibbs, the infinitesimal or gibbs estimated
         outcomes.
@@ -22,8 +22,8 @@ class Score(Input):
         # Validation we have the necessary information for the scores
         self._assert_construct_pgs()
 
-        # Construct a dict of arrays of our phenotype information
-        ph_dict = self._construct_phenotype_dict(core, load_path)
+        # Construct a dict of arrays of our ID's
+        ph_dict = self._genetic_phenotypes(core, load_path)
 
         # Load the raw snps that have been isolated Raw snps
         raw_snps = self.isolate_raw_snps(core, sm_dict)
@@ -36,10 +36,22 @@ class Score(Input):
             if self.gibbs in variant_fraction:
                 self._calculate_score(sm_dict, ph_dict, variant_fraction, raw_snps)
 
+        # Write to file
+        print(ph_dict.keys())
+
+    def compile_pgs(self):
+
+        print("Load phenotype files")
+        ph_dict = {}
+
+        # sum the effects
+        # SUM HERE
+
         # Filter out individuals without defined sex, phenotypes or other invalidator information
         self._filter_ids(ph_dict)
 
-        return
+        # validate the effects
+        # THE REST OF CALCULATE PRS IN LDPRED + a bit of prs_construction for correlation
 
     def _construct_phenotype_dict(self, gen_file, load_path):
         """
@@ -47,6 +59,7 @@ class Score(Input):
         help us validate and clean individuals whom we do not have sufficient information to transfer the score too.
         """
         # Load the genetic embedded information
+        # todo This is probably more just isolate the information from the csv?
         ph_dict = self._genetic_phenotypes(gen_file, load_path)
 
         # Extract the FIDs and IIDs from the sample
@@ -79,14 +92,13 @@ class Score(Input):
             ph_dict[self.fam] = np.array(PlinkObject(load_path).get_family_identifiers())
             ph_dict[self.fid] = mc.variant_array(self.fid.lower(), ph_dict[self.fam])
             ph_dict[self.iid] = mc.variant_array(self.iid.lower(), ph_dict[self.fam])
-            ph_dict[self.sex] = mc.variant_array(self.sex.lower(), ph_dict[self.fam])
+            ph_dict.pop(self.fam, None)
 
         # Bgen doesn't have a fam equivalent, so just load the fid and iid
         elif self.gen_type == ".bgen":
             ids = gen_file.iid
             ph_dict[self.fid] = np.array([fid for fid, iid in ids])
             ph_dict[self.iid] = np.array([iid for fid, iid in ids])
-            ph_dict[self.sex] = np.array([-1 for _ in range(len(ids))])
 
         else:
             raise Exception("Unknown load type set")
@@ -163,6 +175,8 @@ class Score(Input):
     def _assert_construct_pgs(self):
         """Assert that the information required to run is present"""
         assert self.ld_radius, ec.missing_arg(self.operation, "LD_Radius")
-        assert self.phenotype, ec.missing_arg(self.operation, "Phenotype")
 
         return time.time()
+
+    def _assert_compile_pgs(self):
+        assert self.phenotype, ec.missing_arg(self.operation, "Phenotype")
