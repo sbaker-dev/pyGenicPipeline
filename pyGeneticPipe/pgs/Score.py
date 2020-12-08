@@ -102,9 +102,10 @@ class Score(Input):
         # Load in the raw phenotype, and filter out anyone without one.
         self._load_phenotype(ph_dict)
 
-        # print("Load phenotype files")
-        # ph_dict = {}
-        #
+        # If set, load any covariant's in the covariates_file
+        if self.covariates_file:
+            self._load_covariants(ph_dict)
+
         # # Filter out individuals without defined sex, phenotypes or other invalidator information
         # self._filter_ids(ph_dict)
 
@@ -185,32 +186,29 @@ class Score(Input):
         # Log the phenotype information to dict so we can construct the 'raw' values
         ph_dict[self.phenotype] = np.array(phenotypes)
 
-    def _construct_phenotype_dict(self, gen_file, load_path):
+    def _load_covariants(self, ph_dict):
         """
         This will construct the phenotype dict that we will right out for the end user, storing individual level data to
         help us validate and clean individuals whom we do not have sufficient information to transfer the score too.
         """
-        # Load the genetic embedded information
-        # todo This is probably more just isolate the information from the csv?
-        ph_dict = self._genetic_phenotypes(gen_file, load_path)
+        # Load the covariants file
+        cov = CsvObject(self.covariates_file, set_columns=True)
+        headers = {h.lower(): i for i, h in enumerate(cov.headers)}
 
-        # Extract the FIDs and IIDs from the sample
-        if self.covariates_file:
-            cov = CsvObject(self.covariates_file, set_columns=True)
-            headers = {h.lower(): i for i, h in enumerate(cov.headers)}
+        # Load sex if stored in covariates
+        if self.sex.lower() in headers.keys():
+            ph_dict[self.sex] = cov.column_data[headers[self.sex.lower()]]
 
-            # Load sex if stored in covariates
-            if self.sex.lower() in headers.keys():
-                ph_dict[self.sex] = cov.column_data[headers[self.sex.lower()]]
+        # Load PCs if they exist in the file
+        pcs = [headers[h] for h in headers.keys() if h[:2] == self.pc.lower()]
+        if len(pcs) > 0:
+            ph_dict[self.pc] = np.array([[row[i] for i in pcs] for row in cov.row_data])
 
-            # Load PCs if they exist in the file
-            pcs = [headers[h] for h in headers.keys() if h[:2] == self.pc.lower()]
-            if len(pcs) > 0:
-                ph_dict[self.pc] = np.array([[row[i] for i in pcs] for row in cov.row_data])
-            else:
-                ph_dict[self.pc] = np.array([-1 for _ in range(cov.column_length)])
-
-        return ph_dict
+        # If there is anything else, assume it is a covariant
+        covariant = [headers[h] for h in headers.keys()
+                     if (h[:2] != self.pc.lower()) and (h != self.sex.lower()) and (h not in (self.iid, self.fid))]
+        if len(covariant) > 0:
+            ph_dict[self.covariants] = np.array([[row[i] for i in covariant] for row in cov.row_data])
 
     def _filter_ids(self, ph_dict):
         """

@@ -867,8 +867,15 @@ class Input:
 
     @property
     def pc(self):
+        """Key used for accessing the Principle components in headers, groups or other attributes"""
         return "PC"
 
     @property
     def phenotype(self):
+        """Key used for accessing the raw phenotype in headers, groups or other attributes"""
         return "Phenotype"
+
+    @property
+    def covariants(self):
+        """Key used for accessing the covariants in headers, groups or other attributes"""
+        return "Covariants"
