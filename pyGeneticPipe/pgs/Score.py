@@ -77,17 +77,24 @@ class Score(Input):
         those headers as a list of strings. Failures will be printed to the terminal
         """
 
-        # Count each header which isn't an identifier
+        # Count each header which isn't an id identifier
         headers = Counter(mc.flatten([CsvObject(Path(self.scores_directory, file)).headers for file in score_files]))
         headers.pop(self.fid, None)
         headers.pop(self.iid, None)
 
+        # Load the ids, and use this to setup the dict of values
+        load_ids = CsvObject(Path(self.scores_directory, score_files[0]), set_columns=True)
+        ph_dict = {self.fid: load_ids[self.fid], self.iid: load_ids[self.iid]}
+
         # Isolate headers that are complete
-        isolates = [h for h, v in zip(headers.keys(), headers.values()) if (v == len(score_files))]
+        isolates = {h: np.zeros(len(ph_dict[self.iid])) for h, v in zip(headers.keys(), headers.values())
+                    if (v == len(score_files))}
 
         # Assert we have found any successful headers, and tell users what was dropped
-        ec.scores_valid_headers(isolates, headers, score_files)
-        return isolates
+        ec.scores_valid_headers(isolates.keys(), headers, score_files)
+
+        ph_dict = {**ph_dict, **isolates}
+        return ph_dict
 
     def _construct_phenotype_dict(self, gen_file, load_path):
         """
