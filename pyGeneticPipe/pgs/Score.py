@@ -189,7 +189,8 @@ class Score(Input):
         phenotypes = phenotypes[phenotype_filter]
         self._score_error_dict["Missing Phenotype"] += len(phenotype_filter) - np.sum(phenotype_filter)
 
-        # Log the phenotype information to dict so we can construct the 'raw' values
+        # Check everything is of equal length then log the phenotype information to dict
+        assert len(Counter([len(v) for v in ph_dict.values()])) == 1, "Filtering on phenotype failed"
         ph_dict[self.phenotype] = phenotypes
 
     def _load_and_clean_covariants(self, ph_dict):
