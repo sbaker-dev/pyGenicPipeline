@@ -51,12 +51,17 @@ class Score(Input):
 
     def compile_pgs(self):
 
+        # Check we have necessary args for this method
+        self._assert_compile_pgs()
+
         # Get the file names for output from pgs_chromosome_scores
         score_files = mc.directory_iterator(self.scores_directory)
 
         # Isolate the headers to be aggregated, then aggregate successful scores
         ph_dict = self.aggregated_scores(score_files)
-        print(ph_dict[self.inf_dec])
+
+        # Load in the raw phenotype, and filter out anyone without one.
+        self._load_phenotype(ph_dict)
 
         # print("Load phenotype files")
         # ph_dict = {}
