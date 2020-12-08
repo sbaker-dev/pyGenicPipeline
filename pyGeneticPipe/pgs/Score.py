@@ -49,94 +49,6 @@ class Score(Input):
         rows = [[v[i] for v in ph_dict.values()] for i in range(core.iid_count)]
         write_csv(self.scores_directory, f"Scores_{chromosome}", list(ph_dict.keys()), rows)
 
-    def compile_pgs(self):
-
-        # Check we have necessary args for this method
-        self._assert_compile_pgs()
-
-        # Get the file names for output from pgs_chromosome_scores
-        score_files = mc.directory_iterator(self.scores_directory)
-
-        # Isolate the headers to be aggregated, then aggregate successful scores
-        ph_dict = self.aggregated_scores(score_files)
-
-        # Load in the raw phenotype, and filter out anyone without one.
-        self._load_phenotype(ph_dict)
-
-        # print("Load phenotype files")
-        # ph_dict = {}
-        #
-        # # sum the effects
-        # # SUM HERE
-        #
-        # # Filter out individuals without defined sex, phenotypes or other invalidator information
-        # self._filter_ids(ph_dict)
-
-        # validate the effects
-        # THE REST OF CALCULATE PRS IN LDPRED + a bit of prs_construction for correlation
-
-    def aggregated_scores(self, score_files):
-        """
-        This will check the headers where we have full information across all our chromosomes and return the names of
-        those headers as a list of strings. Failures will be printed to the terminal.
-
-        The successful headers that where isolated will then be aggregated
-        """
-
-        # Load the ids, and use this to setup the dict of values
-        load_ids = CsvObject(Path(self.scores_directory, score_files[0]), set_columns=True)
-        ph_dict = {self.fid: np.array(load_ids[self.fid]), self.iid: np.array(load_ids[self.iid])}
-
-        # Count each header which isn't an id identifier
-        headers = Counter(mc.flatten([CsvObject(Path(self.scores_directory, file)).headers for file in score_files]))
-        headers.pop(self.fid, None)
-        headers.pop(self.iid, None)
-
-        # Isolate headers that are complete
-        isolates = {h: np.zeros(len(ph_dict[self.iid])) for h, v in zip(headers.keys(), headers.values())
-                    if (v == len(score_files))}
-
-        # Assert we have found any successful headers, and tell users what was dropped, then join our two dicts together
-        ec.scores_valid_headers(isolates.keys(), headers, score_files)
-        ph_dict = {**ph_dict, **isolates}
-
-        # For each chromosome file
-        for file in score_files:
-            load_file = CsvObject(Path(self.scores_directory, file), set_columns=True)
-
-            # For each header slice the column from the load file and save it as a float32, then add this to our dict
-            for header in isolates.keys():
-                ph_dict[header] = np.add(ph_dict[header], np.array(load_file[header], np.float32))
-
-        return ph_dict
-
-    def _construct_phenotype_dict(self, gen_file, load_path):
-        """
-        This will construct the phenotype dict that we will right out for the end user, storing individual level data to
-        help us validate and clean individuals whom we do not have sufficient information to transfer the score too.
-        """
-        # Load the genetic embedded information
-        # todo This is probably more just isolate the information from the csv?
-        ph_dict = self._genetic_phenotypes(gen_file, load_path)
-
-        # Extract the FIDs and IIDs from the sample
-        if self.covariates_file:
-            cov = CsvObject(self.covariates_file, set_columns=True)
-            headers = {h.lower(): i for i, h in enumerate(cov.headers)}
-
-            # Load sex if stored in covariates
-            if self.sex.lower() in headers.keys():
-                ph_dict[self.sex] = cov.column_data[headers[self.sex.lower()]]
-
-            # Load PCs if they exist in the file
-            pcs = [headers[h] for h in headers.keys() if h[:2] == self.pc.lower()]
-            if len(pcs) > 0:
-                ph_dict[self.pc] = np.array([[row[i] for i in pcs] for row in cov.row_data])
-            else:
-                ph_dict[self.pc] = np.array([-1 for _ in range(cov.column_length)])
-
-        return ph_dict
-
     def _genetic_phenotypes(self, gen_file, load_path):
         """
         Load the full genetic data for this chromosome and isolate any information that can be isolated from it. In this
@@ -176,20 +88,64 @@ class Score(Input):
         # Calculate the PRS for the individuals
         ph_dict[key] = np.array([np.sum(row) for row in ((-1 * raw_snps) * weights).T])
 
-    def _filter_ids(self, ph_dict):
-        """
-        Whilst we automatically construct scores for everyone, we may not have ids for everyone so we now need to clean
-        our data for potential problems such as individuals lacking a raw phenotype or sex mismatching.
-        """
-        # Load the phenotype information
+    def compile_pgs(self):
+
+        # Check we have necessary args for this method
+        self._assert_compile_pgs()
+
+        # Get the file names for output from pgs_chromosome_scores
+        score_files = mc.directory_iterator(self.scores_directory)
+
+        # Isolate the headers to be aggregated, then aggregate successful scores
+        ph_dict = self.aggregated_scores(score_files)
+
+        # Load in the raw phenotype, and filter out anyone without one.
         self._load_phenotype(ph_dict)
 
-        # Filter out any miss matching sex
-        if self.sex in ph_dict.keys():
-            ph_dict[self.sex] = ph_dict[self.sex].astype(int)
-            sex_filter = np.array([True if s != 0 else False for s in ph_dict[self.sex].astype(int)])
-            self._score_error_dict["Miss Matched Sex"] = len(sex_filter) - np.sum(sex_filter)
-            mc.filter_array(ph_dict, sex_filter)
+        # print("Load phenotype files")
+        # ph_dict = {}
+        #
+        # # Filter out individuals without defined sex, phenotypes or other invalidator information
+        # self._filter_ids(ph_dict)
+
+        # validate the effects
+        # THE REST OF CALCULATE PRS IN LDPRED + a bit of prs_construction for correlation
+        # np.corrcoef()
+
+    def aggregated_scores(self, score_files):
+        """
+        This will check the headers where we have full information across all our chromosomes and return the names of
+        those headers as a list of strings. Failures will be printed to the terminal.
+
+        The successful headers that where isolated will then be aggregated
+        """
+
+        # Load the ids, and use this to setup the dict of values
+        load_ids = CsvObject(Path(self.scores_directory, score_files[0]), set_columns=True)
+        ph_dict = {self.fid: np.array(load_ids[self.fid]), self.iid: np.array(load_ids[self.iid])}
+
+        # Count each header which isn't an id identifier
+        headers = Counter(mc.flatten([CsvObject(Path(self.scores_directory, file)).headers for file in score_files]))
+        headers.pop(self.fid, None)
+        headers.pop(self.iid, None)
+
+        # Isolate headers that are complete
+        isolates = {h: np.zeros(len(ph_dict[self.iid])) for h, v in zip(headers.keys(), headers.values())
+                    if (v == len(score_files))}
+
+        # Assert we have found any successful headers, and tell users what was dropped, then join our two dicts together
+        ec.scores_valid_headers(isolates.keys(), headers, score_files)
+        ph_dict = {**ph_dict, **isolates}
+
+        # For each chromosome file
+        for file in score_files:
+            load_file = CsvObject(Path(self.scores_directory, file), set_columns=True)
+
+            # For each header slice the column from the load file and save it as a float32, then add this to our dict
+            for header in isolates.keys():
+                ph_dict[header] = np.add(ph_dict[header], np.array(load_file[header], np.float32))
+
+        return ph_dict
 
     def _load_phenotype(self, ph_dict):
         """Load the raw phenotype values, and filter anyone out who does have a value in phenotype array"""
@@ -228,6 +184,48 @@ class Score(Input):
 
         # Log the phenotype information to dict so we can construct the 'raw' values
         ph_dict[self.phenotype] = np.array(phenotypes)
+
+    def _construct_phenotype_dict(self, gen_file, load_path):
+        """
+        This will construct the phenotype dict that we will right out for the end user, storing individual level data to
+        help us validate and clean individuals whom we do not have sufficient information to transfer the score too.
+        """
+        # Load the genetic embedded information
+        # todo This is probably more just isolate the information from the csv?
+        ph_dict = self._genetic_phenotypes(gen_file, load_path)
+
+        # Extract the FIDs and IIDs from the sample
+        if self.covariates_file:
+            cov = CsvObject(self.covariates_file, set_columns=True)
+            headers = {h.lower(): i for i, h in enumerate(cov.headers)}
+
+            # Load sex if stored in covariates
+            if self.sex.lower() in headers.keys():
+                ph_dict[self.sex] = cov.column_data[headers[self.sex.lower()]]
+
+            # Load PCs if they exist in the file
+            pcs = [headers[h] for h in headers.keys() if h[:2] == self.pc.lower()]
+            if len(pcs) > 0:
+                ph_dict[self.pc] = np.array([[row[i] for i in pcs] for row in cov.row_data])
+            else:
+                ph_dict[self.pc] = np.array([-1 for _ in range(cov.column_length)])
+
+        return ph_dict
+
+    def _filter_ids(self, ph_dict):
+        """
+        Whilst we automatically construct scores for everyone, we may not have ids for everyone so we now need to clean
+        our data for potential problems such as individuals lacking a raw phenotype or sex mismatching.
+        """
+        # Load the phenotype information
+        self._load_phenotype(ph_dict)
+
+        # Filter out any miss matching sex
+        if self.sex in ph_dict.keys():
+            ph_dict[self.sex] = ph_dict[self.sex].astype(int)
+            sex_filter = np.array([True if s != 0 else False for s in ph_dict[self.sex].astype(int)])
+            self._score_error_dict["Miss Matched Sex"] = len(sex_filter) - np.sum(sex_filter)
+            mc.filter_array(ph_dict, sex_filter)
 
     def _assert_construct_pgs(self):
         """Assert that the information required to run is present"""
