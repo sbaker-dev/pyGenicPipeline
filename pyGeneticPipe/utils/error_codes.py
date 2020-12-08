@@ -153,6 +153,12 @@ def gibbs_convergence(variant_fraction, snp_count, sum_sq_beta, genome_herit):
           f"{variant_fraction * snp_count}\nSum Squared Beta > Genome Heritability: {sum_sq_beta} > {genome_herit}")
 
 
+def scores_valid_headers(isolates, headers, score_files):
+    assert len(isolates) >= 1, "CRITICAL ERROR - INFINITESIMAL FAILED TO LOAD"
+    print(f"The following where dropped "
+          f"{[f'{h}: {headers[h]}/{len(score_files)}' for h in headers.keys() if h not in isolates]}")
+
+
 # bed file codes
 def bed_magic_violation(file_name, magic):
     return f"INVALID BED FILE for file at path: {file_name}\n" \

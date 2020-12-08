@@ -3,6 +3,8 @@ from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils import misc as mc
 from pyGeneticPipe.core.Input import Input
 from csvObject import CsvObject, write_csv
+from collections import Counter
+from pathlib import Path
 import numpy as np
 import time
 
@@ -49,17 +51,43 @@ class Score(Input):
 
     def compile_pgs(self):
 
-        print("Load phenotype files")
-        ph_dict = {}
+        # Get the file names for output from pgs_chromosome_scores
+        score_files = mc.directory_iterator(self.scores_directory)
 
-        # sum the effects
-        # SUM HERE
+        # Isolate the headers to be aggregated
+        isolates = self.set_header_isolates(score_files)
 
-        # Filter out individuals without defined sex, phenotypes or other invalidator information
-        self._filter_ids(ph_dict)
+        print(isolates)
+
+        # print("Load phenotype files")
+        # ph_dict = {}
+        #
+        # # sum the effects
+        # # SUM HERE
+        #
+        # # Filter out individuals without defined sex, phenotypes or other invalidator information
+        # self._filter_ids(ph_dict)
 
         # validate the effects
         # THE REST OF CALCULATE PRS IN LDPRED + a bit of prs_construction for correlation
+
+    def set_header_isolates(self, score_files):
+        """
+        This will check the headers where we have full information across all our chromosomes and return the names of
+        those headers as a list of strings. Failures will be printed to the terminal
+        """
+
+        # Count each header which isn't an identifier
+        headers = Counter(mc.flatten([CsvObject(Path(self.scores_directory, file)).headers for file in score_files]))
+        headers.pop(self.fid, None)
+        headers.pop(self.iid, None)
+
+        # Isolate headers that are complete
+        isolates = [h for h, v in zip(headers.keys(), headers.values()) if (v == len(score_files))]
+
+        # Assert we have found any successful headers, and tell users what was dropped
+        ec.scores_valid_headers(isolates, headers, score_files)
+        return isolates
 
     def _construct_phenotype_dict(self, gen_file, load_path):
         """
