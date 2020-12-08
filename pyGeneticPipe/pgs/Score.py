@@ -12,8 +12,7 @@ import time
 class Score(Input):
     def __init__(self, args):
         super().__init__(args)
-
-        self._score_error_dict = {"Missing Phenotype": 0, "Miss Matched Sex": 0}
+        self._score_error_dict = {"Missing Phenotype": 0}
 
     def construct_chromosome_pgs(self, sm_dict, load_path, chromosome):
         """
@@ -104,7 +103,7 @@ class Score(Input):
 
         # If set, load any covariant's in the covariates_file
         if self.covariates_file:
-            self._load_covariants(ph_dict)
+            self._load_and_clean_covariants(ph_dict)
 
         # # Filter out individuals without defined sex, phenotypes or other invalidator information
         # self._filter_ids(ph_dict)
@@ -186,7 +185,7 @@ class Score(Input):
         # Log the phenotype information to dict so we can construct the 'raw' values
         ph_dict[self.phenotype] = np.array(phenotypes)
 
-    def _load_covariants(self, ph_dict):
+    def _load_and_clean_covariants(self, ph_dict):
         """
         This will construct the phenotype dict that we will right out for the end user, storing individual level data to
         help us validate and clean individuals whom we do not have sufficient information to transfer the score too.
@@ -197,39 +196,37 @@ class Score(Input):
 
         # Load sex if stored in covariates
         if self.sex.lower() in headers.keys():
-            ph_dict[self.sex] = cov.column_data[headers[self.sex.lower()]]
+            ph_dict[self.sex] = np.array(cov.column_data[headers[self.sex.lower()]], dtype=int)
+
+            # Filter out any sex that is not 1 or 2
+            sex_filter = np.array([True if (s == 1) or (s == 2) else False for s in ph_dict[self.sex].astype(int)])
+            self._score_error_dict["Miss Matched Sex"] = len(sex_filter) - np.sum(sex_filter)
+            mc.filter_array(ph_dict, sex_filter)
 
         # Load PCs if they exist in the file
         pcs = [headers[h] for h in headers.keys() if h[:2] == self.pc.lower()]
         if len(pcs) > 0:
-            ph_dict[self.pc] = np.array([[row[i] for i in pcs] for row in cov.row_data])
+            self._filter_covariant(ph_dict, self.pc, pcs, cov, "Invalid PCs")
 
         # If there is anything else, assume it is a covariant
         covariant = [headers[h] for h in headers.keys()
                      if (h[:2] != self.pc.lower()) and (h != self.sex.lower()) and (h not in (self.iid, self.fid))]
         if len(covariant) > 0:
-            ph_dict[self.covariants] = np.array([[row[i] for i in covariant] for row in cov.row_data])
+            self._filter_covariant(ph_dict, self.covariants, covariant, cov, "Invalid Covariants")
 
-    def _filter_ids(self, ph_dict):
+    def _filter_covariant(self, ph_dict, key, key_indexes, cov, error_dict_key):
         """
-        Whilst we automatically construct scores for everyone, we may not have ids for everyone so we now need to clean
-        our data for potential problems such as individuals lacking a raw phenotype or sex mismatching.
+        For numeric continuous values we check if they each row contains finite values, otherwise we remove them
         """
-        # Load the phenotype information
-        self._load_phenotype(ph_dict)
+        ph_dict[key] = np.array([[row[i] for i in key_indexes] for row in cov.row_data])
 
-        # Filter out any miss matching sex
-        if self.sex in ph_dict.keys():
-            ph_dict[self.sex] = ph_dict[self.sex].astype(int)
-            sex_filter = np.array([True if s != 0 else False for s in ph_dict[self.sex].astype(int)])
-            self._score_error_dict["Miss Matched Sex"] = len(sex_filter) - np.sum(sex_filter)
-            mc.filter_array(ph_dict, sex_filter)
+        # Filter out anything that is not finite
+        pc_filter = np.array([True if np.isfinite(pc).all() else False for pc in ph_dict[key]])
+        self._score_error_dict[error_dict_key] = len(pc_filter) - np.sum(pc_filter)
 
     def _assert_construct_pgs(self):
         """Assert that the information required to run is present"""
         assert self.ld_radius, ec.missing_arg(self.operation, "LD_Radius")
-
-        return time.time()
 
     def _assert_compile_pgs(self):
         assert self.phenotype, ec.missing_arg(self.operation, "Phenotype")
