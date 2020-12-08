@@ -178,6 +178,11 @@ def cleanup_dict(dict_to_clean, keys_to_remove):
         dict_to_clean.pop(clean, None)
 
 
+def reshape_dict_array(dict_to_shape, dict_key, dimensions=1):
+    """Reshape an array stored as dict_key within a dict_to_shape to a given dimension"""
+    dict_to_shape[dict_key] = dict_to_shape[dict_key].reshape(len(dict_to_shape[dict_key]), dimensions)
+
+
 def error_dict_to_terminal(error_dict):
     """Print the error dict for this chromosome then reset the initialised to default 0"""
     for index, (k, v) in enumerate(zip(error_dict.keys(), error_dict.values())):

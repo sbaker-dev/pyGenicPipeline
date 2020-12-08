@@ -5,6 +5,7 @@ from pyGeneticPipe.core.Input import Input
 from csvObject import CsvObject, write_csv
 from collections import Counter
 from pathlib import Path
+from scipy import linalg
 import numpy as np
 
 
@@ -12,6 +13,7 @@ class Score(Input):
     def __init__(self, args):
         super().__init__(args)
         self._score_error_dict = {"Missing Phenotype": 0}
+        self._validation = {}
 
     def construct_chromosome_pgs(self, sm_dict, load_path, chromosome):
         """
@@ -104,12 +106,14 @@ class Score(Input):
         if self.covariates_file:
             self._load_and_clean_covariants(ph_dict)
 
-        print(ph_dict.keys())
-        print(score_keys)
-
         # validate the effects
-        # THE REST OF CALCULATE PRS IN LDPRED + a bit of prs_construction for correlation
-        # np.corrcoef()
+        self._validation[self.correlation] = np.corrcoef(ph_dict[self.inf_dec], ph_dict[self.phenotype])[0][1]
+        self._validation[self.r2] = self._validation[self.correlation] ** 2
+
+        # Store the original phenotype for writing out later, then reshape our array to be (N, 1)
+        ph_dict[f"{self.core_prefix}_{self.phenotype}"] = ph_dict[self.phenotype]
+        mc.reshape_dict_array(ph_dict, self.phenotype)
+
 
     def aggregated_scores(self, score_files):
         """
@@ -231,6 +235,7 @@ class Score(Input):
         # Filter out anything that is not finite
         pc_filter = np.array([True if np.isfinite(pc).all() else False for pc in ph_dict[key]])
         self._score_error_dict[error_dict_key] = len(pc_filter) - np.sum(pc_filter)
+
 
     def _assert_construct_pgs(self):
         """Assert that the information required to run is present"""

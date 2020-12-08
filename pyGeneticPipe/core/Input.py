@@ -879,3 +879,18 @@ class Input:
     def covariants(self):
         """Key used for accessing the covariants in headers, groups or other attributes"""
         return "Covariants"
+
+    @property
+    def correlation(self):
+        """Key used for accessing Correlation in headers, groups or other attributes"""
+        return "Correlation"
+
+    @property
+    def r2(self):
+        """Key used for accessing R-Squared in headers, groups or other attributes"""
+        return "R-Squared"
+
+    @property
+    def direct(self):
+        """Key used for accessing the direct effect in headers, groups or other attributes"""
+        return "Direct"
