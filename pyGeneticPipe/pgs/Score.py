@@ -179,10 +179,18 @@ class Score(Input):
         # Keep individuals within our phenotype dict if they are within the phenotype file, filter out otherwise
         phenotype_filter = [True if i in ids else False for i in ph_dict[self.iid]]
         mc.filter_array(ph_dict, phenotype_filter)
-        self._score_error_dict["Missing Phenotype"] = len(phenotype_filter) - np.sum(phenotype_filter)
+        self._score_error_dict["Missing Phenotype"] += len(phenotype_filter) - np.sum(phenotype_filter)
+
+        # Construct an array of the phenotypes we found
+        phenotypes = np.array(phenotypes)
+
+        # Filter it, as id may exist in phenotype file that is not in the loaded phenotype dict
+        phenotype_filter = [True if i in ph_dict[self.iid] else False for i in ids]
+        phenotypes = phenotypes[phenotype_filter]
+        self._score_error_dict["Missing Phenotype"] += len(phenotype_filter) - np.sum(phenotype_filter)
 
         # Log the phenotype information to dict so we can construct the 'raw' values
-        ph_dict[self.phenotype] = np.array(phenotypes)
+        ph_dict[self.phenotype] = phenotypes
 
     def _load_and_clean_covariants(self, ph_dict):
         """
