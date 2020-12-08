@@ -80,7 +80,7 @@ class Score(Input):
 
         # Load the ids, and use this to setup the dict of values
         load_ids = CsvObject(Path(self.scores_directory, score_files[0]), set_columns=True)
-        ph_dict = {self.fid: load_ids[self.fid], self.iid: load_ids[self.iid]}
+        ph_dict = {self.fid: np.array(load_ids[self.fid]), self.iid: np.array(load_ids[self.iid])}
 
         # Count each header which isn't an id identifier
         headers = Counter(mc.flatten([CsvObject(Path(self.scores_directory, file)).headers for file in score_files]))
