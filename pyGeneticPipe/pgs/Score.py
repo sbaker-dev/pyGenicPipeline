@@ -204,7 +204,7 @@ class Score(Input):
                 try:
                     # If the phenotype is numeric, not zero, -9 (plink error code, and is a finite value then we will
                     # keep these individuals otherwise we will filter them out.
-                    value = float(line[id_index] + 1)
+                    value = float(line[id_index + 1])
                     if (value != 0) and (value != -9) and np.isfinite(value):
                         # We do tell users to put the phenotype next to the iid but maybe change this?
                         phenotypes.append(float(line[id_index + 1]))
