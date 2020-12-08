@@ -6,7 +6,6 @@ from csvObject import CsvObject, write_csv
 from collections import Counter
 from pathlib import Path
 import numpy as np
-import time
 
 
 class Score(Input):
@@ -96,17 +95,17 @@ class Score(Input):
         score_files = mc.directory_iterator(self.scores_directory)
 
         # Isolate the headers to be aggregated, then aggregate successful scores
-        ph_dict = self.aggregated_scores(score_files)
+        ph_dict, score_keys = self.aggregated_scores(score_files)
 
         # Load in the raw phenotype, and filter out anyone without one.
         self._load_phenotype(ph_dict)
 
-        # If set, load any covariant's in the covariates_file
+        # If set, load and filter on any covariant's in the covariates_file
         if self.covariates_file:
             self._load_and_clean_covariants(ph_dict)
 
-        # # Filter out individuals without defined sex, phenotypes or other invalidator information
-        # self._filter_ids(ph_dict)
+        print(ph_dict.keys())
+        print(score_keys)
 
         # validate the effects
         # THE REST OF CALCULATE PRS IN LDPRED + a bit of prs_construction for correlation
@@ -145,7 +144,7 @@ class Score(Input):
             for header in isolates.keys():
                 ph_dict[header] = np.add(ph_dict[header], np.array(load_file[header], np.float32))
 
-        return ph_dict
+        return ph_dict, list(isolates.keys())
 
     def _load_phenotype(self, ph_dict):
         """Load the raw phenotype values, and filter anyone out who does have a value in phenotype array"""
