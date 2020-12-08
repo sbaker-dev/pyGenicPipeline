@@ -1,3 +1,4 @@
+from itertools import combinations
 from datetime import datetime
 from itertools import chain
 from colorama import Fore
@@ -181,6 +182,11 @@ def cleanup_dict(dict_to_clean, keys_to_remove):
 def reshape_dict_array(dict_to_shape, dict_key, dimensions=1):
     """Reshape an array stored as dict_key within a dict_to_shape to a given dimension"""
     dict_to_shape[dict_key] = dict_to_shape[dict_key].reshape(len(dict_to_shape[dict_key]), dimensions)
+
+
+def possible_combinations(com_list):
+    """Of a possible list """
+    return sum([list(map(list, combinations(com_list, i))) for i in range(len(com_list) + 1)], [])[1:]
 
 
 def error_dict_to_terminal(error_dict):

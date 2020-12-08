@@ -106,14 +106,19 @@ class Score(Input):
         if self.covariates_file:
             self._load_and_clean_covariants(ph_dict)
 
-        # validate the effects
-        self._validation[self.correlation] = np.corrcoef(ph_dict[self.inf_dec], ph_dict[self.phenotype])[0][1]
-        self._validation[self.r2] = self._validation[self.correlation] ** 2
+        # Calculate the direct effect
+        for key in score_keys:
+            self._adjust_prs(ph_dict, key, "Direct")
 
-        # Store the original phenotype for writing out later, then reshape our array to be (N, 1)
-        ph_dict[f"{self.core_prefix}_{self.phenotype}"] = ph_dict[self.phenotype]
-        mc.reshape_dict_array(ph_dict, self.phenotype)
+            # Load possible base adjustments, and if we have more than 1 calculation and run all possible combinations
+            combinations = [c for c in [self.sex, self.pc, self.covariants] if c in ph_dict.keys()]
+            if len(combinations) > 0:
+                for combination in mc.possible_combinations(combinations):
+                    self._adjust_prs(ph_dict, key, combination, combination)
 
+        # Write out the scores to the working directory
+        rows = [[v[i][0] if len(v[i]) == 1 else v[i] for v in ph_dict.values()] for i in range(len(ph_dict[self.iid]))]
+        write_csv(self.working_dir, f"Cumulative_Scores", list(ph_dict.keys()), rows)
 
     def aggregated_scores(self, score_files):
         """
@@ -197,11 +202,15 @@ class Score(Input):
         assert len(Counter([len(v) for v in ph_dict.values()])) == 1, "Filtering on phenotype failed"
         ph_dict[self.phenotype] = phenotypes
 
+        # Reshape our phenotype array to be array to be (N, 1)
+        mc.reshape_dict_array(ph_dict, self.phenotype)
+
     def _load_and_clean_covariants(self, ph_dict):
         """
         This will construct the phenotype dict that we will right out for the end user, storing individual level data to
         help us validate and clean individuals whom we do not have sufficient information to transfer the score too.
         """
+
         # Load the covariants file
         cov = CsvObject(self.covariates_file, set_columns=True)
         headers = {h.lower(): i for i, h in enumerate(cov.headers)}
@@ -214,6 +223,7 @@ class Score(Input):
             sex_filter = np.array([True if (s == 1) or (s == 2) else False for s in ph_dict[self.sex].astype(int)])
             self._score_error_dict["Miss Matched Sex"] = len(sex_filter) - np.sum(sex_filter)
             mc.filter_array(ph_dict, sex_filter)
+            mc.reshape_dict_array(ph_dict, self.sex)
 
         # Load PCs if they exist in the file
         pcs = [headers[h] for h in headers.keys() if h[:2] == self.pc.lower()]
@@ -230,12 +240,41 @@ class Score(Input):
         """
         For numeric continuous values we check if they each row contains finite values, otherwise we remove them
         """
+
+        # Save to dict the values from the key
         ph_dict[key] = np.array([[row[i] for i in key_indexes] for row in cov.row_data])
 
         # Filter out anything that is not finite
         pc_filter = np.array([True if np.isfinite(pc).all() else False for pc in ph_dict[key]])
         self._score_error_dict[error_dict_key] = len(pc_filter) - np.sum(pc_filter)
 
+    def _adjust_prs(self, ph_dict, prs_key, adjust_type, adjust_key=None):
+        """
+        This will adjust the prs of a given prs key by a given adjustment list provided to adjust_key if it is set,
+        otherwise it will just do the direct effect
+        """
+
+        # Reshape the current score type
+        mc.reshape_dict_array(ph_dict, prs_key)
+
+        # Direct effect
+        if not adjust_key:
+            (betas, rss00, r, s) = linalg.lstsq(np.ones((len(ph_dict[self.phenotype]), 1)), ph_dict[self.phenotype])
+
+        # Make Adjustment on this key, such as Sex or PC.
+        else:
+            (betas, rss00, r, s) = linalg.lstsq(np.hstack(self._set_stack(adjust_key, ph_dict, prs_key)))
+
+        x = np.hstack(self._set_stack(adjust_key, ph_dict, prs_key))
+        (betas, rss, r, s) = linalg.lstsq(x, ph_dict[self.phenotype])
+
+        # Calculate basic information to print to terminal
+        pred_r2 = 1 - rss / rss00
+        intercept, effect = betas
+        print(F"For {adjust_type}: Predict R2: {pred_r2[0]}, Intercept {intercept[0]}, Effect {effect[0]}\n")
+
+        # Adjust our prs by the betas then store than in ph_dict under this adjust_type
+        ph_dict[f"{prs_key}_{adjust_type}"] = np.dot(x, betas)
 
     def _assert_construct_pgs(self):
         """Assert that the information required to run is present"""
@@ -243,3 +282,11 @@ class Score(Input):
 
     def _assert_compile_pgs(self):
         assert self.phenotype, ec.missing_arg(self.operation, "Phenotype")
+
+    def _set_stack(self, adjust_key, ph_dict, prs_key):
+
+        base = [ph_dict[prs_key], np.ones((len(ph_dict[self.phenotype]), 1))]
+        if adjust_key:
+            return base + [ph_dict[k] for k in adjust_key]
+        else:
+            return base
