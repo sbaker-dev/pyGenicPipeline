@@ -54,10 +54,9 @@ class Score(Input):
         # Get the file names for output from pgs_chromosome_scores
         score_files = mc.directory_iterator(self.scores_directory)
 
-        # Isolate the headers to be aggregated
-        isolates = self.set_header_isolates(score_files)
-
-        print(isolates)
+        # Isolate the headers to be aggregated, then aggregate successful scores
+        ph_dict = self.aggregated_scores(score_files)
+        print(ph_dict[self.inf_dec])
 
         # print("Load phenotype files")
         # ph_dict = {}
@@ -71,29 +70,39 @@ class Score(Input):
         # validate the effects
         # THE REST OF CALCULATE PRS IN LDPRED + a bit of prs_construction for correlation
 
-    def set_header_isolates(self, score_files):
+    def aggregated_scores(self, score_files):
         """
         This will check the headers where we have full information across all our chromosomes and return the names of
-        those headers as a list of strings. Failures will be printed to the terminal
+        those headers as a list of strings. Failures will be printed to the terminal.
+
+        The successful headers that where isolated will then be aggregated
         """
+
+        # Load the ids, and use this to setup the dict of values
+        load_ids = CsvObject(Path(self.scores_directory, score_files[0]), set_columns=True)
+        ph_dict = {self.fid: load_ids[self.fid], self.iid: load_ids[self.iid]}
 
         # Count each header which isn't an id identifier
         headers = Counter(mc.flatten([CsvObject(Path(self.scores_directory, file)).headers for file in score_files]))
         headers.pop(self.fid, None)
         headers.pop(self.iid, None)
 
-        # Load the ids, and use this to setup the dict of values
-        load_ids = CsvObject(Path(self.scores_directory, score_files[0]), set_columns=True)
-        ph_dict = {self.fid: load_ids[self.fid], self.iid: load_ids[self.iid]}
-
         # Isolate headers that are complete
         isolates = {h: np.zeros(len(ph_dict[self.iid])) for h, v in zip(headers.keys(), headers.values())
                     if (v == len(score_files))}
 
-        # Assert we have found any successful headers, and tell users what was dropped
+        # Assert we have found any successful headers, and tell users what was dropped, then join our two dicts together
         ec.scores_valid_headers(isolates.keys(), headers, score_files)
-
         ph_dict = {**ph_dict, **isolates}
+
+        # For each chromosome file
+        for file in score_files:
+            load_file = CsvObject(Path(self.scores_directory, file), set_columns=True)
+
+            # For each header slice the column from the load file and save it as a float32, then add this to our dict
+            for header in isolates.keys():
+                ph_dict[header] = np.add(ph_dict[header], np.array(load_file[header], np.float32))
+
         return ph_dict
 
     def _construct_phenotype_dict(self, gen_file, load_path):
