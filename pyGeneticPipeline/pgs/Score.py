@@ -1,7 +1,7 @@
-from pyGeneticPipe.geneticParsers.plinkObject import PlinkObject
-from pyGeneticPipe.utils import error_codes as ec
-from pyGeneticPipe.utils import misc as mc
-from pyGeneticPipe.core.Input import Input
+from pyGeneticPipeline.geneticParsers.plinkObject import PlinkObject
+from pyGeneticPipeline.utils import error_codes as ec
+from pyGeneticPipeline.utils import misc as mc
+from pyGeneticPipeline.core.Input import Input
 from csvObject import CsvObject, write_csv
 from collections import Counter
 from pathlib import Path

@@ -1,6 +1,6 @@
-from pyGeneticPipe.utils import error_codes as ec
-from pyGeneticPipe.utils.misc import terminal_time
-from pyGeneticPipe.core.Input import Input
+from pyGeneticPipeline.utils import error_codes as ec
+from pyGeneticPipeline.utils.misc import terminal_time
+from pyGeneticPipeline.core.Input import Input
 from pathlib import Path
 
 

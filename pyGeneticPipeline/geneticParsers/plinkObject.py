@@ -1,5 +1,5 @@
-from pyGeneticPipe.geneticParsers.variantObjects import BimVariant, FamId
-from pyGeneticPipe.utils import error_codes as ec
+from pyGeneticPipeline.geneticParsers.variantObjects import BimVariant, FamId
+from pyGeneticPipeline.utils import error_codes as ec
 from pathlib import Path
 
 

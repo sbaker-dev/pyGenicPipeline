@@ -1,5 +1,5 @@
-from pyGeneticPipe.utils import error_codes as ec
-from pyGeneticPipe.utils.misc import load_yaml
+from pyGeneticPipeline.utils import error_codes as ec
+from pyGeneticPipeline.utils.misc import load_yaml
 from pathlib import Path
 import textwrap
 

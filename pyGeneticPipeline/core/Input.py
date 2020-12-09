@@ -1,8 +1,8 @@
-from pyGeneticPipe.geneticParsers.plinkObject import PlinkObject
-from pyGeneticPipe.geneticParsers.variantObjects import Variant
-from pyGeneticPipe.geneticParsers.bgenObject import BgenObject
-from pyGeneticPipe.utils import error_codes as ec
-from pyGeneticPipe.utils import misc as mc
+from pyGeneticPipeline.geneticParsers.plinkObject import PlinkObject
+from pyGeneticPipeline.geneticParsers.variantObjects import Variant
+from pyGeneticPipeline.geneticParsers.bgenObject import BgenObject
+from pyGeneticPipeline.utils import error_codes as ec
+from pyGeneticPipeline.utils import misc as mc
 from bgen_reader import custom_meta_path
 from pysnptools.distreader import Bgen
 from pysnptools.snpreader import Bed

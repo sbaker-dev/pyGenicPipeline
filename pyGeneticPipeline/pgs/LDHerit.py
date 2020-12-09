@@ -1,7 +1,7 @@
-from pyGeneticPipe.support.ArgMaker import ArgMaker
-from pyGeneticPipe.utils import error_codes as ec
-from pyGeneticPipe.utils import misc as mc
-from pyGeneticPipe.core.Input import Input
+from pyGeneticPipeline.support.ArgMaker import ArgMaker
+from pyGeneticPipeline.utils import error_codes as ec
+from pyGeneticPipeline.utils import misc as mc
+from pyGeneticPipeline.core.Input import Input
 from csvObject import CsvObject
 from colorama import Fore
 from pathlib import Path
