@@ -225,8 +225,11 @@ class Input:
         """
         for file in mc.directory_iterator(load_directory):
             if Path(load_directory, file).suffix == load_type:
-                if int(re.sub(r'[\D]', "", Path(load_directory, file).stem)) == chromosome:
-                    return Path(load_directory, file)
+                try:
+                    if int(re.sub(r'[\D]', "", Path(load_directory, file).stem)) == chromosome:
+                        return Path(load_directory, file)
+                except (ValueError, TypeError):
+                    continue
 
         raise Exception(f"Failed to find any relevant file for {chromosome} in {load_directory}")
 
