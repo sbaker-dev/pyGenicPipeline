@@ -3,6 +3,7 @@ from pyGeneticPipe.geneticParsers.variantObjects import Variant
 from pyGeneticPipe.geneticParsers.bgenObject import BgenObject
 from pyGeneticPipe.utils import error_codes as ec
 from pyGeneticPipe.utils import misc as mc
+from bgen_reader import custom_meta_path
 from pysnptools.distreader import Bgen
 from pysnptools.snpreader import Bed
 from csvObject import CsvObject
@@ -20,6 +21,8 @@ class Input:
         self.args = self._set_args(args)
         self._config = mc.load_yaml(Path(Path(__file__).parent, "Keys.yaml"))
         self.working_dir = self._validate_path(self.args["Working_Directory"], False)
+        self._make_sub_directory("meta_data")
+        custom_meta_path(Path(self.working_dir, "meta_data"))
         self.operation = self._set_current_job(self.args["Operation"])
         self.multi_core_splitter = self.args["Multi_Core_Splitter"]
 
