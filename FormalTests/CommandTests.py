@@ -1,7 +1,7 @@
 import unittest
 import subprocess
 from pathlib import Path
-from pyGeneticPipe.clean.Cleaner import Cleaner
+from pyGeneticPipe.pgs.SummaryCleaner import SummaryCleaner
 from pyGeneticPipe.utils.misc import load_yaml
 import h5py
 
@@ -47,8 +47,8 @@ class MyTestCase(unittest.TestCase):
         testing_path = Path(__file__).parent.absolute()
 
         # For .bed (within config)
-        bed_handel = Cleaner(Path(testing_path, "create_validation_group.yaml"))
-        bed_handel.load_type = ".bed"
+        bed_handel = SummaryCleaner(Path(testing_path, "create_validation_group.yaml"))
+        bed_handel.gen_type = ".bed"
         print("Validating for .bed")
         self._validate_cvg(bed_handel)
 
@@ -58,7 +58,7 @@ class MyTestCase(unittest.TestCase):
         testing_path = Path(__file__).parent.absolute()
 
         # For .bgen (within config)
-        bgen_handel = Cleaner(Path(testing_path, "create_validation_group.yaml"))
+        bgen_handel = SummaryCleaner(Path(testing_path, "create_validation_group.yaml"))
         print("Validating for .bgen")
         self._validate_cvg(bgen_handel)
 

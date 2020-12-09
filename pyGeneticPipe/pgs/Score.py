@@ -284,7 +284,7 @@ class Score(Input):
         assert self.phenotype, ec.missing_arg(self.operation, "Phenotype")
 
     def _set_stack(self, adjust_key, ph_dict, prs_key):
-
+        """If covariants are supplied, return a list of base + each value of each k in adjust_keys"""
         base = [ph_dict[prs_key], np.ones((len(ph_dict[self.phenotype]), 1))]
         if adjust_key:
             return base + [ph_dict[k] for k in adjust_key]
