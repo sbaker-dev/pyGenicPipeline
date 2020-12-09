@@ -63,7 +63,7 @@ if __name__ == "__main__":
         download_url=DOWNLOAD_URL,
         python_requires=PYTHON_REQUIRES,
         install_requires=INSTALL_REQUIRES,
-        package_dir="",
+        include_package_data=True,
         packages=find_packages(),
         classifiers=CLASSIFIERS
     )
