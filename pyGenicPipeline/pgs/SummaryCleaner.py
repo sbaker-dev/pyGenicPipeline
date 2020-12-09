@@ -1,7 +1,7 @@
-from pyGeneticPipeline.geneticParsers.variantObjects import Variant, Nucleotide
-from pyGeneticPipeline.utils import error_codes as ec
-from pyGeneticPipeline.utils import misc as mc
-from pyGeneticPipeline.core.Input import Input
+from pyGenicPipeline.geneticParsers.variantObjects import Variant, Nucleotide
+from pyGenicPipeline.utils import error_codes as ec
+from pyGenicPipeline.utils import misc as mc
+from pyGenicPipeline.core.Input import Input
 from scipy import stats
 import numpy as np
 import time

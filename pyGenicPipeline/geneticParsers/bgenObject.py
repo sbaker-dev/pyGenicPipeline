@@ -1,9 +1,9 @@
 """
 This is a modified version of the pybgen project available at https://github.com/lemieuxl/pybgen
 """
-from pyGeneticPipeline.geneticParsers.variantObjects import Variant
-from pyGeneticPipeline.utils import error_codes as ec
-from pyGeneticPipeline.utils.misc import bits_to_int
+from pyGenicPipeline.geneticParsers.variantObjects import Variant
+from pyGenicPipeline.utils import error_codes as ec
+from pyGenicPipeline.utils.misc import bits_to_int
 from pathlib import Path
 import numpy as np
 import sqlite3
