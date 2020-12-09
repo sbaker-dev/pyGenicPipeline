@@ -35,10 +35,6 @@ INSTALL_REQUIRES = [
     'scipy',
     'PyYAML']
 
-PACKAGES = [
-    "pyGenicPipeline",
-]
-
 CLASSIFIERS = [
     'Programming Language :: Python :: 3.7',
     'License :: OSI Approved :: MIT License',
@@ -46,7 +42,7 @@ CLASSIFIERS = [
 
 if __name__ == "__main__":
 
-    from setuptools import setup
+    from setuptools import setup, find_packages
 
     import sys
 
@@ -67,6 +63,7 @@ if __name__ == "__main__":
         download_url=DOWNLOAD_URL,
         python_requires=PYTHON_REQUIRES,
         install_requires=INSTALL_REQUIRES,
-        packages=PACKAGES,
+        package_dir="",
+        packages=find_packages(),
         classifiers=CLASSIFIERS
     )
