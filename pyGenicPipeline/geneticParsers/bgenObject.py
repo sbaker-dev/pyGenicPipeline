@@ -168,6 +168,8 @@ class BgenObject:
     def _connect_index(self):
         """Connect to the index (which is an SQLITE database)."""
 
+        print(f"V {self._variant_start}")
+
         bgen_file = sqlite3.connect(str(self.file_path.absolute()) + ".bgi")
         bgen_index = bgen_file.cursor()
 
@@ -261,6 +263,29 @@ class BgenObject:
         self.bgen_index.execute("SELECT rsid FROM Variant")
 
         return np.array([name for name in self.bgen_index.fetchall()[self.sid_index]]).flatten()
+
+    def test_indexer(self):
+        self._bgen_binary.seek(self._variant_start)
+
+        a = [self._variant_start]
+        for i in range(self.sid_count - 1):
+
+            self._get_curr_variant_info()
+
+            variant_size = self.unpack("<I", 4)
+
+            self._bgen_binary.seek(self._bgen_binary.tell() + variant_size)
+
+            a.append(self._bgen_binary.tell())
+
+        print(len(a))
+        print(a[:10])
+        print(a[-10:])
+
+
+
+
+
 
     def sid_indexer(self):
         """
