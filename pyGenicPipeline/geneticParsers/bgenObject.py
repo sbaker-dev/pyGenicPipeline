@@ -235,20 +235,16 @@ class BgenObject:
         # Return the Variant - currently only supports first two alleles
         return Variant(chromosome, pos, rs_id, alleles[0], alleles[1])
 
-    def index_from_snps(self, snp_names):
+    def sid_array(self):
         """
-        Construct the seek index for all snps provide as a list or tuple of snp_names
+        Construct an array of all the snps that exist in this file
         """
         assert self.bgen_index, ec.bgen_index_violation("get_variant")
 
-        # Select all the variants where the rsid is in the names provided
-        self.bgen_index.execute("SELECT file_start_position FROM Variant WHERE rsid IN {}".format(tuple(snp_names)))
-
         # Fetching all the seek positions
-        seek_positions = [index[0] for index in self.bgen_index.fetchall()]
+        self.bgen_index.execute("SELECT rsid FROM Variant")
 
-        # Return a dict of type {Name: seek}
-        return {name: seek for name, seek in zip(snp_names, seek_positions)}
+        return np.array([name for name in self.bgen_index.fetchall()[self.sid_index]]).flatten()
 
     def index_of_snps(self):
         """
