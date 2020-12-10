@@ -459,7 +459,10 @@ class BgenObject:
 
     @staticmethod
     def _get_layout_2_last_probs(probs):
-        """Gets the layout 2 last probabilities (homo alternative)."""
+        """
+        Gets the layout 2 last probabilities (homo alternative).
+        :rtype: np.ndarray
+        """
         return 1 - np.sum(probs, axis=1)
 
     def _layout_2_probs_to_dosage(self, probs):
