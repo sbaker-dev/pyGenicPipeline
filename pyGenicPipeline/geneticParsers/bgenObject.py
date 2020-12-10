@@ -228,7 +228,7 @@ class BgenObject:
         variant = self._get_curr_variant_info()
 
         if dosage:
-            return variant, self._get_curr_variant_data()
+            return self._get_curr_variant_data()
         else:
             return variant
 
@@ -288,11 +288,7 @@ class BgenObject:
         # Select all the variants where the rsid is in the names provided
         self.bgen_index.execute("SELECT file_start_position FROM Variant WHERE rsid IN {}".format(tuple(snp_names)))
 
-        for seek in self.bgen_index.fetchall():
-            print(self.get_variant(seek[0], True))
-            break
-
-        # dosage = [self.get_variant(seek[0], True) for seek in self.bgen_index.fetchall()]
+        return np.array([self.get_variant(seek[0], True)[self.iid_index] for seek in self.bgen_index.fetchall()])
 
     def _set_number_of_alleles(self):
         """
@@ -348,7 +344,6 @@ class BgenObject:
                 dosage[missing_data] = np.nan
 
                 # Returning the dosage
-                print("HERE?")
                 return dosage
 
     def _get_curr_variant_probs_layout_1(self):
