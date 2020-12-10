@@ -14,7 +14,8 @@ import os
 
 
 class BgenObject:
-    def __init__(self, file_path, bgi_file=True, probability=None, iter_array_size=1000):
+    def __init__(self, file_path, bgi_present=True, probability=None, iter_array_size=1000,
+                 sid_index=slice(None, None, None), iid_index=slice(None, None, None)):
         """
 
         :param file_path:
@@ -41,6 +42,20 @@ class BgenObject:
             self.bgen_file, self.bgen_index, self.last_variant_block = self._connect_index
         else:
             self.bgen_file, self.bgen_index, self.last_variant_block = None, None, None
+
+        self.iid_index = iid_index
+        self.sid_index = sid_index
+
+    def __getitem__(self, item):
+        if isinstance(item, slice):
+            return BgenObject(self.file_path, self.bgi_present, self.probability, self.iter_array_size, sid_index=item)
+
+        elif isinstance(item, tuple):
+            assert np.sum([isinstance(s, slice) for s in item]) == 2, ec
+            return BgenObject(self.file_path, self.bgi_present, self.probability, self.iter_array_size,
+                              sid_index=item[0], iid_index=item[1])
+        else:
+            raise Exception("Sc")
 
     def parse_header(self):
         """
