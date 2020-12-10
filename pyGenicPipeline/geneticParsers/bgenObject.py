@@ -3,7 +3,7 @@ This is a modified version of the pybgen project available at https://github.com
 """
 from pyGenicPipeline.geneticParsers.variantObjects import Variant
 from pyGenicPipeline.utils import error_codes as ec
-from pyGenicPipeline.utils.misc import bits_to_int
+from pyGenicPipeline.utils import misc as mc
 from pathlib import Path
 import numpy as np
 import sqlite3
@@ -14,7 +14,7 @@ import os
 
 
 class BgenObject:
-    def __init__(self, file_path, bgi_present=True, probability=None, iter_array_size=1000,
+    def __init__(self, file_path, bgi_present=True, probability_return=None, iter_array_size=1000, prob=0.9,
                  iid_index=slice(None, None, None), sid_index=slice(None, None, None)):
         """
 
@@ -24,16 +24,17 @@ class BgenObject:
             otherwise can ec passed as a path if it is in a different directory.
         :type bgi_present: bool | str
 
-        :param probability:
+        :param probability_return:
         """
 
         self.file_path = Path(file_path)
         self._bgen_binary = open(file_path, "rb")
 
-        self.offset, self.headers, self.sid_count, self.iid_count, self.compression, self.layout, \
+        self.offset, self.headers, self.sid_count, self.iid_count, self.compression, self.compressed, self.layout, \
             self.sample_identifiers, self._variant_start = self.parse_header()
 
-        self.probability = probability
+        self.probability_return = probability_return
+        self.probability = prob
         self.iter_array_size = iter_array_size
 
         self.bgi_present = bgi_present
@@ -48,12 +49,13 @@ class BgenObject:
 
     def __getitem__(self, item):
         if isinstance(item, slice):
-            return BgenObject(self.file_path, self.bgi_present, self.probability, self.iter_array_size, sid_index=item)
+            return BgenObject(self.file_path, self.bgi_present, self.probability_return, self.iter_array_size,
+                              self.probability, sid_index=item)
 
         elif isinstance(item, tuple):
             assert np.sum([isinstance(s, slice) for s in item]) == 2, ec
-            return BgenObject(self.file_path, self.bgi_present, self.probability, self.iter_array_size,
-                              iid_index=item[0], sid_index=item[1])
+            return BgenObject(self.file_path, self.bgi_present, self.probability_return, self.iter_array_size,
+                              self.probability, iid_index=item[0], sid_index=item[1])
         else:
             raise Exception("Sc")
 
@@ -84,8 +86,9 @@ class BgenObject:
         self._bgen_binary.read(headers - 20)
 
         # Extract the flag, then set compression layout and sample identifiers from it
-        compression, layout, sample_identifiers = self._header_flag()
-        return offset, headers, variant_number, sample_number, compression, layout, sample_identifiers, variant_start
+        compression, compressed, layout, sample_identifiers = self._header_flag()
+        return (offset, headers, variant_number, sample_number, compression, compressed, layout,
+                sample_identifiers, variant_start)
 
     def _header_flag(self):
         """
@@ -102,25 +105,28 @@ class BgenObject:
 
         # [N1] Bytes are stored right to left hence the reverse, see shorturl.at/cOU78
         # Check the compression of the data
-        compression_flag = bits_to_int(flag[0: 2][::-1])
+        compression_flag = mc.bits_to_int(flag[0: 2][::-1])
         assert 0 <= compression_flag < 3, ec.compression_violation(self._bgen_binary.name, compression_flag)
         if compression_flag == 0:
+            compressed = False
             compression = self._no_decompress
         elif compression_flag == 1:
+            compressed = True
             compression = zlib.decompress
         else:
+            compressed = True
             compression = zstd.decompress
 
         # Check the layout is either 1 or 2, see [N1]
-        layout = bits_to_int(flag[2:6][::-1])
+        layout = mc.bits_to_int(flag[2:6][::-1])
         assert 1 <= layout < 3, ec.layout_violation(self._bgen_binary.name, layout)
 
         # Check if the sample identifiers are in the file or not, then return
         assert flag[31] == 0 or flag[31] == 1, ec.sample_identifier_violation(self._bgen_binary.name, flag[31])
         if flag[31] == 0:
-            return compression, layout, False
+            return compression, compressed, layout, False
         else:
-            return compression, layout, True
+            return compression, compressed, layout, True
 
     def unpack(self, struct_format, size, list_return=False):
         """
@@ -144,6 +150,7 @@ class BgenObject:
         :return: Whatever was unpacked
         :rtype: Any
         """
+
         if list_return:
             return struct.unpack(struct_format, self._bgen_binary.read(size))
         else:
@@ -221,8 +228,7 @@ class BgenObject:
         variant = self._get_curr_variant_info()
 
         if dosage:
-            # will return variant and dosage
-            raise NotImplementedError("Dosage Not yet implemented")
+            return variant, self._get_curr_variant_data()
         else:
             return variant
 
@@ -273,7 +279,7 @@ class BgenObject:
         # Return a dict of type {Name: seek}
         return {name: seek for seek, name in self.bgen_index.fetchall()}
 
-    def index_from_sid(self, snp_names):
+    def dosage_from_sid(self, snp_names):
         """
         Construct the seek index for all snps provide as a list or tuple of snp_names
         """
@@ -282,11 +288,11 @@ class BgenObject:
         # Select all the variants where the rsid is in the names provided
         self.bgen_index.execute("SELECT file_start_position FROM Variant WHERE rsid IN {}".format(tuple(snp_names)))
 
-        # Fetching all the seek positions
-        seek_positions = [index[0] for index in self.bgen_index.fetchall()]
+        for seek in self.bgen_index.fetchall():
+            print(self.get_variant(seek[0], True))
+            break
 
-        # Return a dict of type {Name: seek}
-        return {name: seek for name, seek in zip(snp_names, seek_positions)}
+        # dosage = [self.get_variant(seek[0], True) for seek in self.bgen_index.fetchall()]
 
     def _set_number_of_alleles(self):
         """
@@ -299,6 +305,180 @@ class BgenObject:
             return self.unpack("<H", 2)
         else:
             return 2
+
+    def _get_curr_variant_data(self):
+        """Gets the current variant's dosage or probabilities."""
+
+        if self.layout == 1:
+            print("WARNING - UNTESTED CODE FROM PY-BGEN")
+            # Getting the probabilities
+            probs = self._get_curr_variant_probs_layout_1()
+
+            if self.probability:
+                # Returning the probabilities
+                return probs
+
+            else:
+                # Returning the dosage
+                return self._layout_1_probs_to_dosage(probs)
+
+        else:
+            # Getting the probabilities
+            probs, missing_data = self._get_curr_variant_probs_layout_2()
+
+            if self.probability_return:
+                # Getting the alternative allele homozygous probabilities
+                last_probs = self._get_layout_2_last_probs(probs)
+
+                # Stacking the probabilities
+                last_probs.shape = (last_probs.shape[0], 1)
+                full_probs = np.hstack((probs, last_probs))
+
+                # Setting the missing to NaN
+                full_probs[missing_data] = np.nan
+
+                # Returning the probabilities
+                return full_probs
+
+            else:
+                # Computing the dosage
+                dosage = self._layout_2_probs_to_dosage(probs)
+
+                # Setting the missing to NaN
+                dosage[missing_data] = np.nan
+
+                # Returning the dosage
+                print("HERE?")
+                return dosage
+
+    def _get_curr_variant_probs_layout_1(self):
+        """Gets the current variant's probabilities (layout 1)."""
+        c = self.iid_count
+        if self.compressed:
+            c = self.unpack("<I", 4)
+
+        # Getting the probabilities
+        probs = np.frombuffer(
+            self.compression(self._bgen_binary.read(c)),
+            dtype="u2",
+        ) / 32768
+        probs.shape = (self.iid_count, 3)
+
+        return probs
+
+    def _layout_1_probs_to_dosage(self, probs):
+        """Transforms probability values to dosage (from layout 1)"""
+        # Constructing the dosage
+        dosage = 2 * probs[:, 2] + probs[:, 1]
+        if self.probability > 0:
+            dosage[~np.any(probs >= self.probability, axis=1)] = np.nan
+
+        return dosage
+
+    def _get_curr_variant_probs_layout_2(self):
+        """Gets the current variant's probabilities (layout 2)."""
+        # The total length C of the rest of the data for this variant
+        c = self.unpack("<I", 4)
+
+        # The number of bytes to read
+        to_read = c
+
+        # D = C if no compression
+        d = c
+        if self.compressed:
+            # The total length D of the probability data after
+            # decompression
+            d = self.unpack("<I", 4)
+            to_read = c - 4
+
+        # Reading the data and checking
+        data = self.compression(self._bgen_binary.read(to_read))
+        assert len(data) == d, "INVALID HERE"
+
+        # Checking the number of samples
+        n = mc.struct_unpack("<I", data[:4])
+        assert n == self.iid_count, "INVALID HERE"
+
+        data = data[4:]
+
+        # Checking the number of alleles (we only accept 2 alleles)
+        nb_alleles = mc.struct_unpack("<H", data[:2])
+        assert nb_alleles == 2, "INVALID HERE"
+        data = data[2:]
+
+        # TODO: Check ploidy for sexual chromosomes
+        # The minimum and maximum for ploidy (we only accept ploidy of 2)
+        min_ploidy = mc.byte_to_int(data[0])
+        max_ploidy = mc.byte_to_int(data[1])
+        if min_ploidy != 2 and max_ploidy != 2:
+            raise ValueError("INVALID HERE")
+
+        data = data[2:]
+
+        # Check the list of N bytes for missingness (since we assume only
+        # diploid values for each sample)
+        ploidy_info = np.frombuffer(data[:n], dtype=np.uint8)
+        ploidy_info = np.unpackbits(
+            ploidy_info.reshape(1, ploidy_info.shape[0]).T,
+            axis=1,
+        )
+        missing_data = ploidy_info[:, 0] == 1
+        data = data[n:]
+
+        # TODO: Permit phased data
+        # Is the data phased?
+        is_phased = data[0] == 1
+        if is_phased:
+            raise ValueError(
+                "{}: only accepting unphased data".format("INVALID")
+            )
+        data = data[1:]
+
+        # The number of bits used to encode each probabilities
+        b = mc.byte_to_int(data[0])
+        data = data[1:]
+
+        # Reading the probabilities (don't forget we allow only for diploid
+        # values)
+        if b == 8:
+            probs = np.frombuffer(data, dtype=np.uint8)
+
+        elif b == 16:
+            probs = np.frombuffer(data, dtype=np.uint16)
+
+        elif b == 32:
+            probs = np.frombuffer(data, dtype=np.uint32)
+
+        else:
+            probs = mc.pack_bits(data, b)
+
+        # Changing shape and computing dosage
+        probs.shape = (self.iid_count, 2)
+
+        return probs / (2 ** b - 1), missing_data
+
+    @staticmethod
+    def _get_layout_2_last_probs(probs):
+        """Gets the layout 2 last probabilities (homo alternative)."""
+        return 1 - np.sum(probs, axis=1)
+
+    def _layout_2_probs_to_dosage(self, probs):
+        """Transforms probability values to dosage (from layout 2)."""
+        # Computing the last genotype's probabilities
+        last_probs = self._get_layout_2_last_probs(probs)
+
+        # Constructing the dosage
+        dosage = 2 * last_probs + probs[:, 1]
+
+        # Setting low quality to NaN
+        if self.probability > 0:
+            good_probs = (
+                    np.any(probs >= self.probability, axis=1) |
+                    (last_probs >= self.probability)
+            )
+            dosage[~good_probs] = np.nan
+
+        return dosage
 
     def _set_bgi(self):
         """
