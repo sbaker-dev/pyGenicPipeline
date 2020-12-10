@@ -19,9 +19,9 @@ class BgenObject:
 
         :param file_path:
 
-        :param bgi_file: Takes a value of True if the .bgi is in the same directory and named file_path.bgi
+        :param bgi_present: Takes a value of True if the .bgi is in the same directory and named file_path.bgi
             otherwise can ec passed as a path if it is in a different directory.
-        :type bgi_file: bool | str
+        :type bgi_present: bool | str
 
         :param probability:
         """
@@ -35,7 +35,8 @@ class BgenObject:
         self.probability = probability
         self.iter_array_size = iter_array_size
 
-        self.bgi_file = self._set_bgi(file_path, bgi_file)
+        self.bgi_present = bgi_present
+        self.bgi_file = self._set_bgi()
         if self.bgi_file:
             self.bgen_file, self.bgen_index, self.last_variant_block = self._connect_index
         else:
