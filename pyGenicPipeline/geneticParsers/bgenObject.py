@@ -166,11 +166,11 @@ class BgenObject:
         nb_markers, first_variant_block, last_variant_block = bgen_index.fetchone()
 
         # Check the number of markers are the same across bgen and bgi, and that they start in the same block
-        assert nb_markers == self.variant_number, ec
+        assert nb_markers == self.sid_count, ec
         assert first_variant_block == self._variant_start
 
         # Checking the number of markers
-        if nb_markers != self.variant_number:
+        if nb_markers != self.sid_count:
             raise ValueError("Number of markers different between headers of bgen and bgi")
 
         # Checking the first variant seek position
@@ -216,7 +216,7 @@ class BgenObject:
         """Gets the current variant's information."""
 
         if self.layout == 1:
-            assert self.unpack("<I", 4) == self.sample_number, ec
+            assert self.unpack("<I", 4) == self.iid_count, ec
 
         # Reading the variant id (may be in form chr1:8045045:A:G or just a duplicate of rsid and not used currently)
         self._read_bgen("<H", 2)
@@ -286,29 +286,26 @@ class BgenObject:
         else:
             return 2
 
-    @staticmethod
-    def _set_bgi(bgen_path, bgi_file_path):
+    def _set_bgi(self):
         """
         Connect to the index file either via a bgi file in the same directory or in another directory.
 
-        :param bgen_path: The path to bgen_path
-        :param bgi_file_path: The bgi_position
         """
 
-        if not bgi_file_path:
+        if not self.bgi_present:
             return False
-        elif bgi_file_path:
-            if not os.path.isfile(f"{bgen_path}.bgi"):
-                raise IOError(f"{bgen_path}.bgi was not found")
+        elif self.bgi_present:
+            if not os.path.isfile(f"{self.file_path}.bgi"):
+                raise IOError(f"{self.file_path}.bgi was not found")
             else:
                 return True
-        elif isinstance(bgi_file_path, str):
-            if not os.path.isfile(f"{bgi_file_path}"):
-                raise IOError(f"{bgi_file_path} was not found")
+        elif isinstance(self.bgi_present, str):
+            if not os.path.isfile(f"{self.bgi_present}"):
+                raise IOError(f"{self.bgi_present} was not found")
             else:
                 return True
         else:
-            raise TypeError(ec.bgi_path_violation(bgi_file_path))
+            raise TypeError(ec.bgi_path_violation(self.bgi_present))
 
     @staticmethod
     def _no_decompress(data):
