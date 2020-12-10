@@ -29,7 +29,7 @@ class BgenObject:
         self.file_path = Path(file_path)
         self._bgen_binary = open(file_path, "rb")
 
-        self.offset, self.headers, self.variant_number, self.sample_number, self.compression, self.layout, \
+        self.offset, self.headers, self.sid_count, self.iid_count, self.compression, self.layout, \
             self.sample_identifiers, self._variant_start = self.parse_header()
 
         self.probability = probability
@@ -246,7 +246,7 @@ class BgenObject:
 
         return np.array([name for name in self.bgen_index.fetchall()[self.sid_index]]).flatten()
 
-    def index_of_snps(self):
+    def sid_indexer(self):
         """
         Construct the seek index for all the snps in the file
         """
@@ -257,6 +257,21 @@ class BgenObject:
 
         # Return a dict of type {Name: seek}
         return {name: seek for seek, name in self.bgen_index.fetchall()}
+
+    def index_from_sid(self, snp_names):
+        """
+        Construct the seek index for all snps provide as a list or tuple of snp_names
+        """
+        assert self.bgen_index, ec.bgen_index_violation("get_variant")
+
+        # Select all the variants where the rsid is in the names provided
+        self.bgen_index.execute("SELECT file_start_position FROM Variant WHERE rsid IN {}".format(tuple(snp_names)))
+
+        # Fetching all the seek positions
+        seek_positions = [index[0] for index in self.bgen_index.fetchall()]
+
+        # Return a dict of type {Name: seek}
+        return {name: seek for name, seek in zip(snp_names, seek_positions)}
 
     def _set_number_of_alleles(self):
         """
