@@ -534,8 +534,8 @@ class BgenObject:
         """Parses the sample block."""
         # Getting the block size
         block_size = self.unpack("<I", 4)
-        assert block_size + self._headers_size > self._offset, f"INVALID: {block_size}, {self._headers_size}," \
-                                                               f" {self._offset}"
+        assert block_size + self._headers_size == self._offset, f"INVALID: {block_size}, {self._headers_size}," \
+                                                                f" {self._offset}"
 
         # Checking the number of samples
         n = self.unpack("<I", 4)
