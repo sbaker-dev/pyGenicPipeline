@@ -94,7 +94,7 @@ class SummaryCleaner(Input):
                     else:
                         self._sum_error_dict["Invalid_Snps"] += 1
 
-        print("Extracted snps from summary file\n")
+        print(f"Extracted snps from summary file.\nFound valid lines {len(sm_line)} and Variants {len(sm_variants)}\n")
         return sm_line, sm_variants, validation_snps
 
     def _validate_summary_lines(self, sm_dict):
