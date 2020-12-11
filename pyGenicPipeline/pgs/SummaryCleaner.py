@@ -30,7 +30,7 @@ class SummaryCleaner(Input):
         print(f"Starting Chromosome: {chromosome}")
 
         # Clean the summary lines to only include validatable snps from our genetic samples that exit in this chromosome
-        sm_line, sm_variants, validation_snps = self._valid_snps_lines_and_variants(
+        sm_line, sm_variants, validation_snps_count = self._valid_snps_lines_and_variants(
             chromosome, ref, load_path, validation)
 
         # Construct the summary dict with our summary lines and Variants objects of our valid snps
@@ -46,7 +46,7 @@ class SummaryCleaner(Input):
 
         # Given we have only accepted snps that are within the validation / core, we should never have more snps in
         # summary than within the validation. If we do, something has gone critically wrong.
-        assert len(order) <= len(validation_snps), ec.snp_overflow(len(order), len(validation_snps))
+        assert len(order) <= validation_snps_count, ec.snp_overflow(len(order), validation_snps_count)
 
         # In this case we can order the array using filter array as well, and we return this ordered dict
         mc.filter_array(sm_dict, order)
@@ -95,7 +95,7 @@ class SummaryCleaner(Input):
                         self._sum_error_dict["Invalid_Snps"] += 1
 
         print(f"Extracted snps from summary file.\nFound valid lines {len(sm_line)} and Variants {len(sm_variants)}\n")
-        return sm_line, sm_variants, validation_snps
+        return sm_line, sm_variants, len(validation_snps)
 
     def _validate_summary_lines(self, sm_dict):
         """This will load in each possible header, and clean our dict of values by filtering"""
