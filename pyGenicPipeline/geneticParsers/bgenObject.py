@@ -28,6 +28,7 @@ class BgenObject:
 
         self.file_path = Path(file_path)
         self._bgen_binary = open(file_path, "rb")
+        self._sample_path = sample_path
         self.iid_index = iid_index
         self.sid_index = sid_index
 
@@ -37,7 +38,6 @@ class BgenObject:
         # Index our sid and iid values if we have indexes
         self.sid_count = len(np.arange(self._variant_number)[self.sid_index])
         self.iid_count = len(np.arange(self._sample_number)[self.iid_index])
-        self.iid = self._set_iid(sample_path)
 
         self.probability_return = probability_return
         self.probability = prob
@@ -508,7 +508,7 @@ class BgenObject:
         """Don't decompress"""
         return data
 
-    def _set_iid(self, sample_path):
+    def iid_array(self):
         """
         If sample identifiers are within the bgen file then these can be extracted and set, however this has not yet
         been tested and am unsure if sex and missing stored in bgen as is with .sample files?
@@ -518,14 +518,12 @@ class BgenObject:
 
         If Nothing is provided, and nothing is embedded, we create a list of id's on then number of id's after indexing.
 
-        :param sample_path: Path to sample file
-        :type sample_path: str | None
 
         :return: An array of id information
         """
         if self._sample_identifiers:
             return self._parse_sample_block()
-        elif sample_path:
+        elif self._sample_path:
             raise NotImplementedError("Sorry this needs to be tested")
         else:
             return np.array([[i, i] for i in np.arange(self._sample_number)[self.iid_index]])

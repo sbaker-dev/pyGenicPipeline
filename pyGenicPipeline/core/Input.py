@@ -389,22 +389,35 @@ class Input:
         else:
             raise Exception(f"Critical Error: Unknown load type {self.gen_type} found in _isolate_dosage")
 
-    def _set_z_scores(self, set_z_scores):
+    def genetic_phenotypes(self, gen_file, load_path):
         """
-        If the user wants to compute z scores, then standard_errors most be set but otherwise it isn't a mandatory
-        header.
-
-        :param set_z_scores: A bool of if z scores should be calculated or not
-        :type set_z_scores: bool
-
-        :return: True if assertion of standard errors is also True, if set_z_scores is None then return None
-        :rtype: None | bool
+        Load the full genetic data for this chromosome and isolate any information that can be isolated from it. In this
+        case, .bed load types can access more than bgen due to the ability to extract sex from the .fam file.
         """
-        if set_z_scores:
-            assert self.sm_standard_errors is not None, ec.z_scores_with_standard_errors
-            return True
+
+        ph_dict = {}
+        # For plink files, load the fam file then extract the fid, iid and sex information
+        if self.gen_type == ".bed":
+            ph_dict[self.fam] = np.array(PlinkObject(load_path).get_family_identifiers())
+            ph_dict[self.fid] = mc.variant_array(self.fid.lower(), ph_dict[self.fam])
+            ph_dict[self.iid] = mc.variant_array(self.iid.lower(), ph_dict[self.fam])
+            ph_dict.pop(self.fam, None)
+
+        # Bgen doesn't have a fam equivalent, so just load the fid and iid
+        elif self.gen_type == ".bgen":
+            # todo update to allow for sex and missing if we have loaded .sample
+            if self._bgen_loader:
+                ids = gen_file.iid
+            else:
+                ids = gen_file.iid_array()
+
+            ph_dict[self.fid] = np.array([fid for fid, iid in ids])
+            ph_dict[self.iid] = np.array([iid for fid, iid in ids])
+
         else:
-            return None
+            raise Exception("Unknown load type set")
+
+        return ph_dict
 
     def load_variants(self, load_path, validation, ref):
         """
@@ -473,6 +486,23 @@ class Input:
                 except ValueError:
                     continue
         return long_dict
+
+    def _set_z_scores(self, set_z_scores):
+        """
+        If the user wants to compute z scores, then standard_errors most be set but otherwise it isn't a mandatory
+        header.
+
+        :param set_z_scores: A bool of if z scores should be calculated or not
+        :type set_z_scores: bool
+
+        :return: True if assertion of standard errors is also True, if set_z_scores is None then return None
+        :rtype: None | bool
+        """
+        if set_z_scores:
+            assert self.sm_standard_errors is not None, ec.z_scores_with_standard_errors
+            return True
+        else:
+            return None
 
     def _set_causal_fractions(self):
         """

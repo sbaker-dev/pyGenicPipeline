@@ -1,8 +1,8 @@
 import unittest
 import subprocess
 from pathlib import Path
-from pyGeneticPipe.pgs.SummaryCleaner import SummaryCleaner
-from pyGeneticPipe.utils.misc import load_yaml
+from pyGenicPipeline.pgs.SummaryCleaner import SummaryCleaner
+from pyGenicPipeline.utils.misc import load_yaml
 import h5py
 
 

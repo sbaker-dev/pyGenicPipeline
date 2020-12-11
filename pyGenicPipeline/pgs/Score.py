@@ -1,4 +1,3 @@
-from pyGenicPipeline.geneticParsers.plinkObject import PlinkObject
 from pyGenicPipeline.utils import error_codes as ec
 from pyGenicPipeline.utils import misc as mc
 from pyGenicPipeline.core.Input import Input
@@ -28,7 +27,7 @@ class Score(Input):
         core = self.gen_reference(load_path)
 
         # Construct a dict of arrays of our ID's
-        ph_dict = self._genetic_phenotypes(core, load_path)
+        ph_dict = self.genetic_phenotypes(core, load_path)
 
         # Load the raw snps that have been isolated Raw snps
         raw_snps = self.isolate_raw_snps(core, sm_dict)
@@ -48,32 +47,6 @@ class Score(Input):
         # Write to file
         rows = [[v[i] for v in ph_dict.values()] for i in range(core.iid_count)]
         write_csv(self.scores_directory, f"Scores_{chromosome}", list(ph_dict.keys()), rows)
-
-    def _genetic_phenotypes(self, gen_file, load_path):
-        """
-        Load the full genetic data for this chromosome and isolate any information that can be isolated from it. In this
-        case, .bed load types can access more than bgen due to the ability to extract sex from the .fam file.
-        """
-
-        ph_dict = {}
-        # For plink files, load the fam file then extract the fid, iid and sex information
-        if self.gen_type == ".bed":
-            ph_dict[self.fam] = np.array(PlinkObject(load_path).get_family_identifiers())
-            ph_dict[self.fid] = mc.variant_array(self.fid.lower(), ph_dict[self.fam])
-            ph_dict[self.iid] = mc.variant_array(self.iid.lower(), ph_dict[self.fam])
-            ph_dict.pop(self.fam, None)
-
-        # Bgen doesn't have a fam equivalent, so just load the fid and iid
-        elif self.gen_type == ".bgen":
-            # todo update to allow for sex and missing if we have loaded .sample
-            ids = gen_file.iid
-            ph_dict[self.fid] = np.array([fid for fid, iid in ids])
-            ph_dict[self.iid] = np.array([iid for fid, iid in ids])
-
-        else:
-            raise Exception("Unknown load type set")
-
-        return ph_dict
 
     @staticmethod
     def _calculate_score(sm_dict, ph_dict, key, raw_snps):
