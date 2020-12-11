@@ -22,7 +22,7 @@ MAINTAINER = 'Samuel Baker'
 MAINTAINER_EMAIL = 'samuelbaker.researcher@gmail.com'
 LICENSE = 'MIT'
 DOWNLOAD_URL = "https://github.com/sbaker-dev/pyGenicPipeline"
-VERSION = "0.02.11"
+VERSION = "0.02.12"
 PYTHON_REQUIRES = ">=3.7"
 
 INSTALL_REQUIRES = [
