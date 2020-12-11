@@ -60,6 +60,7 @@ def struct_unpack(struct_format, data, list_return=False):
     else:
         return struct.unpack(struct_format, data)[0]
 
+
 def open_setter(path):
     """
     Some files may be zipped, opens files according to the zip status
@@ -222,6 +223,7 @@ def cleanup_dict(dict_to_clean, keys_to_remove):
     print("Remaining Keys")
     for key in dict_to_clean:
         print(f"{key} - {len(dict_to_clean[key])}")
+    print("\n")
 
 
 def reshape_dict_array(dict_to_shape, dict_key, dimensions=1):
@@ -242,10 +244,10 @@ def error_dict_to_terminal(error_dict):
             print(Fore.LIGHTCYAN_EX + "----------------------------------------")
         else:
             print("{:<30} {}".format(k, v))
+    print("\n")
 
     # Reset values to 0
     for k, v in zip(error_dict.keys(), error_dict.values()):
         if isinstance(v, (int, np.int32, np.int8)):
             error_dict[k] = 0
-
     return time.time()

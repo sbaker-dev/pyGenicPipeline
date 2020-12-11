@@ -603,7 +603,7 @@ class Input:
     def check_sm_dict(sm_dict):
         """Validate that sm dict still exists"""
         if not sm_dict:
-            raise Exception("Failed to find any snps")
+            raise Exception("Failed to find any snps!\n\n")
 
     @property
     def cleaned_types(self):
