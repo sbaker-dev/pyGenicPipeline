@@ -102,29 +102,34 @@ class SummaryCleaner(Input):
         """This will load in each possible header, and clean our dict of values by filtering"""
 
         # If we have chromosomes in our summary statistics check the chromosome of the snps against the validation
+        print("Cleaning Chromosome")
         if self.sm_chromosome is not None:
             if not self._validation_equality(self.sm_chromosome, self.chromosome, sm_dict):
                 print("Failed chromosome equality")
                 return None
 
         # If we have base pair position in our summary then validate the base pair
+        print("Cleaning Base Pair")
         if self.bp_position is not None:
             if not self._validation_equality(self.sm_bp_position, self.bp_position, sm_dict, int):
                 print("Failed base Position Equality")
                 return None
 
         # Clean the summary stats effect sizes for calculation of beta later
+        print("Cleaning Effect size")
         if not self._validation_finite(sm_dict, self.sm_effect_size, self.effect_size):
             print("Failed to find any finite effect sizes")
             return None
 
         # Clean the P values
+        print("Cleaning P value")
         if not self._validation_finite(sm_dict, self.sm_p_value, self.p_value):
             print("Failed to find any finite p values")
             return None
 
         # If we are using z scores we need to load and clean the standard errors column
         if self.z_scores:
+            print("Cleaning standard errors")
             if not self._validation_finite(sm_dict, self.sm_standard_errors, self.standard_errors):
                 print("Failed to find any finite standard errors for computing z scores")
                 return None
@@ -135,8 +140,10 @@ class SummaryCleaner(Input):
         # Check that the nucleotides are sane and flip them if required
         sm_dict = self._validate_nucleotides(sm_dict)
         if not sm_dict:
+            print("Failed to validate lines")
             return None
         else:
+            print("Validated lines, now calculating frequencies")
             # Calculate the frequencies and set info if it exists, remove sm_lines as we no longer require this
             sm_dict[self.freq] = np.array([self._sum_stats_frequencies(line) for line in sm_dict[self.sm_lines]])
             sm_dict[self.info] = self._validate_info(sm_dict[self.sm_lines])
@@ -257,6 +264,7 @@ class SummaryCleaner(Input):
         sm_dict[self.nucleotide] = np.array([Nucleotide(e, a) for e, a in zip(effected_allele, alt_allele)])
 
         # Filter out any snps where the summery or variant Nucleotide is ambiguous
+        print("Filtering Ambiguous")
         filter_ambiguous = [False if (sm_nuc.to_tuple() in self.ambiguous_snps) or
                                      ((var_nuc.a1, var_nuc.a2) in self.ambiguous_snps)
                             else True
@@ -268,6 +276,7 @@ class SummaryCleaner(Input):
 
         # Sanity Check
         # Filter out any snps that do not pass a sanity check (Only a t c and g)
+        print("Filtering Out invalid snps")
         allowed_filter = [False if (sm_nuc.a1 not in self.allowed_alleles) or
                                    (sm_nuc.a2 not in self.allowed_alleles) or
                                    (var_nuc.a1 not in self.allowed_alleles) or
@@ -282,6 +291,7 @@ class SummaryCleaner(Input):
         # Determine Flipping
         # Construct a flip status of 1, 0, -1 for No flipping, failed flipping, and flipped successfully which we can
         # multiple our betas by
+        print("Attempting to flip alleles where required")
         sm_dict["Flip"] = np.array([self._flip_nucleotide(var_nuc, sm_nuc) for var_nuc, sm_nuc in
                                     zip(sm_dict[self.sm_variants], sm_dict[self.nucleotide])])
         filter_flipped = np.array([False if flipped == 0 else True for flipped in sm_dict["Flip"]])
