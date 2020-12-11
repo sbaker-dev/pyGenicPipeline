@@ -25,6 +25,7 @@ class Input:
         custom_meta_path(Path(self.working_dir, "meta_data"))
         self.operation = self._set_current_job(self.args["Operation"])
         self.multi_core_splitter = self.args["Multi_Core_Splitter"]
+        self._bgen_loader = self.args["PySnpTools_Bgen"]
 
         # The project file for this project
         self.summary_file = self._validate_path(self.args["Summary_Path"])
@@ -321,7 +322,10 @@ class Input:
         if self.gen_type == ".bed":
             return Bed(load_path, count_A1=True)
         elif self.gen_type == ".bgen":
-            return Bgen(load_path)
+            if self._bgen_loader:
+                return Bgen(load_path)
+            else:
+                return BgenObject(load_path)
         else:
             raise Exception("Unknown load type set")
 
@@ -363,36 +367,25 @@ class Input:
         :param sm_dict: dict of clean information
         :return: raw snps
         """
-        ordered_common = gen_file[:, gen_file.sid_to_index(self._extract_variant_name(sm_dict))].read().val
+        if self._bgen_loader:
+            variant_names = [variant.bgen_snp_id() for variant in sm_dict[self.sm_variants]]
+        else:
+            variant_names = mc.variant_array(self.snp_id.lower(), sm_dict[self.sm_variants])
 
         # bed returns 2, 1, 0 rather than 0, 1, 2 although it says its 0, 1, 2; so this inverts it
         if self.gen_type == ".bed":
+            ordered_common = gen_file[:, gen_file.sid_to_index(variant_names)].read().val
             return np.array([abs(snp - 2) for snp in ordered_common.T])
 
         # We have a [1, 0, 0], [0, 1, 0], [0, 0, 1] array return for 0, 1, 2 respectively. So if we multiple the arrays
         # by their index position and then sum them we get [0, 1, 2]
         elif self.gen_type == ".bgen":
-            return sum(np.array([snp * i for i, snp in enumerate(ordered_common.T)]))
+            if self._bgen_loader:
+                ordered_common = gen_file[:, gen_file.sid_to_index(variant_names)].read().val
+                return sum(np.array([snp * i for i, snp in enumerate(ordered_common.T)]))
+            else:
+                return gen_file.dosage_from_sid(variant_names)
 
-        else:
-            raise Exception(f"Critical Error: Unknown load type {self.gen_type} found in _isolate_dosage")
-
-    def _extract_variant_name(self, sm_dict):
-        """
-        Different file types have different naming standards.
-
-        .bed: ["rs123", "rs124", ... "rsN"]
-        .bgen: ["rs123,rs123", "rs124,rs124", ... "rsN,rsN"]
-
-        This will standardise the names to be a list of type equivalent to bed
-        :param sm_dict: dict of clean information
-        :return: list of snp names
-        """
-        if self.gen_type == ".bed":
-            return [variant.snp_id for variant in sm_dict[self.sm_variants]]
-        elif self.gen_type == ".bgen":
-            print("Bgen load type, so need to restructure return type ... will take a bit longer longer!")
-            return [variant.bgen_snp_id() for variant in sm_dict[self.sm_variants]]
         else:
             raise Exception(f"Critical Error: Unknown load type {self.gen_type} found in _isolate_dosage")
 
@@ -432,9 +425,16 @@ class Input:
 
         elif self.gen_type == ".bgen":
             # Bgen files store [variant id, rsid], we just want the rsid hence the [1]; see https://bit.ly/2J0C1kC
-            validation = [snp.split(",")[1] for snp in validation.sid]
-            ref = [snp.split(",")[1] for snp in ref.sid]
-            indexer = [BgenObject(load_path).index_of_snps(), BgenObject(load_path)]
+            if self._bgen_loader:
+                print("Loading bgen with PySnpTools")
+                validation = [snp.split(",")[1] for snp in validation.sid]
+                ref = [snp.split(",")[1] for snp in ref.sid]
+            else:
+                print("Loading bgen with custom pybgen via pyGenicParser")
+                validation = validation.sid_array()
+                ref = ref.sid_array()
+
+            indexer = [BgenObject(load_path).sid_indexer(), BgenObject(load_path)]
 
         else:
             raise Exception("Unknown load type set")
@@ -885,18 +885,3 @@ class Input:
     def covariants(self):
         """Key used for accessing the covariants in headers, groups or other attributes"""
         return "Covariants"
-
-    @property
-    def correlation(self):
-        """Key used for accessing Correlation in headers, groups or other attributes"""
-        return "Correlation"
-
-    @property
-    def r2(self):
-        """Key used for accessing R-Squared in headers, groups or other attributes"""
-        return "R-Squared"
-
-    @property
-    def direct(self):
-        """Key used for accessing the direct effect in headers, groups or other attributes"""
-        return "Direct"
