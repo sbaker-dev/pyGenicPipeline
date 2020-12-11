@@ -441,11 +441,16 @@ class Input:
             if self._bgen_loader:
                 print("Loading bgen with PySnpTools")
                 validation = [snp.split(",")[1] for snp in validation.sid]
+                print(f"Loaded Validation snps {mc.terminal_time()}")
                 ref = [snp.split(",")[1] for snp in ref.sid]
+                print(f"Loaded Reference snps {mc.terminal_time()}")
+
             else:
                 print("Loading bgen with custom pybgen via pyGenicParser")
                 validation = validation.sid_array()
+                print(f"Loaded Validation snps {mc.terminal_time()}")
                 ref = ref.sid_array()
+                print(f"Loaded Reference snps {mc.terminal_time()}")
 
             indexer = [BgenObject(load_path).sid_indexer(), BgenObject(load_path)]
 
