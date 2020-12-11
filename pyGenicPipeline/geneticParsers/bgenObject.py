@@ -29,9 +29,15 @@ class BgenObject:
 
         self.file_path = Path(file_path)
         self._bgen_binary = open(file_path, "rb")
+        self.iid_index = iid_index
+        self.sid_index = sid_index
 
-        self.offset, self.headers, self.sid_count, self.iid_count, self.compression, self.compressed, self.layout, \
-            self.sample_identifiers, self._variant_start = self.parse_header()
+        self.offset, self.headers, self._variant_number, self._sample_number, self.compression, self.compressed, \
+            self.layout, self.sample_identifiers, self._variant_start = self.parse_header()
+
+        # Index our sid and iid values if we have indexes
+        self.sid_count = len(np.arange(self._variant_number)[self.sid_index])
+        self.iid_count = len(np.arange(self._sample_number)[self.iid_index])
 
         self.probability_return = probability_return
         self.probability = prob
@@ -44,10 +50,8 @@ class BgenObject:
         else:
             self.bgen_file, self.bgen_index, self.last_variant_block = None, None, None
 
-        self.iid_index = iid_index
-        self.sid_index = sid_index
-
     def __getitem__(self, item):
+        """Return a new BgenObject with slicing set."""
         if isinstance(item, slice):
             return BgenObject(self.file_path, self.bgi_present, self.probability_return, self.iter_array_size,
                               self.probability, sid_index=item)
@@ -187,11 +191,11 @@ class BgenObject:
         nb_markers, first_variant_block, last_variant_block = bgen_index.fetchone()
 
         # Check the number of markers are the same across bgen and bgi, and that they start in the same block
-        assert nb_markers == self.sid_count, ec
+        assert nb_markers == self._variant_number, ec
         assert first_variant_block == self._variant_start
 
         # Checking the number of markers
-        if nb_markers != self.sid_count:
+        if nb_markers != self._variant_number:
             raise ValueError("Number of markers different between headers of bgen and bgi")
 
         # Checking the first variant seek position
@@ -236,7 +240,7 @@ class BgenObject:
         """Gets the current variant's information."""
 
         if self.layout == 1:
-            assert self.unpack("<I", 4) == self.iid_count, ec
+            assert self.unpack("<I", 4) == self._sample_number, ec
 
         # Reading the variant id (may be in form chr1:8045045:A:G or just a duplicate of rsid and not used currently)
         self._read_bgen("<H", 2)
@@ -277,7 +281,7 @@ class BgenObject:
         self.bgen_index.execute("SELECT file_start_position, rsid FROM Variant")
 
         # Return a dict of type {Name: seek}
-        return {name: seek for seek, name in self.bgen_index.fetchall()}
+        return {name: seek for seek, name in self.bgen_index.fetchall()[self.sid_index]}
 
     def dosage_from_sid(self, snp_names):
         """
@@ -348,7 +352,7 @@ class BgenObject:
 
     def _get_curr_variant_probs_layout_1(self):
         """Gets the current variant's probabilities (layout 1)."""
-        c = self.iid_count
+        c = self._sample_number
         if self.compressed:
             c = self.unpack("<I", 4)
 
@@ -357,7 +361,7 @@ class BgenObject:
             self.compression(self._bgen_binary.read(c)),
             dtype="u2",
         ) / 32768
-        probs.shape = (self.iid_count, 3)
+        probs.shape = (self._sample_number, 3)
 
         return probs
 
@@ -392,7 +396,7 @@ class BgenObject:
 
         # Checking the number of samples
         n = mc.struct_unpack("<I", data[:4])
-        assert n == self.iid_count, "INVALID HERE"
+        assert n == self._sample_number, "INVALID HERE"
 
         data = data[4:]
 
@@ -448,7 +452,7 @@ class BgenObject:
             probs = mc.pack_bits(data, b)
 
         # Changing shape and computing dosage
-        probs.shape = (self.iid_count, 2)
+        probs.shape = (self._sample_number, 2)
 
         return probs / (2 ** b - 1), missing_data
 
