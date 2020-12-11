@@ -175,10 +175,13 @@ class SummaryCleaner(Input):
         """
         # Construct an array of summary and genetic chromosomes
         summary_array = mc.line_array(line_index, summary_dict[self.sm_lines], line_type)
+        print(summary_array)
         variant_array = mc.variant_array(variant_key.lower(), summary_dict[self.sm_variants])
+        print(variant_array)
 
         # Filter of True if the variant and summary match, else False which will remove this snp
         obj_filter = summary_array == variant_array
+        print(obj_filter)
 
         self._sum_error_dict[f"Miss Matching {variant_key}"] = len(obj_filter) - np.sum(obj_filter)
         return mc.filter_array(summary_dict, obj_filter)
