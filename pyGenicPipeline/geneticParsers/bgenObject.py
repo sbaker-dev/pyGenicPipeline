@@ -524,8 +524,25 @@ class BgenObject:
         :return: An array of id information
         """
         if self._sample_identifiers:
-            raise NotImplementedError("Sorry, i haven't found a bgen file with id's within it yet to test")
+            return self._parse_sample_block()
         elif sample_path:
             raise NotImplementedError("Sorry this needs to be tested")
         else:
             return np.array([[i, i] for i in np.arange(self._sample_number)[self.iid_index]])
+
+    def _parse_sample_block(self):
+        """Parses the sample block."""
+        # Getting the block size
+        block_size = self.unpack("<I", 4)
+        assert block_size + self._headers_size > self._offset, "INVALID"
+
+        # Checking the number of samples
+        n = self.unpack("<I", 4)
+        assert n == self._sample_number, "INVALID"
+
+        # Getting the sample information
+        samples = [self._read_bgen("<H", 2) for _ in range(self._sample_number)]
+
+        # Check the samples extract are equal to the number present then return
+        assert len(samples) == self._sample_number
+        return samples
