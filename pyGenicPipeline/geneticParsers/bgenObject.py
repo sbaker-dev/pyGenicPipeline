@@ -288,7 +288,7 @@ class BgenObject:
 
         # Select all the variants where the rsid is in the names provided
         self.bgen_index.execute("SELECT file_start_position FROM Variant WHERE rsid IN {}".format(tuple(snp_names)))
-        return np.array([self.get_variant(seek[0])[self.iid_index] for seek in self.bgen_index.fetchall()])
+        return np.array([self.get_variant(seek[0]) for seek in self.bgen_index.fetchall()])
 
     def dosage_from_sid(self, snp_names):
         """
