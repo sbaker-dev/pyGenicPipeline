@@ -30,7 +30,7 @@ class SummaryCleaner(Input):
         print(f"Starting Chromosome: {chromosome}")
 
         # Clean the summary lines to only include validatable snps from our genetic samples that exit in this chromosome
-        core_snps, sm_line, sm_variants, validation_snps = self._valid_snps_lines_and_variants(
+        sm_line, sm_variants, validation_snps = self._valid_snps_lines_and_variants(
             chromosome, ref, load_path, validation)
 
         # Construct the summary dict with our summary lines and Variants objects of our valid snps
@@ -47,7 +47,6 @@ class SummaryCleaner(Input):
         # Given we have only accepted snps that are within the validation / core, we should never have more snps in
         # summary than within the validation. If we do, something has gone critically wrong.
         assert len(order) <= len(validation_snps), ec.snp_overflow(len(order), len(validation_snps))
-        assert len(order) <= len(core_snps), ec.snp_overflow(len(order), len(core_snps))
 
         # In this case we can order the array using filter array as well, and we return this ordered dict
         mc.filter_array(sm_dict, order)
@@ -63,7 +62,7 @@ class SummaryCleaner(Input):
         summary line is within our validation and core sample sets of snps. If this is the case, then we will add the
         line to sm_line as well as a Variant object of the current snp valid snp to sm_variants
         """
-        validation_snps, core_snps, indexer = self.load_variants(load_path, validation, ref)
+        validation_snps, indexer = self.load_variants(load_path, validation, ref)
         print("Constructed snp sets")
 
         sm_variants = []
@@ -81,7 +80,7 @@ class SummaryCleaner(Input):
                 snp_id = line[self.sm_snp_id]
 
                 # If the snp exists in both the validation and core snp samples then clean this line, else skip.
-                if (snp_id in validation_snps) and (snp_id in core_snps):
+                if snp_id in validation_snps:
                     sm_variants.append(self._set_variant(snp_id, indexer))
                     sm_line.append(line)
 
@@ -96,7 +95,7 @@ class SummaryCleaner(Input):
                         self._sum_error_dict["Invalid_Snps"] += 1
 
         print("Extracted snps from summary file\n")
-        return core_snps, sm_line, sm_variants, validation_snps
+        return sm_line, sm_variants, validation_snps
 
     def _validate_summary_lines(self, sm_dict):
         """This will load in each possible header, and clean our dict of values by filtering"""

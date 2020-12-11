@@ -460,7 +460,7 @@ class Input:
             validation = [snp for snp in validation if snp in hap_map_3_snps]
             ref = [snp for snp in ref if snp in hap_map_3_snps]
 
-        return set(validation), set(ref), indexer
+        return set(mc.flatten([validation, ref])), indexer
 
     def load_hap_map_3(self):
         """
