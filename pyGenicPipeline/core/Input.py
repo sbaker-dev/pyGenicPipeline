@@ -599,6 +599,12 @@ class Input:
         else:
             return None
 
+    @staticmethod
+    def check_sm_dict(sm_dict):
+        """Validate that sm dict still exists"""
+        if not sm_dict:
+            raise Exception("Failed to find any snps")
+
     @property
     def cleaned_types(self):
         """The types of each column in the cleaned data"""

@@ -39,6 +39,7 @@ class SummaryCleaner(Input):
         # Clean the summary lines of valid snps for potential errors, if we ever wipe all our samples return None
         sm_dict = self._validate_summary_lines(sm_dict)
         if not sm_dict:
+            print("Failed to validate lines")
             return None
 
         # Construct the order from the base pair position
@@ -103,24 +104,29 @@ class SummaryCleaner(Input):
         # If we have chromosomes in our summary statistics check the chromosome of the snps against the validation
         if self.sm_chromosome is not None:
             if not self._validation_equality(self.sm_chromosome, self.chromosome, sm_dict):
+                print("Failed chromosome equality")
                 return None
 
         # If we have base pair position in our summary then validate the base pair
         if self.bp_position is not None:
             if not self._validation_equality(self.sm_bp_position, self.bp_position, sm_dict, int):
+                print("Failed base Position Equality")
                 return None
 
         # Clean the summary stats effect sizes for calculation of beta later
         if not self._validation_finite(sm_dict, self.sm_effect_size, self.effect_size):
+            print("Failed to find any finite effect sizes")
             return None
 
         # Clean the P values
         if not self._validation_finite(sm_dict, self.sm_p_value, self.p_value):
+            print("Failed to find any finite p values")
             return None
 
         # If we are using z scores we need to load and clean the standard errors column
         if self.z_scores:
             if not self._validation_finite(sm_dict, self.sm_standard_errors, self.standard_errors):
+                print("Failed to find any finite standard errors for computing z scores")
                 return None
 
         # Use the raw beta, standard errors, and p value if required to construct beta and beta_odds
@@ -257,6 +263,7 @@ class SummaryCleaner(Input):
                             for sm_nuc, var_nuc in zip(sm_dict[self.nucleotide], sm_dict[self.sm_variants])]
         self._sum_error_dict["Ambiguous_SNP"] = len(filter_ambiguous) - np.sum(filter_ambiguous)
         if not mc.filter_array(sm_dict, filter_ambiguous):
+            print("All Snps ambiguous")
             return None
 
         # Sanity Check
@@ -269,6 +276,7 @@ class SummaryCleaner(Input):
                           for sm_nuc, var_nuc in zip(sm_dict[self.nucleotide], sm_dict[self.sm_variants])]
         self._sum_error_dict["Non_Allowed_Allele"] = len(allowed_filter) - np.sum(allowed_filter)
         if not mc.filter_array(sm_dict, allowed_filter):
+            print("All Snps are Non-sense values (ie not a, t, c, or g)")
             return None
 
         # Determine Flipping
@@ -281,6 +289,7 @@ class SummaryCleaner(Input):
         self._sum_error_dict["Flipped"] = int(np.sum([1 if f == -1 else 0 for f in sm_dict["Flip"]]))
 
         if not mc.filter_array(sm_dict, filter_flipped):
+            print("All snps failed even after trying to flip")
             return None
 
         # Now we have filtered away any errors, multiple the dicts beta and log_odds elements by 1 or -1 based on no

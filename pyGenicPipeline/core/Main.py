@@ -63,10 +63,15 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input)
         # Then we need to take these samples to construct valid snps, these snps are extract for this chromosome from
         # our summary stats, and then cleaned for possible errors.
         sm_dict = self.clean_summary_statistics(chromosome, load_path, validation, ref)
+        self.check_sm_dict(sm_dict)
 
         # Filter our genetic types for snps, such as those that have undesirable frequencies.
         sm_dict = self.filter_snps(self.val_prefix, validation, sm_dict, chromosome)
+        self.check_sm_dict(sm_dict)
+
+        # Filter on ref sample
         sm_dict = self.filter_snps(self.ref_prefix, ref, sm_dict, chromosome)
+        self.check_sm_dict(sm_dict)
 
         # Compute the chromosome specific ld scores and heritability
         self.compute_ld_scores(sm_dict, len(sm_dict[self.sm_variants]), ref.iid_count)
@@ -97,6 +102,7 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input)
 
         # Create the normalised snps
         sm_dict = self.filter_snps(self.ref_prefix, ref, sm_dict, chromosome)
+        self.check_sm_dict(sm_dict)
 
         # Compute the ld scores and dict
         self.compute_ld_scores(sm_dict, self.gm[self.count_snp], self.gm[self.count_iid], ld_dict=True)
@@ -122,10 +128,12 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input)
         # Then we need to take these samples to construct valid snps, these snps are extract for this chromosome from
         # our summary stats, and then cleaned for possible errors.
         sm_dict = self.clean_summary_statistics(chromosome, load_path, validation, ref)
+        self.check_sm_dict(sm_dict)
 
         # Filter our genetic types for snps, such as those that have undesirable frequencies.
         # sm_dict = self.filter_snps(self.val_prefix, validation, sm_dict, chromosome)
         sm_dict = self.filter_snps(self.ref_prefix, ref, sm_dict, chromosome)
+        self.check_sm_dict(sm_dict)
 
         # Compute the chromosome specific ld scores and heritability
         self.compute_ld_scores(sm_dict, len(sm_dict[self.sm_variants]), ref.iid_count, ld_dict=True)
