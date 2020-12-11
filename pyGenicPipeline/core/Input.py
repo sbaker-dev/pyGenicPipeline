@@ -403,7 +403,7 @@ class Input:
         duplicates = np.sum([(v_count - len(validation)) + (r_count - len(ref))])
 
         # todo Warning This type of indexing seems to cause problems within gibbs so be careful!
-        return set(mc.flatten([validation, ref])[:10000]), indexer, duplicates
+        return set(mc.flatten([validation, ref])), indexer, duplicates
 
     def isolate_raw_snps(self, gen_file, sm_dict):
         """
