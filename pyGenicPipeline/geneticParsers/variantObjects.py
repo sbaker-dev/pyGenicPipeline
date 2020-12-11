@@ -5,7 +5,7 @@ class Variant:
         """
         Contains variant information for bgen files, unlike Bim does not contain morgan position
         """
-        self.chromosome = chromosome
+        self.chromosome = str(int(chromosome))
         self.bp_position = int(bp_position)
         self.snp_id = snp_id
         self.a1 = a1
