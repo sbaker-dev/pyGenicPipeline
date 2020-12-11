@@ -283,6 +283,13 @@ class BgenObject:
         # Return a dict of type {Name: seek}
         return {name: seek for seek, name in self.bgen_index.fetchall()[self.sid_index]}
 
+    def variant_from_sid(self, snp_names):
+        assert self.bgen_index, ec.bgen_index_violation("get_variant")
+
+        # Select all the variants where the rsid is in the names provided
+        self.bgen_index.execute("SELECT file_start_position FROM Variant WHERE rsid IN {}".format(tuple(snp_names)))
+        return np.array([self.get_variant(seek[0])[self.iid_index] for seek in self.bgen_index.fetchall()])
+
     def dosage_from_sid(self, snp_names):
         """
         Construct the seek index for all snps provide as a list or tuple of snp_names

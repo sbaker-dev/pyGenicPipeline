@@ -386,6 +386,8 @@ class Input:
                 ordered_common = gen_file[:, gen_file.sid_to_index(variant_names)].read().val
                 raw_snps = sum(np.array([snp * i for i, snp in enumerate(ordered_common.T)]))
             else:
+                duplicates = gen_file.variant_from_sid(variant_names)
+                print(len(duplicates))
                 raw_snps = gen_file.dosage_from_sid(variant_names)
 
         else:
