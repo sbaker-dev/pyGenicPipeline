@@ -26,7 +26,6 @@ class FilterSnps(Input):
 
         # Load the raw snps from the .bed or .bgen file and use it to isolate statistical information
         raw_snps = self.isolate_raw_snps(gen_file, sm_dict)
-        sm_dict[f"{gen_type}_{self.mean}"] = np.mean(raw_snps, 1, dtype='float32')
         sm_dict[f"{gen_type}_{self.stds}"] = np.std(raw_snps, 1, dtype='float32')
         sm_dict[f"{gen_type}_{self.freq}"] = np.sum(raw_snps, 1, dtype='float32') / (2 * float(gen_file.iid_count))
         sm_dict[f"{gen_type}_{self.raw_snps}"] = raw_snps
@@ -53,7 +52,10 @@ class FilterSnps(Input):
 
         # Now that the genetic information has been cleaned and filtered, use this information to create a normalised
         # snp and clean up sm_dict of anything we know long need
-        self._normalise_snps(sm_dict, gen_type)
+        if gen_type == self.ref_prefix:
+            self._normalise_snps(sm_dict, gen_type)
+        else:
+            mc.cleanup_dict(sm_dict, [f"{gen_type}_{cleaner}" for cleaner in [self.stds, self.freq, self.raw_snps]])
 
         t1 = mc.error_dict_to_terminal(self._filter_error_dict)
         print(f"Cleaned summary stats for Chromosome {chromosome} in {round(t1 - t0, 2)} Seconds\n")
@@ -115,7 +117,7 @@ class FilterSnps(Input):
         n_snps, n_individuals = sm_dict[f"{gen_type}_{self.raw_snps}"].shape
 
         # Need to reformat the shape to construct the normalised snps
-        raw_means = sm_dict[f"{gen_type}_{self.mean}"]
+        raw_means = np.mean(sm_dict[f"{gen_type}_{self.raw_snps}"], 1, dtype='float32')
         raw_stds = sm_dict[f"{gen_type}_{self.stds}"]
         raw_means.shape = (n_snps, 1)
         raw_stds.shape = (n_snps, 1)
@@ -126,7 +128,7 @@ class FilterSnps(Input):
         sm_dict[f"{gen_type}_{self.norm_snps}"] = normalised_snps
 
         # Cleanup the dict
-        mc.cleanup_dict(sm_dict, [f"{gen_type}_{cleaner}" for cleaner in [self.mean, self.raw_snps]])
+        mc.cleanup_dict(sm_dict, [f"{gen_type}_{cleaner}" for cleaner in [self.raw_snps]])
 
     def _assert_filter_snps(self):
         """Different files require different load type operations, so load type must be set"""

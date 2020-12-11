@@ -800,11 +800,6 @@ class Input:
         return "Frequency"
 
     @property
-    def mean(self):
-        """Key used for accessing Means headers, groups or other attributes"""
-        return "Mean"
-
-    @property
     def stds(self):
         """Key used for accessing Standard_Deviations headers, groups or other attributes"""
         return "Standard_Deviations"
