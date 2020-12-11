@@ -372,23 +372,27 @@ class Input:
             variant_names = [variant.bgen_snp_id() for variant in sm_dict[self.sm_variants]]
         else:
             variant_names = mc.variant_array(self.snp_id.lower(), sm_dict[self.sm_variants])
+        print(f"Found {len(variant_names)} variants to extract snps for\n")
 
         # bed returns 2, 1, 0 rather than 0, 1, 2 although it says its 0, 1, 2; so this inverts it
         if self.gen_type == ".bed":
             ordered_common = gen_file[:, gen_file.sid_to_index(variant_names)].read().val
-            return np.array([abs(snp - 2) for snp in ordered_common.T])
+            raw_snps = np.array([abs(snp - 2) for snp in ordered_common.T])
 
         # We have a [1, 0, 0], [0, 1, 0], [0, 0, 1] array return for 0, 1, 2 respectively. So if we multiple the arrays
         # by their index position and then sum them we get [0, 1, 2]
         elif self.gen_type == ".bgen":
             if self._bgen_loader:
                 ordered_common = gen_file[:, gen_file.sid_to_index(variant_names)].read().val
-                return sum(np.array([snp * i for i, snp in enumerate(ordered_common.T)]))
+                raw_snps = sum(np.array([snp * i for i, snp in enumerate(ordered_common.T)]))
             else:
-                return gen_file.dosage_from_sid(variant_names)
+                raw_snps = gen_file.dosage_from_sid(variant_names)
 
         else:
             raise Exception(f"Critical Error: Unknown load type {self.gen_type} found in _isolate_dosage")
+
+        print(f"Isolated {len(raw_snps)}\n")
+        return raw_snps
 
     def genetic_phenotypes(self, gen_file, load_path):
         """
