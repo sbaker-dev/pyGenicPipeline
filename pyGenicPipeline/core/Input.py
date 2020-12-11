@@ -306,6 +306,18 @@ class Input:
             assert 0 <= float(validation_size) <= 1, ec.validation_size_invalid(validation_size)
             return float(validation_size)
 
+    def gen_reference(self, load_path):
+        """Get the pysnptools reference via the load type"""
+        if self.gen_type == ".bed":
+            return Bed(load_path, count_A1=True)
+        elif self.gen_type == ".bgen":
+            if self._bgen_loader:
+                return Bgen(load_path)
+            else:
+                return BgenObject(load_path)
+        else:
+            raise Exception("Unknown load type set")
+
     def _set_validation_sample_size(self, full_sample_size):
         """
         This will return the value of the validation in terms of individuals rather than a percentage that the user
@@ -318,18 +330,6 @@ class Input:
         :rtype: int
         """
         return int((full_sample_size * self.population_percent) * self.validation_size)
-
-    def gen_reference(self, load_path):
-        """Get the pysnptools reference via the load type"""
-        if self.gen_type == ".bed":
-            return Bed(load_path, count_A1=True)
-        elif self.gen_type == ".bgen":
-            if self._bgen_loader:
-                return Bgen(load_path)
-            else:
-                return BgenObject(load_path)
-        else:
-            raise Exception("Unknown load type set")
 
     def construct_validation(self, load_path):
         """
@@ -347,85 +347,7 @@ class Input:
         validation_size = self._set_validation_sample_size(self.gen_reference(load_path).iid_count)
         validation = self.gen_reference(load_path)[:validation_size, :]
         ref = self.gen_reference(load_path)[validation_size:, :]
-
         return validation, ref
-
-    def _set_effect_type(self, effect_type):
-        """
-        Set the effect type of the betas for GWAS summary stats if set
-        """
-        if effect_type:
-            assert effect_type in self._config["effect_types"], ec.invalid_effect_type(
-                self._config["effect_types"], effect_type)
-            return effect_type
-        else:
-            return None
-
-    def isolate_raw_snps(self, gen_file, sm_dict):
-        """
-        This will isolate the raw snps for a given bed or bgen file
-
-        :param gen_file: Genetic file you wish to load from
-        :param sm_dict: dict of clean information
-        :return: raw snps
-        """
-        if self._bgen_loader:
-            variant_names = [variant.bgen_snp_id() for variant in sm_dict[self.sm_variants]]
-        else:
-            variant_names = mc.variant_array(self.snp_id.lower(), sm_dict[self.sm_variants])
-        print(f"Found {len(variant_names)} variants to extract snps for\n")
-
-        # bed returns 2, 1, 0 rather than 0, 1, 2 although it says its 0, 1, 2; so this inverts it
-        if self.gen_type == ".bed":
-            ordered_common = gen_file[:, gen_file.sid_to_index(variant_names)].read().val
-            raw_snps = np.array([abs(snp - 2) for snp in ordered_common.T])
-
-        # We have a [1, 0, 0], [0, 1, 0], [0, 0, 1] array return for 0, 1, 2 respectively. So if we multiple the arrays
-        # by their index position and then sum them we get [0, 1, 2]
-        elif self.gen_type == ".bgen":
-            if self._bgen_loader:
-                ordered_common = gen_file[:, gen_file.sid_to_index(variant_names)].read().val
-                raw_snps = sum(np.array([snp * i for i, snp in enumerate(ordered_common.T)]))
-            else:
-                duplicates = gen_file.variant_from_sid(variant_names)
-                print(len(duplicates))
-                raw_snps = gen_file.dosage_from_sid(variant_names)
-
-        else:
-            raise Exception(f"Critical Error: Unknown load type {self.gen_type} found in _isolate_dosage")
-
-        print(f"Isolated {len(raw_snps)}\n")
-        return raw_snps
-
-    def genetic_phenotypes(self, gen_file, load_path):
-        """
-        Load the full genetic data for this chromosome and isolate any information that can be isolated from it. In this
-        case, .bed load types can access more than bgen due to the ability to extract sex from the .fam file.
-        """
-
-        ph_dict = {}
-        # For plink files, load the fam file then extract the fid, iid and sex information
-        if self.gen_type == ".bed":
-            ph_dict[self.fam] = np.array(PlinkObject(load_path).get_family_identifiers())
-            ph_dict[self.fid] = mc.variant_array(self.fid.lower(), ph_dict[self.fam])
-            ph_dict[self.iid] = mc.variant_array(self.iid.lower(), ph_dict[self.fam])
-            ph_dict.pop(self.fam, None)
-
-        # Bgen doesn't have a fam equivalent, so just load the fid and iid
-        elif self.gen_type == ".bgen":
-            # todo update to allow for sex and missing if we have loaded .sample
-            if self._bgen_loader:
-                ids = gen_file.iid
-            else:
-                ids = gen_file.iid_array()
-
-            ph_dict[self.fid] = np.array([fid for fid, iid in ids])
-            ph_dict[self.iid] = np.array([iid for fid, iid in ids])
-
-        else:
-            raise Exception("Unknown load type set")
-
-        return ph_dict
 
     def load_variants(self, load_path, validation, ref):
         """
@@ -476,6 +398,71 @@ class Input:
         ref = [snp for snp, count in zip(count_snps.keys(), count_snps.values()) if count == 1]
         return set(mc.flatten([validation, ref])[:10000]), indexer
 
+    def isolate_raw_snps(self, gen_file, sm_dict):
+        """
+        This will isolate the raw snps for a given bed or bgen file
+
+        :param gen_file: Genetic file you wish to load from
+        :param sm_dict: dict of clean information
+        :return: raw snps
+        """
+        if self._bgen_loader:
+            variant_names = [variant.bgen_snp_id() for variant in sm_dict[self.sm_variants]]
+        else:
+            variant_names = mc.variant_array(self.snp_id.lower(), sm_dict[self.sm_variants])
+        print(f"Found {len(variant_names)} variants to extract snps for\n")
+
+        # bed returns 2, 1, 0 rather than 0, 1, 2 although it says its 0, 1, 2; so this inverts it
+        if self.gen_type == ".bed":
+            ordered_common = gen_file[:, gen_file.sid_to_index(variant_names)].read().val
+            raw_snps = np.array([abs(snp - 2) for snp in ordered_common.T])
+
+        # We have a [1, 0, 0], [0, 1, 0], [0, 0, 1] array return for 0, 1, 2 respectively. So if we multiple the arrays
+        # by their index position and then sum them we get [0, 1, 2]
+        elif self.gen_type == ".bgen":
+            if self._bgen_loader:
+                ordered_common = gen_file[:, gen_file.sid_to_index(variant_names)].read().val
+                raw_snps = sum(np.array([snp * i for i, snp in enumerate(ordered_common.T)]))
+            else:
+                raw_snps = gen_file.dosage_from_sid(variant_names)
+
+        else:
+            raise Exception(f"Critical Error: Unknown load type {self.gen_type} found in _isolate_dosage")
+
+        assert len(raw_snps) == len(variant_names), "Failed to filter out duplicates"
+        print(f"Isolated {len(raw_snps)}\n")
+        return raw_snps
+
+    def genetic_phenotypes(self, gen_file, load_path):
+        """
+        Load the full genetic data for this chromosome and isolate any information that can be isolated from it. In this
+        case, .bed load types can access more than bgen due to the ability to extract sex from the .fam file.
+        """
+
+        ph_dict = {}
+        # For plink files, load the fam file then extract the fid, iid and sex information
+        if self.gen_type == ".bed":
+            ph_dict[self.fam] = np.array(PlinkObject(load_path).get_family_identifiers())
+            ph_dict[self.fid] = mc.variant_array(self.fid.lower(), ph_dict[self.fam])
+            ph_dict[self.iid] = mc.variant_array(self.iid.lower(), ph_dict[self.fam])
+            ph_dict.pop(self.fam, None)
+
+        # Bgen doesn't have a fam equivalent, so just load the fid and iid
+        elif self.gen_type == ".bgen":
+            # todo update to allow for sex and missing if we have loaded .sample
+            if self._bgen_loader:
+                ids = gen_file.iid
+            else:
+                ids = gen_file.iid_array()
+
+            ph_dict[self.fid] = np.array([fid for fid, iid in ids])
+            ph_dict[self.iid] = np.array([iid for fid, iid in ids])
+
+        else:
+            raise Exception("Unknown load type set")
+
+        return ph_dict
+
     def load_hap_map_3(self):
         """
         Users may wish to limit valid snps to those found within HapMap3. If they do, we access them via the local file
@@ -517,6 +504,17 @@ class Input:
         if set_z_scores:
             assert self.sm_standard_errors is not None, ec.z_scores_with_standard_errors
             return True
+        else:
+            return None
+
+    def _set_effect_type(self, effect_type):
+        """
+        Set the effect type of the betas for GWAS summary stats if set
+        """
+        if effect_type:
+            assert effect_type in self._config["effect_types"], ec.invalid_effect_type(
+                self._config["effect_types"], effect_type)
+            return effect_type
         else:
             return None
 
