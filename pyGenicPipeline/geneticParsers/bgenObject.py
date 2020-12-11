@@ -31,8 +31,8 @@ class BgenObject:
         self.iid_index = iid_index
         self.sid_index = sid_index
 
-        self.offset, self.headers, self._variant_number, self._sample_number, self.compression, self.compressed, \
-            self.layout, self.sample_identifiers, self._variant_start = self.parse_header()
+        self._offset, self._headers_size, self._variant_number, self._sample_number, self._compression, \
+            self._compressed, self._layout, self._sample_identifiers, self._variant_start = self.parse_header()
 
         # Index our sid and iid values if we have indexes
         self.sid_count = len(np.arange(self._variant_number)[self.sid_index])
@@ -74,8 +74,8 @@ class BgenObject:
 
         # Check the header block is not larger than offset
         offset = self.unpack("<I", 4)
-        headers = self.unpack("<I", 4)
-        assert headers <= offset, ec.offset_violation(self._bgen_binary.name, offset, headers)
+        headers_size = self.unpack("<I", 4)
+        assert headers_size <= offset, ec.offset_violation(self._bgen_binary.name, offset, headers_size)
         variant_start = offset + 4
 
         # Extract the number of variants and samples
@@ -87,11 +87,11 @@ class BgenObject:
         assert (magic == b'bgen') or (struct.unpack("<I", magic)[0] == 0), ec.magic_violation(self._bgen_binary.name)
 
         # Skip the free data area
-        self._bgen_binary.read(headers - 20)
+        self._bgen_binary.read(headers_size - 20)
 
         # Extract the flag, then set compression layout and sample identifiers from it
         compression, compressed, layout, sample_identifiers = self._header_flag()
-        return (offset, headers, variant_number, sample_number, compression, compressed, layout,
+        return (offset, headers_size, variant_number, sample_number, compression, compressed, layout,
                 sample_identifiers, variant_start)
 
     def _header_flag(self):
@@ -239,7 +239,7 @@ class BgenObject:
     def _get_curr_variant_info(self):
         """Gets the current variant's information."""
 
-        if self.layout == 1:
+        if self._layout == 1:
             assert self.unpack("<I", 4) == self._sample_number, ec
 
         # Reading the variant id (may be in form chr1:8045045:A:G or just a duplicate of rsid and not used currently)
@@ -301,7 +301,7 @@ class BgenObject:
         :return: number of alleles for this snp
         :rtype: int
         """
-        if self.layout == 2:
+        if self._layout == 2:
             return self.unpack("<H", 2)
         else:
             return 2
@@ -309,7 +309,7 @@ class BgenObject:
     def _get_curr_variant_data(self):
         """Gets the current variant's dosage or probabilities."""
 
-        if self.layout == 1:
+        if self._layout == 1:
             print("WARNING - UNTESTED CODE FROM PY-BGEN")
             # Getting the probabilities
             probs = self._get_curr_variant_probs_layout_1()
@@ -353,12 +353,12 @@ class BgenObject:
     def _get_curr_variant_probs_layout_1(self):
         """Gets the current variant's probabilities (layout 1)."""
         c = self._sample_number
-        if self.compressed:
+        if self._compressed:
             c = self.unpack("<I", 4)
 
         # Getting the probabilities
         probs = np.frombuffer(
-            self.compression(self._bgen_binary.read(c)),
+            self._compression(self._bgen_binary.read(c)),
             dtype="u2",
         ) / 32768
         probs.shape = (self._sample_number, 3)
@@ -384,14 +384,14 @@ class BgenObject:
 
         # D = C if no compression
         d = c
-        if self.compressed:
+        if self._compressed:
             # The total length D of the probability data after
             # decompression
             d = self.unpack("<I", 4)
             to_read = c - 4
 
         # Reading the data and checking
-        data = self.compression(self._bgen_binary.read(to_read))
+        data = self._compression(self._bgen_binary.read(to_read))
         assert len(data) == d, "INVALID HERE"
 
         # Checking the number of samples
@@ -523,7 +523,7 @@ class BgenObject:
 
         :return: An array of id information
         """
-        if self.sample_identifiers:
+        if self._sample_identifiers:
             raise NotImplementedError("Sorry, i haven't found a bgen file with id's within it yet to test")
         elif sample_path:
             raise NotImplementedError("Sorry this needs to be tested")
