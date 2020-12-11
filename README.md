@@ -8,3 +8,7 @@ A high level API for various packages and pipelines, which have been altered or 
 
  
 
+##### major version changes
+
+commit ------- version 0.02.0 - working version with optional pysnptools for bgen, otherwise using pyGenicParser
+commit 06704a0 version 0.01.4 - working version with pysnptools
