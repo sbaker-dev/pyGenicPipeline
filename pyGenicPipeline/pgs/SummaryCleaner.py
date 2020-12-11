@@ -13,10 +13,11 @@ class SummaryCleaner(Input):
 
         # Depending on how this ends up being constructed we might want to log this out as a .txt rather than just
         # print this to a terminal.
-        self._sum_error_dict = {"Removal case": "Count", "Invalid_Snps": 0, f"Miss Matching {self.chromosome}": 0,
-                                f"Miss Matching {self.bp_position}": 0, f"Non Finite {self.effect_size}": 0,
-                                f"Non Finite {self.p_value}": 0, f"Non Finite {self.standard_errors}": 0,
-                                "Ambiguous_SNP": 0, "Non_Allowed_Allele": 0, "Flipped": 0, "Non_Matching": 0}
+        self._sum_error_dict = {"Removal case": "Count", "Total Duplicates": 0, "Invalid_Snps": 0,
+                                f"Miss Matching {self.chromosome}": 0, f"Miss Matching {self.bp_position}": 0,
+                                f"Non Finite {self.effect_size}": 0, f"Non Finite {self.p_value}": 0,
+                                f"Non Finite {self.standard_errors}": 0, "Ambiguous_SNP": 0, "Non_Allowed_Allele": 0,
+                                "Flipped": 0, "Non_Matching": 0}
         self._summary_last_position = 0
 
     def clean_summary_statistics(self, chromosome, load_path, validation, ref):
@@ -63,7 +64,8 @@ class SummaryCleaner(Input):
         summary line is within our validation and core sample sets of snps. If this is the case, then we will add the
         line to sm_line as well as a Variant object of the current snp valid snp to sm_variants
         """
-        validation_snps, indexer = self.load_variants(load_path, validation, ref)
+        validation_snps, indexer, duplicates = self.load_variants(load_path, validation, ref)
+        self._sum_error_dict["Total Duplicates"] += duplicates
         print(f"Constructed snp set with {len(validation_snps)} to be used to check against the summary stats")
 
         sm_variants = []

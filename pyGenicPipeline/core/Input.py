@@ -391,12 +391,19 @@ class Input:
 
         # Check for duplicates that may be loaded later in the pipeline if we don't filter them out and will otherwise
         # not be detected due to returning a set
+        v_count = len(validation)
         count_snps = Counter(validation)
         validation = [snp for snp, count in zip(count_snps.keys(), count_snps.values()) if count == 1]
 
+        r_count = len(ref)
         count_snps = Counter(ref)
         ref = [snp for snp, count in zip(count_snps.keys(), count_snps.values()) if count == 1]
-        return set(mc.flatten([validation, ref])[:10000]), indexer
+
+        # Count total duplicates
+        duplicates = np.sum([(v_count - len(validation)) + (r_count - len(ref))])
+
+        # todo Warning This type of indexing seems to cause problems within gibbs so be careful!
+        return set(mc.flatten([validation, ref])[:10000]), indexer, duplicates
 
     def isolate_raw_snps(self, gen_file, sm_dict):
         """
