@@ -65,6 +65,7 @@ class Score(Input):
 
         # Bgen doesn't have a fam equivalent, so just load the fid and iid
         elif self.gen_type == ".bgen":
+            # todo update to allow for sex and missing if we have loaded .sample
             ids = gen_file.iid
             ph_dict[self.fid] = np.array([fid for fid, iid in ids])
             ph_dict[self.iid] = np.array([iid for fid, iid in ids])

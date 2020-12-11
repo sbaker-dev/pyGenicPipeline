@@ -15,9 +15,8 @@ import os
 
 class BgenObject:
     def __init__(self, file_path, bgi_present=True, probability_return=None, iter_array_size=1000, prob=0.9,
-                 iid_index=slice(None, None, None), sid_index=slice(None, None, None)):
+                 iid_index=slice(None, None, None), sid_index=slice(None, None, None), sample_path=None):
         """
-
         :param file_path:
 
         :param bgi_present: Takes a value of True if the .bgi is in the same directory and named file_path.bgi
@@ -38,6 +37,7 @@ class BgenObject:
         # Index our sid and iid values if we have indexes
         self.sid_count = len(np.arange(self._variant_number)[self.sid_index])
         self.iid_count = len(np.arange(self._sample_number)[self.iid_index])
+        self.iid = self._set_iid(sample_path)
 
         self.probability_return = probability_return
         self.probability = prob
@@ -507,3 +507,25 @@ class BgenObject:
     def _no_decompress(data):
         """Don't decompress"""
         return data
+
+    def _set_iid(self, sample_path):
+        """
+        If sample identifiers are within the bgen file then these can be extracted and set, however this has not yet
+        been tested and am unsure if sex and missing stored in bgen as is with .sample files?
+
+        If a path to the samples has been provided, then we can load the information within it. Sample files contain
+        both the FID and the IID as well as missing and sex allowing us more options akin to .fam files.
+
+        If Nothing is provided, and nothing is embedded, we create a list of id's on then number of id's after indexing.
+
+        :param sample_path: Path to sample file
+        :type sample_path: str | None
+
+        :return: An array of id information
+        """
+        if self.sample_identifiers:
+            raise NotImplementedError("Sorry, i haven't found a bgen file with id's within it yet to test")
+        elif sample_path:
+            raise NotImplementedError("Sorry this needs to be tested")
+        else:
+            return np.array([[i, i] for i in np.arange(self._sample_number)[self.iid_index]])
