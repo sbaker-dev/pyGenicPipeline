@@ -7,6 +7,7 @@ from bgen_reader import custom_meta_path
 from pysnptools.distreader import Bgen
 from pysnptools.snpreader import Bed
 from csvObject import CsvObject
+from collections import Counter
 from pathlib import Path
 import numpy as np
 import pickle
@@ -466,6 +467,13 @@ class Input:
             validation = [snp for snp in validation if snp in hap_map_3_snps]
             ref = [snp for snp in ref if snp in hap_map_3_snps]
 
+        # Check for duplicates that may be loaded later in the pipeline if we don't filter them out and will otherwise
+        # not be detected due to returning a set
+        count_snps = Counter(validation)
+        validation = [snp for snp, count in zip(count_snps.keys(), count_snps.values()) if count == 1]
+
+        count_snps = Counter(ref)
+        ref = [snp for snp, count in zip(count_snps.keys(), count_snps.values()) if count == 1]
         return set(mc.flatten([validation, ref])[:10000]), indexer
 
     def load_hap_map_3(self):
