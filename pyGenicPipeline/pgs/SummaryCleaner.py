@@ -63,7 +63,7 @@ class SummaryCleaner(Input):
         line to sm_line as well as a Variant object of the current snp valid snp to sm_variants
         """
         validation_snps, indexer = self.load_variants(load_path, validation, ref)
-        print("Constructed snp sets")
+        print(f"Constructed snp set with {len(validation_snps)} to be used to check against the summary stats")
 
         sm_variants = []
         sm_line = []

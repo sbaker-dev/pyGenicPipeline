@@ -1,2 +1,4 @@
 include pyGenicPipeline/core/Keys.yaml
 include pyGenicPipeline/support/args.yaml
+include pyGenicPipeline/Data/hm3_sids.txt.gz
+include pyGenicPipeline/Data/long-range-ld-price-2008hg38.txt
