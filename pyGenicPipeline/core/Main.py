@@ -148,13 +148,13 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input)
         # Construct the Weight
         self.construct_gibbs_weights(sm_dict, chromosome)
 
-        # 0.11157818410953191 ish
         print(sm_dict[self.inf_dec])
         print(np.sum(sm_dict[self.inf_dec]))
+        print(f"Above should be 0.11157818410953191 ish")
 
-        # 0.21582699762327068 ish
         print(sm_dict[f"{self.gibbs}_{self.gibbs_causal_fractions[0]}"])
         print(np.sum(sm_dict[f"{self.gibbs}_{self.gibbs_causal_fractions[0]}"]))
+        print(f"Above should be 0.21582699762327068 ish")
 
         # Construct the Poly-genetic Scores
         self.construct_chromosome_pgs(sm_dict, load_path, chromosome)
