@@ -92,7 +92,7 @@ class LDHerit(Input):
 
         return chromosome, load_file.column_length, core.iid_count
 
-    def compute_ld_scores(self, sm_dict, gen_file, snp_count, iid_count, ld_dict=False, debug=False):
+    def compute_ld_scores(self, sm_dict, gen_file, snp_count, iid_count, ld_dict=False):
         """
         This will calculate the ld scores and create a dict of the ld reference for each snp in our normalised list of
         snps
@@ -106,16 +106,15 @@ class LDHerit(Input):
             ld_dict = None
 
         # Create the normalised snps, then calculate the disequilibrium with them
-        norm_snps, stds = self.normalise_snps(sm_dict, gen_file, debug)
+        norm_snps, stds = self.normalise_snps(sm_dict, gen_file, True)
         for i, snp in enumerate(norm_snps):
             self._calculate_disequilibrium(i, snp, norm_snps, ld_scores, iid_count, snp_count, ld_dict)
 
         # Store relevant values
         sm_dict[self.ld_scores] = ld_scores
         sm_dict[self.ld_dict] = ld_dict
-        if debug:
-            sm_dict[self.norm_snps] = norm_snps
-            sm_dict[self.stds] = stds
+        sm_dict[self.norm_snps] = norm_snps
+        sm_dict[self.stds] = stds
 
     def _calculate_disequilibrium(self, snp_index, current_snp, norm_snps, ld_scores, iid_count, snp_count,
                                   ld_dict=None):
