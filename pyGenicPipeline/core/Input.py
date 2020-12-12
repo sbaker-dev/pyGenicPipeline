@@ -462,6 +462,29 @@ class Input:
         assert len(raw_snps) == len(variant_names), "Failed to filter out duplicates"
         return raw_snps
 
+    def normalise_snps(self, sm_dict, gen_file, std_return=False):
+        """For gibbs we use normalised snps, this process will use the information we have filtered to construct it"""
+
+        raw_snps = self.isolate_raw_snps(gen_file, self.variant_names(sm_dict))
+
+        # Get the number of snps and individuals in the filtered dict
+        n_snps, n_individuals = raw_snps.shape
+
+        # Need to reformat the shape to construct the normalised snps
+        raw_means = np.mean(raw_snps, 1, dtype='float32')
+        raw_means.shape = (n_snps, 1)
+        raw_stds = np.std(raw_snps, 1, dtype='float32')
+        raw_stds.shape = (n_snps, 1)
+
+        # Use this information to construct a normalised snps
+        normalised_snps = np.array((raw_snps - raw_means) / raw_stds, dtype="float32")
+        assert normalised_snps.shape == raw_snps.shape
+
+        if std_return:
+            return normalised_snps, raw_stds
+        else:
+            return normalised_snps, None
+
     def genetic_phenotypes(self, gen_file, load_path):
         """
         Load the full genetic data for this chromosome and isolate any information that can be isolated from it. In this
@@ -868,7 +891,6 @@ class Input:
     def herit(self):
         """Key used for accessing Heritability in headers, groups or other attributes"""
         return "Heritability"
-
 
     @property
     def ld_scores(self):
