@@ -33,6 +33,7 @@ class SummaryCleaner(Input):
         # Clean the summary lines to only include validatable snps from our genetic samples that exit in this chromosome
         sm_line, sm_variants, validation_snps_count = self._valid_snps_lines_and_variants(
             chromosome, ref, load_path, validation)
+        print(f"Extracted snps from summary file.\nFound valid lines {len(sm_line)} and Variants {len(sm_variants)}\n")
 
         # Construct the summary dict with our summary lines and Variants objects of our valid snps
         sm_dict = {self.sm_lines: np.array(sm_line), self.sm_variants: np.array(sm_variants)}
@@ -70,19 +71,25 @@ class SummaryCleaner(Input):
 
         # If we have chromosomes then run this process of isolation based on arrays
         if isinstance(self.sm_chromosome, int):
-            sm_line, sm_variants = self._array_summary(validation_snps, indexer, chromosome)
+            sm_line = self._array_summary(chromosome)
 
         # If we don't have chromosomes within the summary stats then we have to parse every line
         else:
             print("WARNING - Summary stats do not have a chromosome column. Will take a LONG time")
-            sm_line, sm_variants = self._line_by_line_summary(validation_snps, indexer, chromosome)
+            sm_line = self._line_by_line_summary(validation_snps, chromosome)
 
-        print(f"Extracted snps from summary file.\nFound valid lines {len(sm_line)} and Variants {len(sm_variants)}\n")
-        return sm_line, sm_variants, len(validation_snps)
+        # Extract the snp ids from lines
+        variants = mc.line_array(self.sm_snp_id, sm_line)
 
-    def _line_by_line_summary(self, validation_snps, indexer, chromosome):
+        # Create a filter that will remove snps not found in our validation snps
+        variants_filter = np.array([True if v in validation_snps else False for v in variants])
+        self._sum_error_dict[f"Invalid_Snps"] = len(variants_filter) - np.sum(variants_filter)
+
+        # Return the filtered lines, variant information for the filtered snps, and the validation snp count
+        return sm_line[variants_filter], indexer.info_from_sid(variants[variants_filter]), len(validation_snps)
+
+    def _line_by_line_summary(self, validation_snps, chromosome):
         """This will check, for every line in the summary statistics, if a snp is within our list of accept snps."""
-        sm_variants = []
         sm_line = []
         with mc.open_setter(self.summary_file)(self.summary_file) as file:
             self._seek_to_start(chromosome, file)
@@ -98,23 +105,22 @@ class SummaryCleaner(Input):
 
                 # If the snp exists in both the validation and core snp samples then clean this line, else skip.
                 if snp_id in validation_snps:
-                    sm_variants.append(self._set_variant(snp_id, indexer))
                     sm_line.append(line)
 
                 else:
                     self._sum_error_dict["Invalid_Snps"] += 1
-        return sm_line, sm_variants
 
-    def _array_summary(self, validation_snps, indexer, chromosome):
+        return np.array(sm_line)
+
+    def _array_summary(self, chromosome):
         """This will use chromosome positioning to parse all chromosome lines, and then filter then post location"""
-        lines = []
+
+        sm_line = []
         with mc.open_setter(self.summary_file)(self.summary_file) as file:
             self._seek_to_start(chromosome, file)
 
             # For each line in the GWAS Summary file
-            for index, line_byte in enumerate(file):
-                if self.verbose and index % 1000 == 0:
-                    print(f"{index} at {mc.terminal_time()}")
+            for line_byte in file:
 
                 # Decode the line and extract the chromosome
                 line = mc.decode_line(line_byte, self.zipped)
@@ -122,7 +128,7 @@ class SummaryCleaner(Input):
 
                 # If the chromosome is equal to the chromosome we are looking for we keep it
                 if line_chromosome == chromosome:
-                    lines.append(line)
+                    sm_line.append(line)
 
                 # If the chromosomes exist in summary statistics we can terminate this for loop when we are no
                 # longer in the right zone and set tell to seek to this position for the next chromosome
@@ -132,19 +138,7 @@ class SummaryCleaner(Input):
                         file.close()
                         break
 
-        # Extract the snp ids from lines
-        lines = np.array(lines)
-        variants = mc.line_array(self.sm_snp_id, lines)
-
-        # Create a filter that will remove snps not found in our validation snps
-        variants_filter = np.array([True if v in validation_snps else False for v in variants])
-        self._sum_error_dict[f"Invalid_Snps"] = len(variants_filter) - np.sum(variants_filter)
-
-        # Create an array of variants
-        sm_variants = np.array([self._set_variant(snp_id, indexer) for snp_id in variants[variants_filter]])
-
-        # Return the filtered lines as sm_lines, and sm_variants
-        return lines[variants_filter], sm_variants
+        return np.array(sm_line)
 
     def _validate_summary_lines(self, sm_dict):
         """This will load in each possible header, and clean our dict of values by filtering"""

@@ -1,13 +1,12 @@
-from pyGenicPipeline.geneticParsers.plinkObject import PlinkObject
-from pyGenicPipeline.geneticParsers.variantObjects import Variant
-from pyGenicPipeline.geneticParsers.bgenObject import BgenObject
 from pyGenicPipeline.utils import error_codes as ec
 from pyGenicPipeline.utils import misc as mc
+
 from bgen_reader import custom_meta_path
 from pysnptools.distreader import Bgen
 from pysnptools.snpreader import Bed
 from csvObject import CsvObject
 from collections import Counter
+from pyGenicParser import *
 from pathlib import Path
 import numpy as np
 import pickle
@@ -364,21 +363,20 @@ class Input:
         if self.gen_type == ".bed":
             validation = validation.sid
             ref = ref.sid
-            indexer = [PlinkObject(load_path).construct_bim_index(), PlinkObject(load_path)]
+            indexer = PlinkObject(load_path, True)
 
         elif self.gen_type == ".bgen":
-            # Bgen files store [variant id, rsid], we just want the rsid hence the [1]; see https://bit.ly/2J0C1kC
+            indexer = BgenObject(load_path)
             if self._bgen_loader:
-                print("Loading bgen with PySnpTools")
+                print("Loading bgen with PySnpTools\n")
+                # Bgen files store [variant id, rs_id], we just want the rs_id hence the [1]; see https://bit.ly/2J0C1kC
                 validation = [snp.split(",")[1] for snp in validation.sid]
                 ref = [snp.split(",")[1] for snp in ref.sid]
 
             else:
-                print("Loading bgen with custom pybgen via pyGenicParser")
+                print("Loading bgen with custom pybgen via pyGenicParser\n")
                 validation = validation.sid_array()
                 ref = ref.sid_array()
-
-            indexer = [BgenObject(load_path).sid_indexer(), BgenObject(load_path)]
 
         else:
             raise Exception("Unknown load type set")
@@ -392,17 +390,13 @@ class Input:
         # Check for duplicates that may be loaded later in the pipeline if we don't filter them out and will otherwise
         # not be detected due to returning a set
         v_count = len(validation)
-        count_snps = Counter(validation)
-        validation = [snp for snp, count in zip(count_snps.keys(), count_snps.values()) if count == 1]
+        validation = [snp for (snp, count) in Counter(validation).items() if count == 1]
 
         r_count = len(ref)
-        count_snps = Counter(ref)
-        ref = [snp for snp, count in zip(count_snps.keys(), count_snps.values()) if count == 1]
+        ref = [snp for (snp, count) in Counter(ref).items() if count == 1]
 
         # Count total duplicates
         duplicates = np.sum([(v_count - len(validation)) + (r_count - len(ref))])
-
-        # todo Warning This type of indexing seems to cause problems within gibbs so be careful!
         return set(mc.flatten([validation, ref])), indexer, duplicates
 
     def isolate_raw_snps(self, gen_file, sm_dict):
@@ -413,6 +407,9 @@ class Input:
         :param sm_dict: dict of clean information
         :return: raw snps
         """
+        # todo Isolating all of the information is leading to significant memory issues. We need to try to do this
+        #  filtering on id to see if that can save us memory without it taking forever
+
         if self._bgen_loader:
             variant_names = [variant.bgen_snp_id() for variant in sm_dict[self.sm_variants]]
         else:
