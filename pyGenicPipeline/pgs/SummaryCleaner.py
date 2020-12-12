@@ -141,7 +141,8 @@ class SummaryCleaner(Input):
                 # longer in the right zone and set tell to seek to this position for the next chromosome
                 else:
                     if line_chromosome > chromosome:
-                        self._summary_last_position = file.tell() - len(line_byte)
+                        if self.zipped:
+                            self._summary_last_position = file.tell() - len(line_byte)
                         file.close()
                         break
 
@@ -157,7 +158,7 @@ class SummaryCleaner(Input):
                 return None
 
         # If we have base pair position in our summary then validate the base pair
-        if self.bp_position is not None:
+        if self.sm_bp_position is not None:
             if not self._validation_equality(self.sm_bp_position, self.bp_position, sm_dict, int):
                 print("Failed base Position Equality\n")
                 return None
@@ -190,10 +191,13 @@ class SummaryCleaner(Input):
             print("Validated lines, now calculating frequencies\n")
             # Calculate the frequencies and set info if it exists, remove sm_lines as we no longer require this
             sm_dict[self.freq] = np.array([self._sum_stats_frequencies(line) for line in sm_dict[self.sm_lines]])
+
+            # todo We currently log info, but then never use it?
             sm_dict[self.info] = self._validate_info(sm_dict[self.sm_lines])
 
             # Remove the temporary flip status and summary nucleotides keys as we no longer need them
-            mc.cleanup_dict(sm_dict, ["Flip", self.nucleotide, self.sm_lines, self.p_value, self.effect_size])
+            mc.cleanup_dict(sm_dict, ["Flip", self.nucleotide, self.sm_lines, self.p_value, self.effect_size,
+                                      self.info])
             return sm_dict
 
     def _validation_equality(self, line_index, variant_key, summary_dict, line_type=None):

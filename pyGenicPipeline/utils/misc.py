@@ -35,7 +35,7 @@ def decode_line(line, zip_status):
     if zip_status:
         return line.decode("utf-8").split()
     else:
-        return line.readline().split()
+        return line.split()
 
 
 def terminal_time():

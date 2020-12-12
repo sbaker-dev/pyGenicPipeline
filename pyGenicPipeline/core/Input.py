@@ -285,6 +285,9 @@ class Input:
 
             # Determine if we have custom headers or not via _loaded_sum_headers
             raw_headers = file.readline()
+            if self.verbose:
+                print(f"Summary Headers: {raw_headers}")
+
             headers = {header: self._check_header(header, mc.decode_line(raw_headers, self.zipped), header_sets)
                        for header in header_sets}
 
