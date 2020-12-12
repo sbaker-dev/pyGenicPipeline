@@ -31,7 +31,7 @@ class Score(Input):
         ph_dict = self.genetic_phenotypes(core, load_path)
 
         # Load the raw snps that have been isolated Raw snps
-        raw_snps = self.isolate_raw_snps(core, sm_dict)
+        raw_snps = self.isolate_raw_snps(core, mc.variant_array(self.snp_id.lower(), sm_dict[self.sm_variants]))
 
         # Calculate scores for the infinitesimal model
         self._calculate_score(sm_dict, ph_dict, self.inf_dec, raw_snps)

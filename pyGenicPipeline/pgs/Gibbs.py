@@ -47,12 +47,12 @@ class Gibbs(Input):
                     break
 
             # Compute the effect size then write to file
-            sm_dict[f"{self.gibbs}_{variant_fraction}"] = beta / sm_dict[f"{self.ref_prefix}_{self.stds}"].flatten()
+            sm_dict[f"{self.gibbs}_{variant_fraction}"] = beta / sm_dict[self.stds].flatten()
             print(f"Construct weights file for Chromosome {chromosome} variant fraction of {variant_fraction} in "
                   f"{round(time.time() - self.start_time, 2)} Seconds\n")
 
         # Do the same for the infinitesimal model
-        sm_dict[self.inf_dec] = inf_betas / sm_dict[f"{self.ref_prefix}_{self.stds}"].flatten()
+        sm_dict[self.inf_dec] = inf_betas / sm_dict[self.stds].flatten()
 
     def _infinitesimal_betas(self, sm_dict):
         """
@@ -70,7 +70,7 @@ class Gibbs(Input):
             current_window = stop_i - start_i
 
             # Load the snps in this window
-            window_snps = mc.snps_in_window(sm_dict[f"{self.ref_prefix}_{self.norm_snps}"], wi, snp_count, ld_window)
+            window_snps = mc.snps_in_window(sm_dict[self.norm_snps], wi, snp_count, ld_window)
 
             # Load the disequilibrium (D in LDPred)?
             dis = mc.shrink_r2_matrix(np.dot(window_snps, window_snps.T) / iid_count, iid_count)

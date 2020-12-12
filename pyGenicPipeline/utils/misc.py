@@ -172,7 +172,7 @@ def cleanup_dict(dict_to_clean, keys_to_remove):
     print("Remaining Keys")
     for key in dict_to_clean:
         print(f"{key} - {len(dict_to_clean[key])}")
-    print("\n")
+    print("")
 
 
 def reshape_dict_array(dict_to_shape, dict_key, dimensions=1):
@@ -187,6 +187,7 @@ def possible_combinations(com_list):
 
 def error_dict_to_terminal(error_dict):
     """Print the error dict for this chromosome then reset the initialised to default 0"""
+    print("")
     for index, (k, v) in enumerate(zip(error_dict.keys(), error_dict.values())):
         if index == 0:
             print(Fore.LIGHTCYAN_EX + "{:<30} {}".format(k, v))
