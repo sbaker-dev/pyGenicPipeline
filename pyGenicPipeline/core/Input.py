@@ -837,6 +837,14 @@ class Input:
         return "Filter"
 
     @property
+    def f_std(self):
+        return f"{self.filter_key}_{self.stds}"
+
+    @property
+    def f_freq(self):
+        return f"{self.filter_key}_{self.freq}"
+
+    @property
     def norm_snps(self):
         """Key used for accessing Raw_Snps headers, groups or other attributes"""
         return "Normalised_Snps"
@@ -861,19 +869,6 @@ class Input:
         """Key used for accessing Heritability in headers, groups or other attributes"""
         return "Heritability"
 
-    @property
-    def val_prefix(self):
-        """Key used for accessing the validation genotype data in headers, groups or other attributes"""
-        return "VAL"
-
-    @property
-    def ref_prefix(self):
-        """Key used for accessing the reference genotype data in headers, groups or other attributes"""
-        return "REF"
-
-    @property
-    def core_prefix(self):
-        return "CORE"
 
     @property
     def ld_scores(self):
