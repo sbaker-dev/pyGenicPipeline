@@ -81,6 +81,9 @@ class FilterSnps(Input):
 
         return filter_dict
 
+    def combined_filter_chunks(self):
+        raise NotImplementedError("Not done yet!")
+
     def _summary_frequencies(self, filter_dict):
         """
         If the summary frequencies existed in the summary stats then cross check them with our genetic frequencies,

@@ -47,10 +47,12 @@ class Input:
         self.ambiguous_snps, self.allowed_alleles, self.allele_flip = self._configure_alleles()
 
         # Set filter information
-        # todo set externally
-        self._filter_iter_size = self.args["Filter_Range"]
+        self._make_sub_directory("Filter_Cleaned")
+        self.filter_directory = Path(self.working_dir, "Filter_Cleaned")
         self.maf_min = self._config["Min_Maf"]
         self.freq_discrepancy = self._config["Max_Freq_Discrepancy"]
+        self.filter_index = self.args["Filter_Index"]
+        self._filter_iter_size = self.args["Filter_Range"]
         self.clean_headers, self._clean_dict = self._set_cleaned_headers()
 
         # Gibbs information
@@ -590,7 +592,12 @@ class Input:
         Load a saved cleaned file from summary statistics for a given chromosome found at the load_path provided, and
         use this to construct the sm_dict we pass between methods
         """
-        load_file = CsvObject(load_path, self.cleaned_types, set_columns=True)
+        if self.operation in ("pgs_filter_cleaned", "pgs_ld_scores"):
+            assert self.ld_scores not in CsvObject(load_path).headers, f"LD scores found when they should not be" \
+                                                                       f" in {self.operation}"
+            load_file = CsvObject(load_path, self.cleaned_types[:-1], set_columns=True)
+        else:
+            load_file = CsvObject(load_path, self.cleaned_types, set_columns=True)
 
         chromo = load_file.column_data[self.c_chromosome]
         bp_pos = load_file.column_data[self._clean_dict[self.bp_position]]

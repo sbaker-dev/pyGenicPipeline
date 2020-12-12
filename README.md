@@ -10,6 +10,7 @@ A high level API for various packages and pipelines, which have been altered or 
 
 ##### major version changes
 
+* commit ------- Version 0.05.0 - Adding more methods to Main to allow for smaller less aggregated processes
 * commit 8524ff7 Version 0.04.0 - Allowing for filtering via chunks, and some memory savings
 * commit 7128f6c Version 0.03.0 - pyGenicParser from the spun out internal methods 
 * commit e652137 Version 0.02.0 - optional pysnptools for bgen, otherwise using internal methods for bgen
