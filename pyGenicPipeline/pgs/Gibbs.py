@@ -28,6 +28,15 @@ class Gibbs(Input):
         print(f"Calculated infinitesimal for chromosome {chromosome} in {round(time.time() - self.start_time, 2)}"
               f" Seconds\n")
 
+        # If the user wants to run the LD pred Gibbs then do so.
+        if self.gibbs_run:
+            self._gibbs_on_causal_fraction(chromosome, inf_betas, sm_dict)
+
+        # Do the same for the infinitesimal model
+        sm_dict[self.inf_dec] = inf_betas / sm_dict[self.stds].flatten()
+
+    def _gibbs_on_causal_fraction(self, chromosome, inf_betas, sm_dict):
+        """If gibbs is set to run, iterate through the causal fractions and calculate the gibbs beta"""
         for variant_fraction in self.gibbs_causal_fractions:
             self.start_time = time.time()
 
@@ -50,9 +59,6 @@ class Gibbs(Input):
             sm_dict[f"{self.gibbs}_{variant_fraction}"] = beta / sm_dict[self.stds].flatten()
             print(f"Construct weights file for Chromosome {chromosome} variant fraction of {variant_fraction} in "
                   f"{round(time.time() - self.start_time, 2)} Seconds\n")
-
-        # Do the same for the infinitesimal model
-        sm_dict[self.inf_dec] = inf_betas / sm_dict[self.stds].flatten()
 
     def _infinitesimal_betas(self, sm_dict):
         """

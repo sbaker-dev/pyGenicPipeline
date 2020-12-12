@@ -59,6 +59,7 @@ class Input:
         self.heritability_calculated = self.args["Heritability_Calculated"]
         self.gibbs_causal_fractions = self._set_causal_fractions()
         # todo set these up externally
+        self.gibbs_run = False
         self.gibbs_iter = 100
         self.gibbs_burn_in = 10
         self.gibbs_shrink = 1
