@@ -478,6 +478,7 @@ class Input:
 
         # Use this information to construct a normalised snps
         normalised_snps = np.array((raw_snps - raw_means) / raw_stds, dtype="float32")
+        print(f"Normalised {len(normalised_snps)} snps\n")
         assert normalised_snps.shape == raw_snps.shape
 
         if std_return:

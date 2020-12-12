@@ -33,7 +33,8 @@ class FilterSnps(Input):
             # Filter out undesirable snps, then store the new snps into a list
             filter_dict = self.filter_snp_chunk(ref, filter_dict, chromosome)
 
-            # If we also have a validation file, filter on that as well
+            # If we also have a validation file, filter on that as well. This will likely have a different std/freq so
+            # may filter out additional snps
             if validation:
                 filter_dict = self.filter_snp_chunk(validation, filter_dict, chromosome)
 
