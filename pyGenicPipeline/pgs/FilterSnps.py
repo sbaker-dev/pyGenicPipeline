@@ -13,6 +13,11 @@ class FilterSnps(Input):
                                    "Monomorphic": 0, "In Long Range LD": 0}
 
     def filter_snps(self, sm_dict, ref, chromosome, validation=None):
+        """
+        Large numbers of snps and individuals can lead to significant memory issues. This will filter the snps in chunks
+        vus allowing it to run with less memory
+        """
+        t0 = self._assert_filter_snps()
         # Extract the information we need for filtering and then filter our references
         snp_list, freqs, bp_positions = self.chunked_snp_names(sm_dict)
         accepted_snps = []
@@ -31,6 +36,9 @@ class FilterSnps(Input):
             # Store any remaining snps to a list
             accepted_snps.append(filter_dict[self.snp_id])
 
+        t1 = mc.error_dict_to_terminal(self._filter_error_dict)
+        print(f"Cleaned summary stats for Chromosome {chromosome} in {round(t1 - t0, 2)} Seconds\n")
+
     def filter_snp_chunk(self, gen_type, gen_file, filter_dict, chromosome):
         """
         From our cleaned summary statistics we can construct a set of information for our validation and reference
@@ -40,9 +48,6 @@ class FilterSnps(Input):
         If we have information on summary frequencies, the user has specified a maf_min or wants to filter snps in long
         range LD then we can filter those out. This process will always filter out monomorphic snps.
         """
-
-        t0 = self._assert_filter_snps()
-
         # Load the raw snps from the .bed or .bgen file and use it to isolate statistical information
         raw_snps = self.isolate_raw_snps(gen_file, filter_dict[self.snp_id])
         filter_dict[f"{gen_type}_{self.stds}"] = np.std(raw_snps, 1, dtype='float32')
@@ -72,17 +77,6 @@ class FilterSnps(Input):
 
         return filter_dict
 
-        # # Now that the genetic information has been cleaned and filtered, use this information to create a normalised
-        # # snp and clean up sm_dict of anything we know long need
-        # if gen_type == self.ref_prefix:
-        #     self._normalise_snps(sm_dict, gen_type)
-        # else:
-        #     mc.cleanup_dict(sm_dict, [f"{gen_type}_{cleaner}" for cleaner in [self.stds, self.freq, self.raw_snps]])
-        #
-        # t1 = mc.error_dict_to_terminal(self._filter_error_dict)
-        # print(f"Cleaned summary stats for Chromosome {chromosome} in {round(t1 - t0, 2)} Seconds\n")
-        # return sm_dict
-
     def _summary_frequencies(self, filter_dict, gen_type):
         """
         If the summary frequencies existed in the summary stats then cross check them with our genetic frequencies,
@@ -94,7 +88,7 @@ class FilterSnps(Input):
 
         # Invalid frequencies from summary stats where coded as -1 so these should be removed
         freq_filter = np.logical_or(freq_filter, filter_dict[self.freq] <= 0)
-        self._filter_error_dict[f"{self.freq} Discrepancy"] = len(freq_filter) - np.sum(freq_filter)
+        self._filter_error_dict[f"{self.freq} Discrepancy"] += len(freq_filter) - np.sum(freq_filter)
         return mc.filter_array(filter_dict, freq_filter)
 
     def _maf_filter(self, sm_dict, gen_type):
@@ -105,13 +99,13 @@ class FilterSnps(Input):
         maf_filter = (sm_dict[f"{gen_type}_{self.freq}"] > self.maf_min) * \
                      (sm_dict[f"{gen_type}_{self.freq}"] < (1 - self.maf_min))
 
-        self._filter_error_dict["MAF"] = len(maf_filter) - np.sum(maf_filter)
+        self._filter_error_dict["MAF"] += len(maf_filter) - np.sum(maf_filter)
         return mc.filter_array(sm_dict, maf_filter)
 
     def _monomorphic_filter(self, sm_dict, gen_type):
         """Remove any Monomorphic snps, those with no variation"""
         monomorphic_filter = sm_dict[f"{gen_type}_{self.stds}"] > 0
-        self._filter_error_dict["Monomorphic"] = len(monomorphic_filter) - np.sum(monomorphic_filter)
+        self._filter_error_dict["Monomorphic"] += len(monomorphic_filter) - np.sum(monomorphic_filter)
         return mc.filter_array(sm_dict, monomorphic_filter)
 
     def _long_range_ld_filter(self, filter_dict, chromosome):
