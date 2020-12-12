@@ -403,12 +403,30 @@ class Input:
         duplicates = np.sum([(v_count - len(validation)) + (r_count - len(ref))])
         return set(mc.flatten([validation, ref])), indexer, duplicates
 
-    def chunked_snp_names(self, sm_dict):
+    def variant_names(self, sm_dict):
+        """Variant names differ in pysnptools bgen, so account for this and just return rs_id's"""
         if self._bgen_loader:
-            variant_names = np.array([variant.bgen_snp_id() for variant in sm_dict[self.sm_variants]])
+            return np.array([variant.bgen_snp_id() for variant in sm_dict[self.sm_variants]])
         else:
-            variant_names = mc.variant_array(self.snp_id.lower(), sm_dict[self.sm_variants])
-        print(f"Found {len(variant_names)} variants to extract snps for\n")
+            return mc.variant_array(self.snp_id.lower(), sm_dict[self.sm_variants])
+
+    def chunked_snp_names(self, sm_dict):
+        """
+        Even a couple of 10's of thousands of snps will lead to memory issues especially if there are large numbers of
+        individuals in the data set. This will load the variant names that have been cleaned, then group the snp names,
+        frequencies, and base pair positions (all needed in filtering) into a chunk size.
+
+        The chunk size is calculated from the number of variant names by the filter_iter_size set by the user.
+
+        :param sm_dict: Dict of cleaned summary statistics
+        :type sm_dict: dict
+
+        :return: A list of three numpy arrays of snp names, frequencies, and base pair positions
+        :rtype: list[np.ndarray, np.ndarray, np.ndarray]
+        """
+
+        # Extract variant names
+        variant_names = self.variant_names(sm_dict)
 
         # Calculate the number of chunks required, then return the variant names split on chunk size
         chunks = int(np.ceil(len(variant_names) / self._filter_iter_size))
@@ -812,6 +830,11 @@ class Input:
     def raw_snps(self):
         """Key used for accessing Raw_Snps headers, groups or other attributes"""
         return "Raw_Snps"
+
+    @property
+    def filter_key(self):
+        """Key used for accessing a Filter in headers, groups or other attributes"""
+        return "Filter"
 
     @property
     def norm_snps(self):
