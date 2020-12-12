@@ -37,7 +37,7 @@ class Input:
         self.validation_size = self._set_validation_size(self.args["Validation_Size"])
         self.population_percent = 1
 
-        # Set summary and filter statistics information if required
+        # Set summary information
         self._make_sub_directory("Chromosome_Cleaned")
         self.clean_directory = Path(self.working_dir, "Chromosome_Cleaned")
         self.zipped, self.sample_size = self._set_summary_stats()
@@ -45,6 +45,10 @@ class Input:
         self.effect_type = self._set_effect_type(self.args["Summary_Effect_Type"])
         self.z_scores = self._set_z_scores(self.args["Z_Scores"])
         self.ambiguous_snps, self.allowed_alleles, self.allele_flip = self._configure_alleles()
+
+        # Set filter information
+        # todo set externally
+        self._filter_iter_size = 10000
         self.maf_min = self._config["Min_Maf"]
         self.freq_discrepancy = self._config["Max_Freq_Discrepancy"]
         self.clean_headers, self._clean_dict = self._set_cleaned_headers()
@@ -399,22 +403,26 @@ class Input:
         duplicates = np.sum([(v_count - len(validation)) + (r_count - len(ref))])
         return set(mc.flatten([validation, ref])), indexer, duplicates
 
-    def isolate_raw_snps(self, gen_file, sm_dict):
+    def chunked_snp_names(self, sm_dict):
+        if self._bgen_loader:
+            variant_names = np.array([variant.bgen_snp_id() for variant in sm_dict[self.sm_variants]])
+        else:
+            variant_names = mc.variant_array(self.snp_id.lower(), sm_dict[self.sm_variants])
+        print(f"Found {len(variant_names)} variants to extract snps for\n")
+
+        # Calculate the number of chunks required, then return the variant names split on chunk size
+        chunks = int(np.ceil(len(variant_names) / self._filter_iter_size))
+        return [np.array_split(variant_names, chunks), np.array_split(sm_dict[self.freq], chunks),
+                np.array_split(mc.variant_array(self.bp_position.lower(), sm_dict[self.sm_variants]), chunks)]
+
+    def isolate_raw_snps(self, gen_file, variant_names):
         """
         This will isolate the raw snps for a given bed or bgen file
 
         :param gen_file: Genetic file you wish to load from
-        :param sm_dict: dict of clean information
+        :param variant_names: The snp names to isolate the dosage for
         :return: raw snps
         """
-        # todo Isolating all of the information is leading to significant memory issues. We need to try to do this
-        #  filtering on id to see if that can save us memory without it taking forever
-
-        if self._bgen_loader:
-            variant_names = [variant.bgen_snp_id() for variant in sm_dict[self.sm_variants]]
-        else:
-            variant_names = mc.variant_array(self.snp_id.lower(), sm_dict[self.sm_variants])
-        print(f"Found {len(variant_names)} variants to extract snps for\n")
 
         # bed returns 2, 1, 0 rather than 0, 1, 2 although it says its 0, 1, 2; so this inverts it
         if self.gen_type == ".bed":
@@ -434,7 +442,6 @@ class Input:
             raise Exception(f"Critical Error: Unknown load type {self.gen_type} found in _isolate_dosage")
 
         assert len(raw_snps) == len(variant_names), "Failed to filter out duplicates"
-        print(f"Isolated {len(raw_snps)}\n")
         return raw_snps
 
     def genetic_phenotypes(self, gen_file, load_path):
