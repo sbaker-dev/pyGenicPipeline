@@ -18,8 +18,10 @@ class FilterSnps(Input):
         vus allowing it to run with less memory
         """
         t0 = self._assert_filter_snps()
+
         # Extract the information we need for filtering and then filter our references
         snp_list, freqs, bp_positions = self.chunked_snp_names(sm_dict)
+
         accepted_snps = []
         for index, (snps, f, bp) in enumerate(zip(snp_list, freqs, bp_positions), start=1):
             print(f"Filtering chunk {index} out of {len(snp_list)}")
@@ -36,8 +38,14 @@ class FilterSnps(Input):
             # Store any remaining snps to a list
             accepted_snps.append(filter_dict[self.snp_id])
 
+        # Create a filter from the accept snps
+        accepted_snps = mc.flatten(accepted_snps)
+        snp_filter = np.array([True if v in accepted_snps else False for v in self.variant_names(sm_dict)])
+
+        # Return the filter summary dict
         t1 = mc.error_dict_to_terminal(self._filter_error_dict)
         print(f"Cleaned summary stats for Chromosome {chromosome} in {round(t1 - t0, 2)} Seconds\n")
+        return mc.filter_array(sm_dict, snp_filter)
 
     def filter_snp_chunk(self, gen_type, gen_file, filter_dict, chromosome):
         """
