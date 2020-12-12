@@ -25,7 +25,7 @@ class FilterSnps(Input):
 
         accepted_snps = []
         for index, (snps, f, bp) in enumerate(zip(snp_list, freqs, bp_positions), start=1):
-            print(f"Filtering chunk {index} out of {len(snp_list)}")
+            print(f"Filtering chunk {index} out of {len(snp_list)}: {mc.terminal_time()}")
             # Setup the base filter from our extract chunks
             filter_dict = {self.snp_id: snps, self.freq: f, self.bp_position: bp,
                            self.filter_key: np.full(len(snps), True)}

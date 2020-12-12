@@ -48,7 +48,7 @@ class Input:
 
         # Set filter information
         # todo set externally
-        self._filter_iter_size = 10000
+        self._filter_iter_size = self.args["Filter_Range"]
         self.maf_min = self._config["Min_Maf"]
         self.freq_discrepancy = self._config["Max_Freq_Discrepancy"]
         self.clean_headers, self._clean_dict = self._set_cleaned_headers()
