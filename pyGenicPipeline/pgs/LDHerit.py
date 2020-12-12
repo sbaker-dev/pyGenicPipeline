@@ -2,6 +2,7 @@ from pyGenicPipeline.support.ArgMaker import ArgMaker
 from pyGenicPipeline.utils import error_codes as ec
 from pyGenicPipeline.utils import misc as mc
 from pyGenicPipeline.core.Input import Input
+
 from csvObject import CsvObject
 from colorama import Fore
 from pathlib import Path

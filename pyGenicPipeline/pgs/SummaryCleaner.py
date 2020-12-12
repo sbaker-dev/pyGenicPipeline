@@ -1,7 +1,8 @@
-from pyGenicPipeline.geneticParsers.variantObjects import Variant, Nucleotide
 from pyGenicPipeline.utils import error_codes as ec
 from pyGenicPipeline.utils import misc as mc
 from pyGenicPipeline.core.Input import Input
+
+from pyGenicParser import Nucleotide
 from scipy import stats
 import numpy as np
 import time
@@ -85,8 +86,14 @@ class SummaryCleaner(Input):
         variants_filter = np.array([True if v in validation_snps else False for v in variants])
         self._sum_error_dict[f"Invalid_Snps"] = len(variants_filter) - np.sum(variants_filter)
 
+        # Bed files also have morgan position which we don't currently use, so filter them out
+        if self.gen_type == ".bed":
+            sm_variants = indexer.info_from_sid(variants[variants_filter], True)
+        else:
+            sm_variants = indexer.info_from_sid(variants[variants_filter])
+
         # Return the filtered lines, variant information for the filtered snps, and the validation snp count
-        return sm_line[variants_filter], indexer.info_from_sid(variants[variants_filter]), len(validation_snps)
+        return sm_line[variants_filter], sm_variants, len(validation_snps)
 
     def _line_by_line_summary(self, validation_snps, chromosome):
         """This will check, for every line in the summary statistics, if a snp is within our list of accept snps."""

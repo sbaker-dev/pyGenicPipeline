@@ -1,6 +1,7 @@
 from pyGenicPipeline.utils import error_codes as ec
 from pyGenicPipeline.utils import misc as mc
 from pyGenicPipeline.core.Input import Input
+
 import numpy as np
 import time
 

@@ -6,6 +6,7 @@ from pyGenicPipeline.pgs.LDHerit import LDHerit
 from pyGenicPipeline.core.Input import Input
 from pyGenicPipeline.pgs.Gibbs import Gibbs
 from pyGenicPipeline.pgs.Score import Score
+
 from csvObject import write_csv
 from colorama import init, Fore
 import numpy as np
@@ -150,11 +151,11 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input)
 
         print(sm_dict[self.inf_dec])
         print(np.sum(sm_dict[self.inf_dec]))
-        print(f"Above should be 0.11157818410953191 ish")
+        print(f"Above should be 0.11157818410953191 ish\n")
 
         print(sm_dict[f"{self.gibbs}_{self.gibbs_causal_fractions[0]}"])
         print(np.sum(sm_dict[f"{self.gibbs}_{self.gibbs_causal_fractions[0]}"]))
-        print(f"Above should be 0.21582699762327068 ish")
+        print(f"Above should be 0.21582699762327068 ish\n")
 
         # Construct the Poly-genetic Scores
         self.construct_chromosome_pgs(sm_dict, load_path, chromosome)

@@ -1,6 +1,7 @@
 from pyGenicPipeline.utils import error_codes as ec
 from pyGenicPipeline.utils import misc as mc
 from pyGenicPipeline.core.Input import Input
+
 from csvObject import CsvObject, write_csv
 from collections import Counter
 from pathlib import Path
@@ -63,6 +64,8 @@ class Score(Input):
         ph_dict[key] = np.array([np.sum(row) for row in ((-1 * raw_snps) * weights).T])
 
     def compile_pgs(self):
+
+        # todo WARNING - STRANGE BEHAVIOUR WHEN COMPILING DIFFERENT FILE TYPES
 
         # Check we have necessary args for this method
         self._assert_compile_pgs()
