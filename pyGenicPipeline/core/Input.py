@@ -681,6 +681,7 @@ class Input:
         if not sm_dict:
             raise Exception("Failed to find any snps!\n\n")
 
+    # todo: Often, this will not be 9 but 8 long. We need to make it 8, then correct when its 9
     @property
     def cleaned_types(self):
         """The types of each column in the cleaned data"""

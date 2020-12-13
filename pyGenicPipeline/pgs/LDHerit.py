@@ -58,7 +58,7 @@ class LDHerit(Input):
         config_dict = {}
         for file in mc.directory_iterator(self.clean_directory):
             print(file)
-            load_file = CsvObject(Path(self.clean_directory, file), self.cleaned_types, set_columns=True)
+            load_file = CsvObject(Path(self.clean_directory, file), self.cleaned_types[:-1], set_columns=True)
 
             # Isolate the generic information
             chromosome, n_snps, n_iid = self._chromosome_from_load(load_file)
