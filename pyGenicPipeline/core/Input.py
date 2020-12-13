@@ -589,15 +589,24 @@ class Input:
         else:
             return [1, 0.3, 0.1, 0.03, 0.01, 0.003, 0.001]
 
-    def sm_dict_from_csv(self, load_path):
+    def sm_dict_from_csv(self, load_path, different_types=None):
         """
         Load a saved cleaned file from summary statistics for a given chromosome found at the load_path provided, and
         use this to construct the sm_dict we pass between methods
         """
-        if self.operation in ("pgs_filter_cleaned", "pgs_ld_scores", "pgs_weights"):
-            load_file = CsvObject(load_path, self.cleaned_types[:-1], set_columns=True)
-        else:
+        header_length = len(CsvObject(load_path).headers)
+        if header_length == len(self.cleaned_types):
             load_file = CsvObject(load_path, self.cleaned_types, set_columns=True)
+        elif header_length == len(self.cleaned_types) - 1:
+            load_file = CsvObject(load_path, self.cleaned_types[:-1], set_columns=True)
+        elif different_types:
+            print("No sm dict construction - returning headers and column values")
+            load_file = CsvObject(load_path, different_types, set_columns=True)
+            return {header: np.array(columns) for header, columns in zip(load_file.headers, load_file.column_data)}
+        else:
+            print("No Know specification - returning untyped headers and column values")
+            load_file = CsvObject(load_path, set_columns=True)
+            return {header: columns for header, columns in zip(load_file.headers, load_file.column_data)}
 
         chromo = load_file.column_data[self.c_chromosome]
         bp_pos = load_file.column_data[self._clean_dict[self.bp_position]]
