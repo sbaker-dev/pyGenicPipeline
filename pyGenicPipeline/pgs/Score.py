@@ -65,7 +65,7 @@ class Score(Input):
         """
         # Restructure weights to be a vector array
         weights = np.array(list([np.array(sm_dict[key]).tolist()])[index])
-        weights.shape = (len(sm_dict[key]), 1)
+        weights.shape = (len(weights), 1)
 
         # Calculate the PRS for the individuals
         score_array[key].append(np.array([np.sum(row) for row in ((-1 * raw_snps) * weights).T]))
