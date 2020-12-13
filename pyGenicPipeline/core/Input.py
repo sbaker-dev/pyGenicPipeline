@@ -594,9 +594,7 @@ class Input:
         Load a saved cleaned file from summary statistics for a given chromosome found at the load_path provided, and
         use this to construct the sm_dict we pass between methods
         """
-        if self.operation in ("pgs_filter_cleaned", "pgs_ld_scores"):
-            assert self.ld_scores not in CsvObject(load_path).headers, f"LD scores found when they should not be" \
-                                                                       f" in {self.operation}"
+        if self.operation in ("pgs_filter_cleaned", "pgs_ld_scores", "pgs_weights"):
             load_file = CsvObject(load_path, self.cleaned_types[:-1], set_columns=True)
         else:
             load_file = CsvObject(load_path, self.cleaned_types, set_columns=True)
