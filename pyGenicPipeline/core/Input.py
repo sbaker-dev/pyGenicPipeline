@@ -412,7 +412,7 @@ class Input:
     def variant_names(self, sm_dict):
         """Variant names differ in pysnptools bgen, so account for this and just return rs_id's"""
         if self._bgen_loader:
-            return np.array([variant.bgen_snp_id() for variant in sm_dict[self.sm_variants]])
+            return [variant.bgen_snp_id() for variant in sm_dict[self.sm_variants]]
         else:
             return mc.variant_array(self.snp_id.lower(), sm_dict[self.sm_variants])
 
@@ -457,6 +457,7 @@ class Input:
         # by their index position and then sum them we get [0, 1, 2]
         elif self.gen_type == ".bgen":
             if self._bgen_loader:
+                print(gen_file[:7, :7].sid)
                 ordered_common = gen_file[:, gen_file.sid_to_index(variant_names)].read().val
                 raw_snps = sum(np.array([snp * i for i, snp in enumerate(ordered_common.T)]))
             else:
