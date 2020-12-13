@@ -51,7 +51,8 @@ class Score(Input):
         ph_dict = {**ph_dict, **scores_dict}
         # Validate we have all elements of equal length to the number of id's in core
         for key in ph_dict.keys():
-            assert len(ph_dict[key]) == core.iid_count
+            print(key)
+            assert len(ph_dict[key]) == core.iid_count, f"{len(ph_dict[key])}, {key}, {core.iid_count}"
 
         # Write to file
         rows = [[v[i] for v in ph_dict.values()] for i in range(core.iid_count)]
