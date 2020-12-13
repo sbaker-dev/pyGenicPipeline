@@ -21,7 +21,9 @@ class FilterSnps(Input):
         t0 = self._assert_filter_snps()
 
         # Extract the information we need for filtering and then filter our references
-        snp_list, freqs, bp_positions = self.chunked_snp_names(sm_dict)
+        snp_list, chunks = self.chunked_snp_names(sm_dict, chunk_return=True)
+        bp_positions = np.array_split(mc.variant_array(self.bp_position.lower(), sm_dict[self.sm_variants]), chunks)
+        freqs = np.array_split(sm_dict[self.freq], chunks)
 
         accepted_snps = []
         for index, (snps, f, bp) in enumerate(zip(snp_list, freqs, bp_positions), start=1):

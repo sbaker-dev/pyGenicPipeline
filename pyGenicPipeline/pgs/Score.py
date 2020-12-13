@@ -30,17 +30,23 @@ class Score(Input):
         # Construct a dict of arrays of our ID's
         ph_dict = self.genetic_phenotypes(core, load_path)
 
-        # Load the raw snps that have been isolated Raw snps
-        raw_snps = self.isolate_raw_snps(core, mc.variant_array(self.snp_id.lower(), sm_dict[self.sm_variants]))
+        scores_dict = {h: [] for h in sm_dict.keys() if (self.gibbs in h) or (h == self.inf_dec)}
+        chunked_snps = self.chunked_snp_names(sm_dict)
+        for index, snp_names in enumerate(chunked_snps):
+            print(f"Processing Scores Chunk {index} out of {len(chunked_snps)}")
+            # Load the raw snps that have been isolated Raw snps
+            raw_snps = self.isolate_raw_snps(core, snp_names)
 
-        # Calculate scores for the infinitesimal model
-        self._calculate_score(sm_dict, ph_dict, self.inf_dec, raw_snps)
+            # Calculate scores for the infinitesimal model
+            self._calculate_score(sm_dict, scores_dict, self.inf_dec, raw_snps)
 
-        # Now do the same for each model calculated by Gibbs
-        for variant_fraction in sm_dict.keys():
-            if self.gibbs in variant_fraction:
-                self._calculate_score(sm_dict, ph_dict, variant_fraction, raw_snps)
+            # Now do the same for each model calculated by Gibbs
+            for variant_fraction in sm_dict.keys():
+                if self.gibbs in variant_fraction:
+                    self._calculate_score(sm_dict, scores_dict, variant_fraction, raw_snps)
 
+        scores_dict = {h: mc.flatten(values) for h, values in scores_dict.items()}
+        ph_dict = {**ph_dict, **scores_dict}
         # Validate we have all elements of equal length to the number of id's in core
         for key in ph_dict.keys():
             assert len(ph_dict[key]) == core.iid_count
@@ -48,9 +54,10 @@ class Score(Input):
         # Write to file
         rows = [[v[i] for v in ph_dict.values()] for i in range(core.iid_count)]
         write_csv(self.scores_directory, f"Scores_{chromosome}", list(ph_dict.keys()), rows)
+        print(f"Finished Constructing scores for Chromosome {chromosome}")
 
     @staticmethod
-    def _calculate_score(sm_dict, ph_dict, key, raw_snps):
+    def _calculate_score(sm_dict, score_array, key, raw_snps):
         """
         Here we load the weights calculated and re-structure the 1 dimensional list to be a vector array. We then use
         this vector array of beta values from weights alongside the raw snps to calculate the effect of each snp based
@@ -61,7 +68,7 @@ class Score(Input):
         weights.shape = (len(sm_dict[key]), 1)
 
         # Calculate the PRS for the individuals
-        ph_dict[key] = np.array([np.sum(row) for row in ((-1 * raw_snps) * weights).T])
+        score_array[key].append(np.array([np.sum(row) for row in ((-1 * raw_snps) * weights).T]))
 
     def compile_pgs(self):
 

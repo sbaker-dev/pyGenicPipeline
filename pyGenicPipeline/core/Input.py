@@ -415,19 +415,19 @@ class Input:
         """Variant names differ in pysnptools bgen, so account for this and just return rs_id's"""
         return mc.variant_array(self.snp_id.lower(), sm_dict[self.sm_variants])
 
-    def chunked_snp_names(self, sm_dict):
+    def chunked_snp_names(self, sm_dict, chunk_return=False):
         """
         Even a couple of 10's of thousands of snps will lead to memory issues especially if there are large numbers of
-        individuals in the data set. This will load the variant names that have been cleaned, then group the snp names,
-        frequencies, and base pair positions (all needed in filtering) into a chunk size.
-
-        The chunk size is calculated from the number of variant names by the filter_iter_size set by the user.
+        individuals in the data set. This will load the variant names that have been cleaned, then chunk them by a
+        dimension calculated from the number of variant names by the filter_iter_size set by the user.
 
         :param sm_dict: Dict of cleaned summary statistics
         :type sm_dict: dict
 
-        :return: A list of three numpy arrays of snp names, frequencies, and base pair positions
-        :rtype: list[np.ndarray, np.ndarray, np.ndarray]
+        :param chunk_return: If True returns the chunk size as well as the variants, otherwise just the variants
+        :type chunk_return: bool
+
+        :return:  np.array_split numpy arrays of snp names, or this combined with the chunk size
         """
 
         # Extract variant names
@@ -435,8 +435,10 @@ class Input:
 
         # Calculate the number of chunks required, then return the variant names split on chunk size
         chunks = int(np.ceil(len(variant_names) / self._filter_iter_size))
-        return [np.array_split(variant_names, chunks), np.array_split(sm_dict[self.freq], chunks),
-                np.array_split(mc.variant_array(self.bp_position.lower(), sm_dict[self.sm_variants]), chunks)]
+        if chunk_return:
+            return np.array_split(variant_names, chunks), chunks
+        else:
+            return np.array_split(variant_names, chunks)
 
     def isolate_raw_snps(self, gen_file, variant_names):
         """

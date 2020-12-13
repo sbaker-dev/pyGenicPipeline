@@ -6,10 +6,11 @@ from pyGenicPipeline.pgs.FilterSnps import FilterSnps
 from pyGenicPipeline.utils.misc import terminal_time
 from pyGenicPipeline.pgs.LDHerit import LDHerit
 from pyGenicPipeline.core.Input import Input
-from pyGenicPipeline.pgs.Gibbs import Gibbs
+from pyGenicPipeline.utils import misc as mc
 from pyGenicPipeline.pgs.Score import Score
+from pyGenicPipeline.pgs.Gibbs import Gibbs
 
-from csvObject import write_csv
+from csvObject import CsvObject, write_csv
 from colorama import init, Fore
 from pathlib import Path
 import numpy as np
@@ -79,6 +80,14 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input,
             valid_chromosomes = self.validation_chromosomes()
             for chromosome in valid_chromosomes:
                 self.chromosome_weights(chromosome)
+
+    def pgs_scores(self):
+        if self.multi_core_splitter:
+            self.chromosome_scores(self.multi_core_splitter)
+        else:
+            valid_chromosomes = self.validation_chromosomes()
+            for chromosome in valid_chromosomes:
+                self.chromosome_scores(chromosome)
 
     def pgs_weights_and_scores(self):
         """
@@ -165,7 +174,9 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input,
         sm_dict = self.sm_dict_from_csv(load_path)
 
         # Chunk the data that was saved
-        snp_list, freqs, bp_positions = self.chunked_snp_names(sm_dict)
+        snp_list, chunks = self.chunked_snp_names(sm_dict, chunk_return=True)
+        bp_positions = np.array_split(mc.variant_array(self.bp_position.lower(), sm_dict[self.sm_variants]), chunks)
+        freqs = np.array_split(sm_dict[self.freq], chunks)
 
         # Filter based on the current filter_index
         filter_dict = {self.snp_id: snp_list[self.filter_index], self.freq: freqs[self.filter_index],
@@ -224,6 +235,19 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input,
 
         write_csv(self.weights_directory, f"Weights_{chromosome}", headers, values)
         print(f"Constructed weights file for {chromosome}")
+
+    def chromosome_scores(self, chromosome):
+        # Construct the dict of values from our saved csv
+        load_path = str(self.select_file_on_chromosome(chromosome, self.clean_directory, ".csv"))
+        sm_dict = self.sm_dict_from_csv(load_path)
+
+        # Load any scores we calculated
+        load_path = str(self.select_file_on_chromosome(chromosome, self.weights_directory, ".csv"))
+        sm_dict = {**sm_dict, **self.sm_dict_from_csv(load_path, [float])}
+
+        # Construct the scores
+        load_path = str(self.select_file_on_chromosome(chromosome, self.gen_directory, self.gen_type))
+        self.construct_chromosome_pgs(sm_dict, load_path, chromosome)
 
     def debug_cross_check(self):
         """
