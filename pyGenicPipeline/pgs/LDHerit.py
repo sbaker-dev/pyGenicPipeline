@@ -16,7 +16,7 @@ class LDHerit(Input):
         self._genome_dict = {"Genome-wide Stats": "Values", "Lambda Inflation": 0.0, "Mean LD Score": 0.0,
                              "Genome-Wide Heritability": 0.0}
 
-    def genome_wide_heritability(self):
+    def calculate_genome_wide_heritability(self):
         """
         Once we have cleaned our data sets, we can store the genome wide data along side with some individual
         chromosome information that does not take the form of lists, in a yaml config file.
@@ -50,6 +50,29 @@ class LDHerit(Input):
         mc.error_dict_to_terminal(self._genome_dict)
 
         # Construct config file
+        ArgMaker().write_yaml_config_dict(config_dict, self.working_dir, "genome_wide_config")
+
+    def distribute_heritability_genome_wide(self):
+        """If we can't calculate heritability, distribute it from a provided float"""
+        total_snps = 0
+        config_dict = {}
+        for file in mc.directory_iterator(self.clean_directory):
+            print(file)
+            load_file = CsvObject(Path(self.clean_directory, file), self.cleaned_types, set_columns=True)
+
+            # Isolate the generic information
+            chromosome, n_snps, n_iid = self._chromosome_from_load(load_file)
+            chromosome_values = {self.count_snp: n_snps, self.count_iid: n_iid,
+                                 "Description": f"Chromosome {chromosome}"}
+            config_dict[chromosome] = chromosome_values
+            total_snps += n_snps
+
+        print(f"Suggested LD_Radius based on {total_snps} / 3000 is {total_snps / 3000}")
+
+        for key, value in config_dict.items():
+            config_dict[key][self.herit] = self.herit_calculated * (config_dict[key][self.count_snp] / total_snps)
+
+        config_dict["Genome"] = {f"{self.genome_key}_{self.herit}": self.herit_calculated}
         ArgMaker().write_yaml_config_dict(config_dict, self.working_dir, "genome_wide_config")
 
     def _heritability_by_chromosome(self, config_dict):
@@ -92,7 +115,7 @@ class LDHerit(Input):
 
         return chromosome, load_file.column_length, core.iid_count
 
-    def compute_ld_scores(self, sm_dict, gen_file, snp_count, iid_count, ld_dict=False):
+    def compute_ld_scores(self, sm_dict, gen_file, snp_count, iid_count, load_path, ld_dict=False):
         """
         This will calculate the ld scores and create a dict of the ld reference for each snp in our normalised list of
         snps
@@ -106,9 +129,9 @@ class LDHerit(Input):
             ld_dict = None
 
         # Create the normalised snps, then calculate the disequilibrium with them
-        norm_snps, stds = self.normalise_snps(sm_dict, gen_file, True)
+        norm_snps, stds = self.normalise_snps(gen_file, self.variant_names(sm_dict),  True)
         for i, snp in enumerate(norm_snps):
-            self._calculate_disequilibrium(i, snp, norm_snps, ld_scores, iid_count, snp_count, ld_dict)
+            self._calculate_disequilibrium(sm_dict, load_path, i, snp, norm_snps, ld_scores, iid_count, snp_count, ld_dict)
 
         # Store relevant values
         sm_dict[self.ld_scores] = ld_scores
@@ -116,13 +139,20 @@ class LDHerit(Input):
         sm_dict[self.norm_snps] = norm_snps
         sm_dict[self.stds] = stds
 
-    def _calculate_disequilibrium(self, snp_index, current_snp, norm_snps, ld_scores, iid_count, snp_count,
-                                  ld_dict=None):
+    def _calculate_disequilibrium(self, sm_dict, load_path, snp_index, current_snp, norm_snps, ld_scores, iid_count,
+                                  snp_count, ld_dict=None):
         """
         This will calculate the disequilibrium of the snps in a given radius window
         """
-
+        # todo THis does work -- tecnically -- but its too slow when running snp by snp.
         # Create a window of normalised snps around the current snp with a maximum length of (self.ld_radius * 2) + 1
+        # print(norm_snps.shape)
+
+        # Load and normalise the snp dosage data for this window
+
+        # snp_names = self.local_values(self.variant_names(sm_dict), snp_index, snp_count)
+        # snps_in_ld, _ = self.normalise_snps(self.gen_reference(load_path), snp_names)
+
         snps_in_ld = self.local_values(norm_snps, snp_index, snp_count)
 
         # Calculate the distance dot product
@@ -145,9 +175,9 @@ class LDHerit(Input):
 
         :return: estimated heritability (h2 in ldpred)
         """
-        if self.heritability_calculated:
+        if self.herit_calculated:
             try:
-                return self.heritability_calculated[chromosome]
+                return self.herit_calculated[chromosome]
             except KeyError:
                 raise Exception("You have said you will provided pre-calculated heritability but failed to find it for"
                                 f"chromosome {chromosome}")

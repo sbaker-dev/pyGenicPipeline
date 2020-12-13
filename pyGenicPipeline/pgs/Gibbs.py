@@ -12,7 +12,7 @@ class Gibbs(Input):
         super().__init__(args)
         self.start_time = 0
 
-    def construct_gibbs_weights(self, sm_dict, chromosome):
+    def construct_gibbs_weights(self, sm_dict, load_path, chromosome):
         """
         THis will construct weights for both the infinitesimal and variant fraction models, with the latter being run
         via a Gibbs processor. Both methods from LDPred
@@ -24,7 +24,7 @@ class Gibbs(Input):
 
         # Update the betas via infinitesimal shrinkage using ld information to use as the start value for the variant
         # fraction method used within Gibbs
-        inf_betas = self._infinitesimal_betas(sm_dict)
+        inf_betas, stds = self._infinitesimal_betas(sm_dict, load_path)
         print(f"Calculated infinitesimal for chromosome {chromosome} in {round(time.time() - self.start_time, 2)}"
               f" Seconds\n")
 
@@ -33,10 +33,11 @@ class Gibbs(Input):
             self._gibbs_on_causal_fraction(chromosome, inf_betas, sm_dict)
 
         # Do the same for the infinitesimal model
-        sm_dict[self.inf_dec] = inf_betas / sm_dict[self.stds].flatten()
+        sm_dict[self.inf_dec] = inf_betas / stds.flatten()
 
     def _gibbs_on_causal_fraction(self, chromosome, inf_betas, sm_dict):
         """If gibbs is set to run, iterate through the causal fractions and calculate the gibbs beta"""
+        print("WARNING - DEPRECIATED IN CURRENT VERSION")
         for variant_fraction in self.gibbs_causal_fractions:
             self.start_time = time.time()
 
@@ -60,7 +61,7 @@ class Gibbs(Input):
             print(f"Construct weights file for Chromosome {chromosome} variant fraction of {variant_fraction} in "
                   f"{round(time.time() - self.start_time, 2)} Seconds\n")
 
-    def _infinitesimal_betas(self, sm_dict):
+    def _infinitesimal_betas(self, sm_dict, load_path):
         """
         Apply the infinitesimal shrink w LD (which requires LD information), from LDPred directly (mostly).
 
@@ -70,13 +71,18 @@ class Gibbs(Input):
         iid_count = self.gm[self.count_iid]
 
         updated_betas = np.empty(snp_count)
+        stds = np.empty(snp_count)
+        stds.shape = (snp_count, 1)
+
         for wi in range(0, snp_count, ld_window):
+            print(f"Window {wi} / {snp_count}")
             start_i = wi
             stop_i = min(snp_count, wi + ld_window)
             current_window = stop_i - start_i
 
-            # Load the snps in this window
-            window_snps = mc.snps_in_window(sm_dict[self.norm_snps], wi, snp_count, ld_window)
+            # Load and normalise the snp dosage data for this window
+            window_snp_names = self.variant_names(sm_dict)[start_i: min(snp_count, (start_i + ld_window))]
+            window_snps, std = self.normalise_snps(self.gen_reference(load_path), window_snp_names, True)
 
             # Load the disequilibrium (D in LDPred)?
             dis = mc.shrink_r2_matrix(np.dot(window_snps, window_snps.T) / iid_count, iid_count)
@@ -85,10 +91,11 @@ class Gibbs(Input):
             a = np.array(((snp_count / self.gm[self.herit]) * np.eye(current_window)) + (self.sample_size / 1.0) * dis)
 
             # Update the betas
-            updated_betas[start_i: stop_i] = np.dot(np.linalg.pinv(a) * self.sample_size,
-                                                    sm_dict[self.beta][start_i: stop_i])
+            updated_betas[start_i: stop_i] = np.dot(np.linalg.pinv(a) *
+                                                    self.sample_size, sm_dict[self.beta][start_i: stop_i])
+            stds[start_i: stop_i] = std
 
-        return updated_betas
+        return updated_betas, stds
 
     def gibbs_processor(self, start_betas, variant_fraction, sm_dict):
         """LDPred Gibbs Sampler"""

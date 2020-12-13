@@ -56,9 +56,11 @@ class Input:
         self.clean_headers, self._clean_dict = self._set_cleaned_headers()
 
         # Gibbs information
+        self._make_sub_directory("Weights")
+        self.weights_directory = Path(self.working_dir, "Weights")
         self.gm = self._set_genome()
         self.ld_radius = self.args["LD_Radius"]
-        self.heritability_calculated = self.args["Heritability_Calculated"]
+        self.herit_calculated = self.args["Heritability_Calculated"]
         self.gibbs_causal_fractions = self._set_causal_fractions()
         # todo set these up externally
         self.gibbs_run = False
@@ -447,19 +449,19 @@ class Input:
 
         # bed returns 2, 1, 0 rather than 0, 1, 2 although it says its 0, 1, 2; so this inverts it
         if self.gen_type == ".bed":
-            ordered_common = gen_file[:, gen_file.sid_to_index(variant_names)].read().val
-            raw_snps = np.array([abs(snp - 2) for snp in ordered_common.T])
+            ordered_common = gen_file[:, gen_file.sid_to_index(variant_names)].read(dtype=np.int8).val
+            raw_snps = np.array([abs(snp - 2) for snp in ordered_common.T], dtype=np.int8)
 
         # We have a [1, 0, 0], [0, 1, 0], [0, 0, 1] array return for 0, 1, 2 respectively. So if we multiple the arrays
         # by their index position and then sum them we get [0, 1, 2]
         elif self.gen_type == ".bgen":
             if self._bgen_loader:
                 # Re-construct the variant_id-rs_id
-                v_dict = {rs_id: v_id for rs_id, v_id in [snp.split(",") for snp in gen_file.sid]}
+                v_dict = {snp[1]: snp[0] for snp in [snp.split(",") for snp in gen_file.sid]}
                 variant_names = [f"{v_dict[rs_id]},{rs_id}" for rs_id in variant_names]
 
-                ordered_common = gen_file[:, gen_file.sid_to_index(variant_names)].read().val
-                raw_snps = sum(np.array([snp * i for i, snp in enumerate(ordered_common.T)]))
+                ordered_common = gen_file[:, gen_file.sid_to_index(variant_names)].read(dtype=np.int8).val
+                raw_snps = sum(np.array([snp * i for i, snp in enumerate(ordered_common.T)], dtype=np.int8))
             else:
                 raw_snps = gen_file.dosage_from_sid(variant_names)
 
@@ -469,10 +471,10 @@ class Input:
         assert len(raw_snps) == len(variant_names), "Failed to filter out duplicates"
         return raw_snps
 
-    def normalise_snps(self, sm_dict, gen_file, std_return=False):
+    def normalise_snps(self, gen_file, variant_names, std_return=False):
         """For gibbs we use normalised snps, this process will use the information we have filtered to construct it"""
 
-        raw_snps = self.isolate_raw_snps(gen_file, self.variant_names(sm_dict))
+        raw_snps = self.isolate_raw_snps(gen_file, variant_names)
 
         # Get the number of snps and individuals in the filtered dict
         n_snps, n_individuals = raw_snps.shape
@@ -485,7 +487,6 @@ class Input:
 
         # Use this information to construct a normalised snps
         normalised_snps = np.array((raw_snps - raw_means) / raw_stds, dtype="float32")
-        print(f"Normalised {len(normalised_snps)} snps\n")
         assert normalised_snps.shape == raw_snps.shape
 
         if std_return:

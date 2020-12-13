@@ -10,6 +10,7 @@ A high level API for various packages and pipelines, which have been altered or 
 
 ##### major version changes
 
+* commit ------- Version 0.06.0 - Adding more methods and call normalised from sliced rather than the full array
 * commit be640d1 Version 0.05.0 - Adding more methods to Main to allow for smaller less aggregated processes
 * commit 8524ff7 Version 0.04.0 - Allowing for filtering via chunks, and some memory savings
 * commit 7128f6c Version 0.03.0 - pyGenicParser from the spun out internal methods 

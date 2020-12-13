@@ -72,17 +72,25 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input,
             for chromosome in valid_chromosomes:
                 self.chromosome_ld_score(chromosome)
 
-    def pgs_scores(self):
+    def pgs_weights(self):
+        if self.multi_core_splitter:
+            self.chromosome_weights(self.multi_core_splitter)
+        else:
+            valid_chromosomes = self.validation_chromosomes()
+            for chromosome in valid_chromosomes:
+                self.chromosome_weights(chromosome)
+
+    def pgs_weights_and_scores(self):
         """
         This will construct pgs scores based on the cleaned data produced from pgs_clean_and_coordinate and the genome
         type file create from genome_wide_heritability.
         """
         if self.multi_core_splitter:
-            self.chromosome_scores(self.multi_core_splitter)
+            self.chromosome_pgs_weights_and_scores(self.multi_core_splitter)
         else:
             valid_chromosomes = self.validation_chromosomes()
             for chromosome in valid_chromosomes:
-                self.chromosome_scores(chromosome)
+                self.chromosome_pgs_weights_and_scores(chromosome)
 
     def chromosome_clean_and_filter(self, chromosome):
         """This takes the value of a current chromosome and constructs the weights described in pgs_construct_weights"""
@@ -101,10 +109,10 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input,
         print(f"Found {len(sm_dict[self.sm_variants])} Snps after filtering")
 
         # Compute the chromosome specific ld scores and heritability
-        self.compute_ld_scores(sm_dict, ref, len(sm_dict[self.sm_variants]), ref.iid_count)
+        self.compute_ld_scores(sm_dict, ref, len(sm_dict[self.sm_variants]), ref.iid_count, load_path)
         self._write_full_cleaned(sm_dict, chromosome, start_time)
 
-    def chromosome_scores(self, chromosome):
+    def chromosome_pgs_weights_and_scores(self, chromosome):
 
         # Assert we have the genome file form genome_wide_heritability, set dict to of this chromosome and genome
         assert self.gm, "missing g"
@@ -119,10 +127,12 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input,
         _, ref = self.construct_validation(load_path)
 
         # Compute the ld scores and dict
-        self.compute_ld_scores(sm_dict, ref, self.gm[self.count_snp], self.gm[self.count_iid], ld_dict=True)
+        if self.gibbs:
+            self.compute_ld_scores(sm_dict, ref, self.gm[self.count_snp], self.gm[self.count_iid], load_path,
+                                   ld_dict=True)
 
         # Construct the weighted betas for each snp for use in construction of scores
-        self.construct_gibbs_weights(sm_dict, chromosome)
+        self.construct_gibbs_weights(sm_dict, load_path, chromosome)
 
         # Construct the Poly-genetic Scores
         self.construct_chromosome_pgs(sm_dict, load_path, chromosome)
@@ -184,8 +194,35 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input,
         _, ref = self.construct_validation(load_path)
 
         # Compute the ld scores and dict
-        self.compute_ld_scores(sm_dict, ref, len(sm_dict[self.sm_variants]), ref.iid_count)
+        self.compute_ld_scores(sm_dict, ref, len(sm_dict[self.sm_variants]), ref.iid_count, load_path)
         self._write_full_cleaned(sm_dict, chromosome, start_time)
+
+    def chromosome_weights(self, chromosome):
+        assert self.gm, "missing g"
+        self.gm = {**self.gm[chromosome], **self.gm[self.genome_key]}
+
+        # Construct the dict of values we need for this run from our cleaned data
+        load_path = str(self.select_file_on_chromosome(chromosome, self.clean_directory, ".csv"))
+        sm_dict = self.sm_dict_from_csv(load_path)
+
+        # Load the genetic reference as was in the first stage
+        load_path = str(self.select_file_on_chromosome(chromosome, self.gen_directory, self.gen_type))
+        _, ref = self.construct_validation(load_path)
+
+        # Compute the ld scores and dict
+        if self.gibbs_run:
+            self.compute_ld_scores(sm_dict, ref, self.gm[self.count_snp], self.gm[self.count_iid], load_path,
+                                   ld_dict=True)
+
+        # Construct the weighted betas for each snp for use in construction of scores
+        self.construct_gibbs_weights(sm_dict, load_path, chromosome)
+
+        # Save the keys that have weights to a file
+        columns = {key: v for key, v in sm_dict.items() if self.gibbs in key or key == self.inf_dec}
+        headers = list(columns.keys())
+        values = np.array([v for v in columns.values()]).T.flatten()
+
+        write_csv(self.weights_directory, f"Weights_{chromosome}", headers, values)
 
     def debug_cross_check(self):
         """
@@ -209,25 +246,27 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input,
         self.filter_snps(sm_dict, ref, chromosome)
 
         # Compute the chromosome specific ld scores and heritability
-        self.compute_ld_scores(sm_dict, ref, len(sm_dict[self.sm_variants]), ref.iid_count, ld_dict=True)
+        self.compute_ld_scores(sm_dict, ref, len(sm_dict[self.sm_variants]), ref.iid_count, load_path, ld_dict=True)
 
         # Mirror test environment gm
         self.gm[self.count_snp] = 5693
         self.gm[self.count_iid] = 483
         self.gm[self.herit] = 0.04553305821357676
         self.gibbs_causal_fractions = [1]
+        # self.gibbs_run = True
 
         # This is the start of scores
         # Construct the Weight
-        self.construct_gibbs_weights(sm_dict, chromosome)
+        self.construct_gibbs_weights(sm_dict, load_path, chromosome)
 
         print(sm_dict[self.inf_dec])
         print(np.sum(sm_dict[self.inf_dec]))
         print(f"0.11157818410953191 is the target (ish)\n")
 
-        print(sm_dict[f"{self.gibbs}_{self.gibbs_causal_fractions[0]}"])
-        print(np.sum(sm_dict[f"{self.gibbs}_{self.gibbs_causal_fractions[0]}"]))
-        print(f"0.21582699762327068 is that target (ish)\n")
+        if self.gibbs_run:
+            print(sm_dict[f"{self.gibbs}_{self.gibbs_causal_fractions[0]}"])
+            print(np.sum(sm_dict[f"{self.gibbs}_{self.gibbs_causal_fractions[0]}"]))
+            print(f"0.21582699762327068 is that target (ish)\n")
 
         # Construct the Poly-genetic Scores
         self.construct_chromosome_pgs(sm_dict, load_path, chromosome)
