@@ -223,6 +223,7 @@ class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input,
         values = np.array([v for v in columns.values()]).T.flatten()
 
         write_csv(self.weights_directory, f"Weights_{chromosome}", headers, values)
+        print(f"Constructed weights file for {chromosome}")
 
     def debug_cross_check(self):
         """
