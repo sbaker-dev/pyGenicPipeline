@@ -30,13 +30,13 @@ class Score(Input):
         # Construct a dict of arrays of our ID's
         ph_dict = self.genetic_phenotypes(core, load_path)
 
-        scores_dict = {h: [] for h in sm_dict.keys() if (self.gibbs in h) or (h == self.inf_dec)}
         chunked_snps, chunks = self.chunked_snp_names(sm_dict, True)
 
-        for header in scores_dict.keys():
+        for header in [h for h in sm_dict.keys() if (self.gibbs in h) or (h == self.inf_dec)]:
             print(f"Starting Header scores {mc.terminal_time()}\n")
 
             chunk_scores = np.array_split(sm_dict[header], chunks)
+            scores = np.zeros(len(ph_dict[self.iid]))
 
             for index, (snp_names, weighted_scores) in enumerate(zip(chunked_snps, chunk_scores)):
                 print(f"Processing Scores Chunk {index} out of {len(chunked_snps)} - {mc.terminal_time()}")
@@ -45,10 +45,10 @@ class Score(Input):
                 raw_snps = self.isolate_raw_snps(core, snp_names)
 
                 # Calculate scores
-                self._calculate_score(scores_dict, header, raw_snps, weighted_scores)
+                self._calculate_score(scores, raw_snps, weighted_scores)
 
-        scores_dict = {h: mc.flatten(values) for h, values in scores_dict.items()}
-        ph_dict = {**ph_dict, **scores_dict}
+            ph_dict[header] = scores
+
         # Validate we have all elements of equal length to the number of id's in core
         for key in ph_dict.keys():
             print(key)
@@ -60,7 +60,7 @@ class Score(Input):
         print(f"Finished Constructing scores for Chromosome {chromosome}")
 
     @staticmethod
-    def _calculate_score(score_array, key, raw_snps, weighted_scores):
+    def _calculate_score(scores, raw_snps, weighted_scores):
         """
         Here we load the weights calculated and re-structure the 1 dimensional list to be a vector array. We then use
         this vector array of beta values from weights alongside the raw snps to calculate the effect of each snp based
@@ -70,8 +70,8 @@ class Score(Input):
         weights = np.array(weighted_scores)
         weights.shape = (len(weights), 1)
 
-        # Calculate the PRS for the individuals
-        score_array[key].append(np.array([np.sum(row) for row in ((-1 * raw_snps) * weights).T]))
+        # Cumulative the PRS for the individuals
+        scores += np.array([np.sum(row) for row in ((-1 * raw_snps) * weights).T])
 
     def compile_pgs(self):
 
