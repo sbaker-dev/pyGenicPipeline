@@ -31,19 +31,21 @@ class Score(Input):
         ph_dict = self.genetic_phenotypes(core, load_path)
 
         scores_dict = {h: [] for h in sm_dict.keys() if (self.gibbs in h) or (h == self.inf_dec)}
-        chunked_snps = self.chunked_snp_names(sm_dict)
-        for index, snp_names in enumerate(chunked_snps):
-            print(f"Processing Scores Chunk {index} out of {len(chunked_snps)}")
-            # Load the raw snps that have been isolated Raw snps
-            raw_snps = self.isolate_raw_snps(core, snp_names)
+        chunked_snps, chunks = self.chunked_snp_names(sm_dict, True)
 
-            # Calculate scores for the infinitesimal model
-            self._calculate_score(sm_dict, scores_dict, self.inf_dec, raw_snps, index)
+        for header in scores_dict.keys():
+            print(f"Starting Header scores {mc.terminal_time()}\n")
 
-            # Now do the same for each model calculated by Gibbs
-            for variant_fraction in sm_dict.keys():
-                if self.gibbs in variant_fraction:
-                    self._calculate_score(sm_dict, scores_dict, variant_fraction, raw_snps, index)
+            chunk_scores = np.array_split(sm_dict[header], chunks)
+
+            for index, (snp_names, weighted_scores) in enumerate(zip(chunked_snps, chunk_scores)):
+                print(f"Processing Scores Chunk {index} out of {len(chunked_snps)} - {mc.terminal_time()}")
+
+                # Load the raw snps that have been isolated Raw snps
+                raw_snps = self.isolate_raw_snps(core, snp_names)
+
+                # Calculate scores
+                self._calculate_score(scores_dict, header, raw_snps, weighted_scores)
 
         scores_dict = {h: mc.flatten(values) for h, values in scores_dict.items()}
         ph_dict = {**ph_dict, **scores_dict}
@@ -57,14 +59,14 @@ class Score(Input):
         print(f"Finished Constructing scores for Chromosome {chromosome}")
 
     @staticmethod
-    def _calculate_score(sm_dict, score_array, key, raw_snps, index):
+    def _calculate_score(score_array, key, raw_snps, weighted_scores):
         """
         Here we load the weights calculated and re-structure the 1 dimensional list to be a vector array. We then use
         this vector array of beta values from weights alongside the raw snps to calculate the effect of each snp based
         on the nucleotide of the individuals (0, 1 or 2) to compute a score for this key.
         """
         # Restructure weights to be a vector array
-        weights = np.array(list([np.array(sm_dict[key]).tolist()])[index])
+        weights = np.array(weighted_scores)
         weights.shape = (len(weights), 1)
 
         # Calculate the PRS for the individuals
