@@ -38,12 +38,12 @@ class Score(Input):
             raw_snps = self.isolate_raw_snps(core, snp_names)
 
             # Calculate scores for the infinitesimal model
-            self._calculate_score(sm_dict, scores_dict, self.inf_dec, raw_snps)
+            self._calculate_score(sm_dict, scores_dict, self.inf_dec, raw_snps, index)
 
             # Now do the same for each model calculated by Gibbs
             for variant_fraction in sm_dict.keys():
                 if self.gibbs in variant_fraction:
-                    self._calculate_score(sm_dict, scores_dict, variant_fraction, raw_snps)
+                    self._calculate_score(sm_dict, scores_dict, variant_fraction, raw_snps, index)
 
         scores_dict = {h: mc.flatten(values) for h, values in scores_dict.items()}
         ph_dict = {**ph_dict, **scores_dict}
@@ -57,14 +57,14 @@ class Score(Input):
         print(f"Finished Constructing scores for Chromosome {chromosome}")
 
     @staticmethod
-    def _calculate_score(sm_dict, score_array, key, raw_snps):
+    def _calculate_score(sm_dict, score_array, key, raw_snps, index):
         """
         Here we load the weights calculated and re-structure the 1 dimensional list to be a vector array. We then use
         this vector array of beta values from weights alongside the raw snps to calculate the effect of each snp based
         on the nucleotide of the individuals (0, 1 or 2) to compute a score for this key.
         """
         # Restructure weights to be a vector array
-        weights = sm_dict[key]
+        weights = np.array(list([np.array(sm_dict[key]).tolist()])[index])
         weights.shape = (len(sm_dict[key]), 1)
 
         # Calculate the PRS for the individuals
