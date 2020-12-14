@@ -12,7 +12,7 @@ import numpy as np
 class Score(Input):
     def __init__(self, args):
         super().__init__(args)
-        self._score_error_dict = {"Missing Phenotype": 0}
+        self._score_error_dict = {"Missing IID": 0, "Missing Phenotype": 0}
         self._validation = {}
 
     def construct_chromosome_pgs(self, sm_dict, load_path, chromosome):
@@ -95,6 +95,7 @@ class Score(Input):
 
         # Calculate the direct effect
         for key in score_keys:
+            print(f"Adjusting {key}")
             self._adjust_prs(ph_dict, key, "Direct")
 
             # Load possible base adjustments, and if we have more than 1 calculation and run all possible combinations
@@ -134,63 +135,67 @@ class Score(Input):
 
         # For each chromosome file
         for file in score_files:
+            print(file)
             load_file = CsvObject(Path(self.scores_directory, file), set_columns=True)
 
             # For each header slice the column from the load file and save it as a float32, then add this to our dict
             for header in isolates.keys():
                 ph_dict[header] = np.add(ph_dict[header], np.array(load_file[header], np.float32))
 
+        print(f"Aggregated scores {mc.terminal_time()}")
         return ph_dict, list(isolates.keys())
 
     def _load_phenotype(self, ph_dict):
         """Load the raw phenotype values, and filter anyone out who does have a value in phenotype array"""
+        # todo - THis is a mess...Fix it when less tired
+        # todo - make sure to go back to v0.07.00 to keep the non csv object version as well
 
-        ids = []
-        phenotypes = []
-        with mc.open_setter(self.phenotype_file)(self.phenotype_file) as file:
-            # Determine if we have custom headers or not via _loaded_sum_headers
-            headers = [h.lower() for h in file.readline().split()]
-            assert self.iid.lower() in headers, "FAILED TO FIND IID"
+        assert self.phenotype_file.suffix == ".csv", "Sorry, currently only Csv files support for phenotypes"
 
-            id_index = headers.index(self.iid.lower())
+        phenotype_file = CsvObject(self.phenotype_file, set_columns=True)
+        # Determine if we have custom headers or not via _loaded_sum_headers
+        headers = [h.lower() for h in phenotype_file.headers]
+        assert self.iid.lower() in headers, f"FAILED TO FIND IID IN HEADERS: {headers}"
 
-            # For each line of phenotype information
-            for line in file:
-                line = line.split()
-                try:
-                    # If the phenotype is numeric, not zero, -9 (plink error code, and is a finite value then we will
-                    # keep these individuals otherwise we will filter them out.
-                    value = float(line[id_index + 1])
-                    if (value != 0) and (value != -9) and np.isfinite(value):
-                        # We do tell users to put the phenotype next to the iid but maybe change this?
-                        phenotypes.append(float(line[id_index + 1]))
-                        ids.append(line[id_index])
+        # Set id index
+        id_index = headers.index(self.iid.lower())
 
-                # Value may be non-numeric (Ie NA) so skip if a type error occurs
-                except TypeError:
-                    pass
+        # Determine which ids we want to keep
+        filtered = set(ph_dict[self.iid])
+        filter_id = [True if ids in filtered else False for ids in phenotype_file.column_data[id_index]]
 
-            file.close()
+        # Isolate the phenotypes if they are finited
+        phenotypes = {}
+        for index, (filterer, line) in enumerate(zip(filter_id, phenotype_file.row_data)):
+            try:
+                value = float(line[id_index + 1])
+                if filterer and np.isfinite(value):
+                    # We do tell users to put the phenotype next to the iid but maybe change this?
+                    phenotypes[line[id_index]] = (float(line[id_index + 1]))
+                else:
+                    filter_id[index] = False
+            except TypeError:
+                filter_id[index] = False
+
+        phenotype_column = []
+        id_filter = []
+        for ids in ph_dict[self.iid]:
+            try:
+                phenotype_column.append(phenotypes[ids])
+                id_filter.append(True)
+            except KeyError:
+                id_filter.append(False)
 
         # Keep individuals within our phenotype dict if they are within the phenotype file, filter out otherwise
-        phenotype_filter = [True if i in ids else False for i in ph_dict[self.iid]]
-        mc.filter_array(ph_dict, phenotype_filter)
-        self._score_error_dict["Missing Phenotype"] += len(phenotype_filter) - np.sum(phenotype_filter)
-
-        # Construct an array of the phenotypes we found
-        phenotypes = np.array(phenotypes)
-
-        # Filter it, as id may exist in phenotype file that is not in the loaded phenotype dict
-        phenotype_filter = [True if i in ph_dict[self.iid] else False for i in ids]
-        phenotypes = phenotypes[phenotype_filter]
-        self._score_error_dict["Missing Phenotype"] += len(phenotype_filter) - np.sum(phenotype_filter)
+        mc.filter_array(ph_dict, id_filter)
+        ph_dict[self.phenotype] = np.array(phenotype_column)
 
         # Check everything is of equal length then log the phenotype information to dict
         assert len(Counter([len(v) for v in ph_dict.values()])) == 1, "Filtering on phenotype failed"
-        ph_dict[self.phenotype] = phenotypes
 
         # Reshape our phenotype array to be array to be (N, 1)
         mc.reshape_dict_array(ph_dict, self.phenotype)
+        print("loaded phenotypes")
 
     def _load_and_clean_covariants(self, ph_dict):
         """
