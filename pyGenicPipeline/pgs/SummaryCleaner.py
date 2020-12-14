@@ -1,4 +1,4 @@
-from pyGenicPipeline.utils import error_codes as ec
+from pyGenicPipeline.utils import errors as ec
 from pyGenicPipeline.utils import misc as mc
 from pyGenicPipeline.core.Input import Input
 
