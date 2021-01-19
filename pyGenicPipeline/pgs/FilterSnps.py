@@ -2,6 +2,7 @@ from pyGenicPipeline.utils import errors as ec
 from pyGenicPipeline.utils import misc as mc
 from pyGenicPipeline.core.Input import Input
 
+from miscSupports import terminal_time, flatten
 import numpy as np
 import time
 
@@ -27,7 +28,7 @@ class FilterSnps(Input):
 
         accepted_snps = []
         for index, (snps, f, bp) in enumerate(zip(snp_list, freqs, bp_positions), start=1):
-            print(f"Filtering chunk {index} out of {len(snp_list)}: {mc.terminal_time()}")
+            print(f"Filtering chunk {index} out of {len(snp_list)}: {terminal_time()}")
             # Setup the base filter from our extract chunks
             filter_dict = {self.snp_id: snps, self.freq: f, self.bp_position: bp,
                            self.filter_key: np.full(len(snps), True)}
@@ -47,7 +48,7 @@ class FilterSnps(Input):
         t1 = mc.error_dict_to_terminal(self._filter_error_dict)
 
         print(f"Cleaned summary stats for Chromosome {chromosome} in {round(t1 - t0, 2)} Seconds\n")
-        return mc.filter_array(sm_dict, mc.flatten(accepted_snps))
+        return mc.filter_array(sm_dict, flatten(accepted_snps))
 
     def filter_snp_chunk(self, gen_file, filter_dict, chromosome):
         """

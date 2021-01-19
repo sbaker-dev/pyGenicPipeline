@@ -2,6 +2,7 @@ from pyGenicPipeline.utils import errors as ec
 from pyGenicPipeline.utils import misc as mc
 from pyGenicPipeline.core.Input import Input
 
+from miscSupports import directory_iterator, flatten, terminal_time
 from csvObject import CsvObject, write_csv
 from collections import Counter
 from pathlib import Path
@@ -33,13 +34,13 @@ class Score(Input):
         chunked_snps, chunks = self.chunked_snp_names(sm_dict, True)
 
         for header in [h for h in sm_dict.keys() if (self.gibbs in h) or (h == self.inf_dec)]:
-            print(f"Starting Header scores {mc.terminal_time()}\n")
+            print(f"Starting Header scores {terminal_time()}\n")
 
             chunk_scores = np.array_split(sm_dict[header], chunks)
             scores = np.zeros(len(ph_dict[self.iid]))
 
             for index, (snp_names, weighted_scores) in enumerate(zip(chunked_snps, chunk_scores)):
-                print(f"Processing Scores Chunk {index} out of {len(chunked_snps)} - {mc.terminal_time()}")
+                print(f"Processing Scores Chunk {index} out of {len(chunked_snps)} - {terminal_time()}")
 
                 # Load the raw snps that have been isolated Raw snps
                 raw_snps = self.isolate_raw_snps(core, snp_names)
@@ -81,7 +82,7 @@ class Score(Input):
         self._assert_compile_pgs()
 
         # Get the file names for output from pgs_chromosome_scores
-        score_files = mc.directory_iterator(self.scores_directory)
+        score_files = directory_iterator(self.scores_directory)
 
         # Isolate the headers to be aggregated, then aggregate successful scores
         ph_dict, score_keys = self.aggregated_scores(score_files)
@@ -121,7 +122,7 @@ class Score(Input):
         ph_dict = {self.fid: np.array(load_ids[self.fid]), self.iid: np.array(load_ids[self.iid])}
 
         # Count each header which isn't an id identifier
-        headers = Counter(mc.flatten([CsvObject(Path(self.scores_directory, file)).headers for file in score_files]))
+        headers = Counter(flatten([CsvObject(Path(self.scores_directory, file)).headers for file in score_files]))
         headers.pop(self.fid, None)
         headers.pop(self.iid, None)
 
@@ -142,7 +143,7 @@ class Score(Input):
             for header in isolates.keys():
                 ph_dict[header] = np.add(ph_dict[header], np.array(load_file[header], np.float32))
 
-        print(f"Aggregated scores {mc.terminal_time()}")
+        print(f"Aggregated scores {terminal_time()}")
         return ph_dict, list(isolates.keys())
 
     def _load_phenotype(self, ph_dict):

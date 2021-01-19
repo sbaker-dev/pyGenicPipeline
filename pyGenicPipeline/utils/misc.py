@@ -1,13 +1,9 @@
 from itertools import combinations
-from datetime import datetime
-from itertools import chain
 from colorama import Fore
 from pathlib import Path
 import numpy as np
 import time
-import yaml
 import gzip
-import os
 
 
 def open_setter(path):
@@ -36,52 +32,6 @@ def decode_line(line, zip_status):
         return line.decode("utf-8").split()
     else:
         return line.split()
-
-
-def terminal_time():
-    """
-    A way to remember when you initialised a cell by return the current hour and minute as a string
-    """
-    return f"{datetime.now().time().hour}:{datetime.now().time().minute}:{datetime.now().time().second}"
-
-
-def directory_iterator(directory, file_only=True):
-    """
-    This takes a directory and returns a list of entries within that directory, if file_only is selected only
-    files as apposed to directories will be returned
-
-    :param directory: The directory you wish to iterate through
-    :type directory: str
-
-    :param file_only: Defaults to true where the return is just a list of files
-    :type file_only: bool
-
-    :return: List of entries from the directory
-    :rtype: list
-    """
-
-    if file_only:
-        return [file for file in os.listdir(directory) if os.path.isfile(f"{directory}/{file}")]
-    else:
-        return [file for file in os.listdir(directory)]
-
-
-def flatten(list_of_lists):
-    """
-    Flatten a list of lists into a list
-    """
-    return list(chain(*list_of_lists))
-
-
-def load_yaml(path_to_file):
-    """
-    Load the yaml file from package into scope
-    """
-    with open(path_to_file, "r") as f:
-        try:
-            return yaml.safe_load(f)
-        except yaml.YAMLError:
-            raise yaml.YAMLError
 
 
 def line_array(line_index, numpy_line_array, type_np=None):

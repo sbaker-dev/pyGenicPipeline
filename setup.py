@@ -34,7 +34,8 @@ INSTALL_REQUIRES = [
     'colorama',
     'zstd',
     'scipy',
-    'PyYAML']
+    'PyYAML',
+    'miscSupports']
 
 CLASSIFIERS = [
     'Programming Language :: Python :: 3.7',

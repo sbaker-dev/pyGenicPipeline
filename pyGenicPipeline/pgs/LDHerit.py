@@ -3,6 +3,7 @@ from pyGenicPipeline.utils import errors as ec
 from pyGenicPipeline.utils import misc as mc
 from pyGenicPipeline.core.Input import Input
 
+from miscSupports import directory_iterator
 from csvObject import CsvObject
 from colorama import Fore
 from pathlib import Path
@@ -56,7 +57,7 @@ class LDHerit(Input):
         """If we can't calculate heritability, distribute it from a provided float"""
         total_snps = 0
         config_dict = {}
-        for file in mc.directory_iterator(self.clean_directory):
+        for file in directory_iterator(self.clean_directory):
             print(file)
             load_file = CsvObject(Path(self.clean_directory, file), self.cleaned_types[:-1], set_columns=True)
 
@@ -81,7 +82,7 @@ class LDHerit(Input):
         calculation
         """
         cumulative_ld = sum_sq_beta = total_snps = 0
-        for file in mc.directory_iterator(self.clean_directory):
+        for file in directory_iterator(self.clean_directory):
             load_file = CsvObject(Path(self.clean_directory, file), self.cleaned_types, set_columns=True)
 
             # Isolate the generic information

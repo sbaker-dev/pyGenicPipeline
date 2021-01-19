@@ -103,8 +103,6 @@ class SummaryCleaner(Input):
 
             # For each line in the GWAS Summary file
             for index, line_byte in enumerate(file):
-                if self.verbose and index % 1000 == 0:
-                    print(f"{index} at {mc.terminal_time()}")
 
                 # Decode the line and extract the snp_id
                 line = mc.decode_line(line_byte, self.zipped)

@@ -1,6 +1,7 @@
 from pyGenicPipeline.utils import errors as ec
 from pyGenicPipeline.utils import misc as mc
 
+from miscSupports import load_yaml, directory_iterator, flatten
 from bgen_reader import custom_meta_path
 from pysnptools.distreader import Bgen
 from pysnptools.snpreader import Bed
@@ -19,7 +20,7 @@ class Input:
     def __init__(self, args):
         # General operational parameters
         self.args = self._set_args(args)
-        self._config = mc.load_yaml(Path(Path(__file__).parent, "Keys.yaml"))
+        self._config = load_yaml(Path(Path(__file__).parent, "Keys.yaml"))
         self.working_dir = self._validate_path(self.args["Working_Directory"], False)
         self._make_sub_directory("meta_data")
         custom_meta_path(Path(self.working_dir, "meta_data"))
@@ -94,7 +95,7 @@ class Input:
             yaml_path = Path(args)
             assert (yaml_path.exists() and yaml_path.suffix == ".yaml"), ec.path_invalid(yaml_path, "_set_args")
 
-            return mc.load_yaml(yaml_path)
+            return load_yaml(yaml_path)
 
     @staticmethod
     def _set_current_job(operation_dict):
@@ -181,7 +182,7 @@ class Input:
         """
 
         valid_chromosomes = []
-        for file in mc.directory_iterator(self.gen_directory):
+        for file in directory_iterator(self.gen_directory):
             if Path(self.gen_directory, file).suffix == self.gen_type:
                 valid_chromosomes.append(int(re.sub(r'[\D]', "", Path(self.gen_directory, file).stem)))
         valid_chromosomes.sort()
@@ -234,7 +235,7 @@ class Input:
         :param chromosome: Current chromosome to be loaded
         :return: Path to the current file as a Path from pathlib
         """
-        for file in mc.directory_iterator(load_directory):
+        for file in directory_iterator(load_directory):
             if Path(load_directory, file).suffix == load_type:
                 try:
                     if int(re.sub(r'[\D]', "", Path(load_directory, file).stem)) == chromosome:
@@ -409,7 +410,7 @@ class Input:
 
         # Count total duplicates
         duplicates = np.sum([(v_count - len(validation)) + (r_count - len(ref))])
-        return set(mc.flatten([validation, ref])), indexer, duplicates
+        return set(flatten([validation, ref])), indexer, duplicates
 
     def variant_names(self, sm_dict):
         """Variant names differ in pysnptools bgen, so account for this and just return rs_id's"""
@@ -516,6 +517,7 @@ class Input:
             if self._bgen_loader:
                 ids = gen_file.iid
             else:
+                # todo - This won't work. Ids only returns iid not iid + fid
                 ids = gen_file.iid_array()
 
             ph_dict[self.fid] = np.array([fid for fid, iid in ids])
@@ -682,7 +684,7 @@ class Input:
         """Load the genome file if it has been produced, else return None"""
         genome_path = Path(self.working_dir, "genome_wide_config.yaml")
         if genome_path.exists():
-            return mc.load_yaml(genome_path)
+            return load_yaml(genome_path)
         else:
             return None
 
