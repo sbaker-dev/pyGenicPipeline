@@ -1,7 +1,7 @@
 from abc import ABC
 
 from pyGenicPipeline.pgs.SummaryCleaner import SummaryCleaner
-from pyGenicPipeline.support.ShellMaker import ShellMaker
+from pyGenicPipeline.core.Constructors.ShellMaker import ShellMaker
 from pyGenicPipeline.pgs.FilterSnps import FilterSnps
 from pyGenicPipeline.pgs.LDHerit import LDHerit
 from pyGenicPipeline.core.Input import Input
@@ -10,7 +10,7 @@ from pyGenicPipeline.pgs.Score import Score
 from pyGenicPipeline.pgs.Gibbs import Gibbs
 
 from miscSupports import terminal_time
-from csvObject import CsvObject, write_csv
+from csvObject import write_csv
 from colorama import init, Fore
 from pathlib import Path
 import numpy as np
