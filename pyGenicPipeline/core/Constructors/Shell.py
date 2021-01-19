@@ -5,7 +5,7 @@ from miscSupports import terminal_time
 from pathlib import Path
 
 
-class ShellMaker(Input):
+class Shell(Input):
     def __init__(self, args):
         super().__init__(args)
 

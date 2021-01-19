@@ -1,7 +1,7 @@
 from abc import ABC
 
 from pyGenicPipeline.pgs.SummaryCleaner import SummaryCleaner
-from pyGenicPipeline.core.Constructors.ShellMaker import ShellMaker
+from pyGenicPipeline.core.Constructors.Shell import Shell
 from pyGenicPipeline.pgs.FilterSnps import FilterSnps
 from pyGenicPipeline.pgs.LDHerit import LDHerit
 from pyGenicPipeline.core.Input import Input
@@ -17,7 +17,7 @@ import numpy as np
 import time
 
 
-class Main(ShellMaker, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input, ABC):
+class Main(Shell, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input, ABC):
     def __init__(self, args):
         """
         This Class inherits all other classes that can be used, and then execute the job via getattr
