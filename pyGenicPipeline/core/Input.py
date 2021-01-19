@@ -25,9 +25,12 @@ class Input:
         self._make_sub_directory("meta_data")
         custom_meta_path(Path(self.working_dir, "meta_data"))
         self.operation = self._set_current_job(self.args["Operation"])
-        self.target_chromosome = self.args["Multi_Core_Splitter"]
+        self.target_chromosome = self.args["Target_Chromosome"]
         self._bgen_loader = self.args["PySnpTools_Bgen"]
         self.verbose = self.args["Verbose"]
+
+        # todo have a print config option which prints things like summary headers or whatever based on the job
+        #  submitted
 
         # The project file for this project
         self.summary_file = self._validate_path(self.args["Summary_Path"])
@@ -226,24 +229,22 @@ class Input:
 
         return np.unique(ok_chromosomes)
 
-    @staticmethod
-    def select_file_on_chromosome(chromosome, load_directory, load_type):
+    def select_file_on_chromosome(self, load_directory, load_type):
         """
         For a given chromosome, get the respective file
         :param load_type: The suffix of the file you want to validate against
         :param load_directory: The directory to iterate through
-        :param chromosome: Current chromosome to be loaded
         :return: Path to the current file as a Path from pathlib
         """
         for file in directory_iterator(load_directory):
             if Path(load_directory, file).suffix == load_type:
                 try:
-                    if int(re.sub(r'[\D]', "", Path(load_directory, file).stem)) == chromosome:
+                    if int(re.sub(r'[\D]', "", Path(load_directory, file).stem)) == self.target_chromosome:
                         return Path(load_directory, file)
                 except (ValueError, TypeError):
                     continue
 
-        raise Exception(f"Failed to find any relevant file for {chromosome} in {load_directory}")
+        raise Exception(f"Failed to find any relevant file for {self.target_chromosome} in {load_directory}")
 
     def _check_header(self, sum_header, headers, summary_headers):
         """
@@ -291,8 +292,6 @@ class Input:
 
             # Determine if we have custom headers or not via _loaded_sum_headers
             raw_headers = file.readline()
-            if self.verbose:
-                print(f"Summary Headers: {raw_headers}")
 
             headers = {header: self._check_header(header, mc.decode_line(raw_headers, self.zipped), header_sets)
                        for header in header_sets}

@@ -119,11 +119,6 @@ def cleanup_dict(dict_to_clean, keys_to_remove):
     for clean in keys_to_remove:
         dict_to_clean.pop(clean, None)
 
-    print("Remaining Keys")
-    for key in dict_to_clean:
-        print(f"{key} - {len(dict_to_clean[key])}")
-    print("")
-
 
 def reshape_dict_array(dict_to_shape, dict_key, dimensions=1):
     """Reshape an array stored as dict_key within a dict_to_shape to a given dimension"""
