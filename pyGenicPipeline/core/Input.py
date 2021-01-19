@@ -1,5 +1,6 @@
 from pyGenicPipeline.utils import errors as ec
 from pyGenicPipeline.utils import misc as mc
+from .Loaders import *
 
 from miscSupports import load_yaml, directory_iterator, flatten
 from bgen_reader import custom_meta_path
@@ -13,50 +14,46 @@ import numpy as np
 import pickle
 import gzip
 import re
-import os
 
 
-class Input:
+class Input(SummaryLoader, ArgsParser):
     def __init__(self, args):
         # General operational parameters
-        self.args = mc.set_args(args)
-        self._config = load_yaml(Path(Path(__file__).parent, "Keys.yaml"))
-        self.working_dir = mc.validate_path(self.args["Working_Directory"], False)
-        self.operation = self._set_current_job(self.args["Operation"])
+        super().__init__(args)
 
-        print(self.operation.split("_")[0])
+        self.operation = self._set_current_job(self.args["Operation"])
+        self._config = self.config["Other"]
+
+        # Genetic Common
+        # These attributes are or can be used by multiple processors so are not restricted to sub-loaders
+        self.target_chromosome = self.args["Target_Chromosome"]
+
+        # Internal data brought across with package, loaded if requested
+        self.hap_map_3 = self._load_local_data("HapMap3")
+        self.lr_ld_path = self._load_local_data("Filter_Long_Range_LD")
+
+        # Genetic files
+        self.gen_type = self.args["Load_Type"]
+        self.gen_directory = mc.validate_path(self.args["Load_Directory"])
+        self._snp_tools = self.args["PySnpTools_Bgen"]
 
         # PySnpTools will by default write memory files to the directory of the Gen files, but this is often undesirable
         # on a sever environment where read and write permissions may not be universal.
-        self._make_sub_directory(None, "PySnpTools_Meta")
-        custom_meta_path(Path(self.working_dir, "PySnpTools_Meta"))
+        if self._snp_tools:
+            self.make_sub_directory(None, "PySnpTools_Meta")
+            custom_meta_path(Path(self.working_dir, "PySnpTools_Meta"))
 
-        self.target_chromosome = self.args["Target_Chromosome"]
-        self._bgen_loader = self.args["PySnpTools_Bgen"]
-
+        # TODO DO THIS VIA HAVING A __REPR__ WITHIN EACH LOADER OBJECT
         # todo have a print config option which prints things like summary headers or whatever based on the job
         #  submitted
 
-        # The project file for this project
-        self.summary_file = mc.validate_path(self.args["Summary_Path"])
-        self.gen_directory = mc.validate_path(self.args["Load_Directory"])
-        self.hap_map_3 = self._load_local_data("HapMap3")
-        self.lr_ld_path = self._load_local_data("Filter_Long_Range_LD")
-        self.gen_type = self.args["Load_Type"]
-        self.validation_size = self._set_validation_size(self.args["Validation_Size"])
-        self.population_percent = 1
-
         # Set summary information
-        self._make_sub_directory("PGS", "Chromosome_Cleaned")
-        self.clean_directory = Path(self.working_dir, "PGS", "Chromosome_Cleaned")
-        self.zipped, self.sample_size = self._set_summary_stats()
-        self._summary_headers = self._set_summary_headers()
-        self.effect_type = self._set_effect_type(self.args["Summary_Effect_Type"])
-        self.z_scores = self._set_z_scores(self.args["Z_Scores"])
-        self.ambiguous_snps, self.allowed_alleles, self.allele_flip = self._configure_alleles()
+
+        print("HER")
+        self.construct_reference_panel()
 
         # Set filter information
-        self._make_sub_directory("PGS", "Filter_Cleaned")
+        self.make_sub_directory("PGS", "Filter_Cleaned")
         self.filter_directory = Path(self.working_dir, "PGS", "Filter_Cleaned")
         self.maf_min = self._config["Min_Maf"]
         self.freq_discrepancy = self._config["Max_Freq_Discrepancy"]
@@ -65,7 +62,7 @@ class Input:
         self.clean_headers, self._clean_dict = self._set_cleaned_headers()
 
         # Gibbs information
-        self._make_sub_directory("PGS", "Weights")
+        self.make_sub_directory("PGS", "Weights")
         self.weights_directory = Path(self.working_dir, "PGS", "Weights")
         self.gm = self._set_genome()
         self.ld_radius = self.args["LD_Radius"]
@@ -83,7 +80,7 @@ class Input:
         self.gibbs_breaker = True
 
         # Score information
-        self._make_sub_directory("PGS", "Chromosome_Scores")
+        self.make_sub_directory("PGS", "Chromosome_Scores")
         self.scores_directory = Path(self.working_dir, "PGS", "Chromosome_Scores")
         self.phenotype_file = mc.validate_path(self.args["Phenotype"])
         self.covariates_file = mc.validate_path(self.args["Covariates"])
@@ -124,9 +121,12 @@ class Input:
 
     def _load_local_data(self, access_key):
         """
-        This will load a dataset that has been embedded into the package as a non yaml file sourced from LDPred
+        This will set a dataset path that has been embedded into the package as a non yaml file sourced from LDPred if
+        the current arg is set to be true
+
         :param access_key: The key to access the data file
         :type access_key: str
+
         :return: Path to the relevant file if request is not equal to None, else None
         :rtype: Path | None
         """
@@ -148,18 +148,9 @@ class Input:
         else:
             return None
 
-    def _configure_alleles(self):
-        """
-        Yaml storage of tuples/ sets didn't work so this configures a list of lists into a set of tuples for ambiguous,
-        sets a set of allow alleles, and also returns the dict of allele_flip
-        """
-        ambiguous = set(tuple(ambiguous) for ambiguous in self._config["ambiguous_snps"])
-        return ambiguous, set(self._config["allowed_alleles"]), self._config["allele_flip"]
-
     def validation_chromosomes(self):
         """
-        This will create a dataset of all the chromosomes that we have to work with our validation group in the
-        h5py file
+        This will create a dataset of all the chromosomes that we have to work with
 
         :return: A list of valid chromosomes
         :rtype: list
@@ -171,27 +162,6 @@ class Input:
                 valid_chromosomes.append(int(re.sub(r'[\D]', "", Path(self.gen_directory, file).stem)))
         valid_chromosomes.sort()
         return valid_chromosomes
-
-    def _set_summary_stats(self):
-        """
-        If we are reading in the summary statistics file then validate its path, construct a valid set of snps in a set
-        and map the chromosome and bp_position to each valid snp in a dict. Validate the type of zipped structure and
-        the sample size of the study
-
-        :return: summary_path, snp_pos_map, valid_snp, gz_status, sample_size
-        """
-
-        # Stop if not required
-        if not self.summary_file:
-            return None, None
-
-        # Check the sample size from this study has been provided
-        sample_size = self.args["Summary_Sample_Size"]
-        assert (sample_size is not None) and (sample_size > 0), ec.sample_size()
-
-        # Determine if the summary file is g-zipped
-        gz_status = (self.summary_file.suffix == ".gz")
-        return gz_status, sample_size
 
     def validate_chromosomes(self, chromosome_set):
         """
@@ -303,7 +273,7 @@ class Input:
         if self.gen_type == ".bed":
             return Bed(load_path, count_A1=True)
         elif self.gen_type == ".bgen":
-            if self._bgen_loader:
+            if self._snp_tools:
                 return Bgen(load_path)
             else:
                 return BgenObject(load_path)
@@ -360,7 +330,7 @@ class Input:
 
         elif self.gen_type == ".bgen":
             indexer = BgenObject(load_path)
-            if self._bgen_loader:
+            if self._snp_tools:
                 print("Loading bgen with PySnpTools\n")
                 # Bgen files store [variant id, rs_id], we just want the rs_id hence the [1]; see https://bit.ly/2J0C1kC
                 validation = [snp.split(",")[1] for snp in validation.sid]
@@ -438,7 +408,7 @@ class Input:
         # We have a [1, 0, 0], [0, 1, 0], [0, 0, 1] array return for 0, 1, 2 respectively. So if we multiple the arrays
         # by their index position and then sum them we get [0, 1, 2]
         elif self.gen_type == ".bgen":
-            if self._bgen_loader:
+            if self._snp_tools:
                 # Re-construct the variant_id-rs_id
                 v_dict = {snp[1]: snp[0] for snp in [snp.split(",") for snp in gen_file.sid]}
                 variant_names = [f"{v_dict[rs_id]},{rs_id}" for rs_id in variant_names]
@@ -494,7 +464,7 @@ class Input:
         # Bgen doesn't have a fam equivalent, so just load the fid and iid
         elif self.gen_type == ".bgen":
             # todo update to allow for sex and missing if we have loaded .sample
-            if self._bgen_loader:
+            if self._snp_tools:
                 ids = gen_file.iid
             else:
                 # todo - This won't work. Ids only returns iid not iid + fid
@@ -535,33 +505,9 @@ class Input:
                     continue
         return long_dict
 
-    def _set_z_scores(self, set_z_scores):
-        """
-        If the user wants to compute z scores, then standard_errors most be set but otherwise it isn't a mandatory
-        header.
 
-        :param set_z_scores: A bool of if z scores should be calculated or not
-        :type set_z_scores: bool
 
-        :return: True if assertion of standard errors is also True, if set_z_scores is None then return None
-        :rtype: None | bool
-        """
-        if set_z_scores:
-            assert self.sm_standard_errors is not None, ec.z_scores_with_standard_errors
-            return True
-        else:
-            return None
 
-    def _set_effect_type(self, effect_type):
-        """
-        Set the effect type of the betas for GWAS summary stats if set
-        """
-        if effect_type:
-            assert effect_type in self._config["effect_types"], ec.invalid_effect_type(
-                self._config["effect_types"], effect_type)
-            return effect_type
-        else:
-            return None
 
     def _set_causal_fractions(self):
         """
@@ -625,31 +571,6 @@ class Input:
         cleaned_dict = {header: i for i, header in enumerate(cleaned_headers)}
         return cleaned_headers, cleaned_dict
 
-    def _make_sub_directory(self, job, name):
-        """
-        Make a sub-directory within the working directory
-
-        :param job: If this sub directory is part of a job make a job sub directory first, otherwise don't.
-        :type job: None | str
-
-        :param name: The name of the end directory you want
-        :type name: str
-        """
-        if job:
-            try:
-                os.mkdir(Path(self.working_dir, job))
-                try:
-                    os.mkdir(Path(self.working_dir, job, name))
-                except FileExistsError:
-                    pass
-            except FileExistsError:
-                pass
-        else:
-            try:
-                os.mkdir(Path(self.working_dir, name))
-            except FileExistsError:
-                pass
-
     def _set_gibbs_headers(self):
         """Construct the headers that will be used in the writing of weights"""
 
@@ -698,190 +619,6 @@ class Input:
         """The types of each column in the cleaned data"""
         return [int, int, str, str, str, float, float, float, float]
 
-    @property
-    def chromosome(self):
-        """Key used for accessing Chromosome headers, groups or other attributes"""
-        return "Chromosome"
-
-    @property
-    def sm_chromosome(self):
-        """Summary stat chromosome header index in GWAS summary file"""
-        return self._summary_headers[self.chromosome]
-
-    @property
-    def snp_id(self):
-        """Key used for accessing SNP_ID headers, groups or other attributes"""
-        return "SNP_ID"
-
-    @property
-    def sm_snp_id(self):
-        """Snp/variant id header index in GWAS summary file"""
-        return self._summary_headers[self.snp_id]
-
-    @property
-    def effect_allele(self):
-        """Key used for accessing Effect_Allele headers, groups or other attributes"""
-        return "Effect_Allele"
-
-    @property
-    def sm_effect_allele(self):
-        """Effect allele header index in GWAS summary file"""
-        return self._summary_headers[self.effect_allele]
-
-    @property
-    def alt_allele(self):
-        """Key used for accessing Alt_Allele headers, groups or other attributes"""
-        return "Alt_Allele"
-
-    @property
-    def sm_alt_allele(self):
-        """Alt allele header index in GWAS summary file"""
-        return self._summary_headers[self.alt_allele]
-
-    @property
-    def bp_position(self):
-        """Key used for accessing bp_position headers, groups or other attributes"""
-        return "BP_Position"
-
-    @property
-    def sm_bp_position(self):
-        """Base pair position header index in GWAS summary file"""
-        return self._summary_headers[self.bp_position]
-
-    @property
-    def p_value(self):
-        """Key used for accessing P_Value headers, groups or other attributes"""
-        return "P_Value"
-
-    @property
-    def sm_p_value(self):
-        """P value position header index in GWAS summary file"""
-        return self._summary_headers[self.p_value]
-
-    @property
-    def effect_size(self):
-        """Key used for accessing Effect_size headers, groups or other attributes"""
-        return "Effect_Size"
-
-    @property
-    def sm_effect_size(self):
-        """Effect size header index in GWAS summary file"""
-        return self._summary_headers[self.effect_size]
-
-    @property
-    def minor_allele_freq(self):
-        """Key used for accessing Minor_Allele_Freq headers, groups or other attributes"""
-        return "Minor_Allele_Freq"
-
-    @property
-    def sm_minor_allele_freq(self):
-        """Minor allele Frequency header index in GWAS summary file"""
-        return self._summary_headers[self.minor_allele_freq]
-
-    @property
-    def info(self):
-        """Key used for accessing Minor_Allele_Freq headers, groups or other attributes"""
-        return "Info"
-
-    @property
-    def sm_info(self):
-        """Info score header index in GWAS summary file"""
-        return self._summary_headers[self.info]
-
-    @property
-    def standard_errors(self):
-        """Key used for accessing Minor_Allele_Freq headers, groups or other attributes"""
-        return "Standard_Errors"
-
-    @property
-    def sm_standard_errors(self):
-        """Standard error header index in GWAS summary file"""
-        return self._summary_headers[self.standard_errors]
-
-    @property
-    def case_freq(self):
-        """Key used for accessing Case_Freq headers, groups or other attributes"""
-        return "Case_Freq"
-
-    @property
-    def sm_case_freq(self):
-        """Case_Freq header index in GWAS summary file"""
-        return self._summary_headers[self.case_freq]
-
-    @property
-    def case_n(self):
-        """Key used for accessing Case_N headers, groups or other attributes"""
-        return "Case_N"
-
-    @property
-    def sm_case_n(self):
-        """Case_N header index in GWAS summary file"""
-        return self._summary_headers[self.case_freq]
-
-    @property
-    def control_freq(self):
-        """Key used for accessing Control_Freq headers, groups or other attributes"""
-        return "Control_Freq"
-
-    @property
-    def sm_control_freq(self):
-        """Control_Freq header index in GWAS summary file"""
-        return self._summary_headers[self.case_freq]
-
-    @property
-    def control_n(self):
-        """Key used for accessing Control_N headers, groups or other attributes"""
-        return "Control_N"
-
-    @property
-    def sm_control_n(self):
-        """Control_N header index in GWAS summary file"""
-        return self._summary_headers[self.case_freq]
-
-    @property
-    def sm_lines(self):
-        """Key for accessing lines in the summary stats file"""
-        return "SM_Lines"
-
-    @property
-    def sm_variants(self):
-        """Key for accessing variants associated with the snps found in the summary stats file"""
-        return "SM_Variants"
-
-    @property
-    def beta(self):
-        """Key used for accessing Beta headers, groups or other attributes"""
-        return "Beta"
-
-    @property
-    def log_odds(self):
-        """Key used for accessing Log_Odds headers, groups or other attributes"""
-        return "Log_Odds"
-
-    @property
-    def nucleotide(self):
-        """Key used for accessing Nucleotide headers, groups or other attributes"""
-        return "Nucleotide"
-
-    @property
-    def freq(self):
-        """Key used for accessing Frequency headers, groups or other attributes"""
-        return "Frequency"
-
-    @property
-    def stds(self):
-        """Key used for accessing Standard_Deviations headers, groups or other attributes"""
-        return "Standard_Deviations"
-
-    @property
-    def raw_snps(self):
-        """Key used for accessing Raw_Snps headers, groups or other attributes"""
-        return "Raw_Snps"
-
-    @property
-    def filter_key(self):
-        """Key used for accessing a Filter in headers, groups or other attributes"""
-        return "Filter"
 
     @property
     def f_std(self):
@@ -891,45 +628,6 @@ class Input:
     def f_freq(self):
         return f"{self.filter_key}_{self.freq}"
 
-    @property
-    def norm_snps(self):
-        """Key used for accessing Raw_Snps headers, groups or other attributes"""
-        return "Normalised_Snps"
-
-    @property
-    def count_snp(self):
-        """Key used for accessing the number of snps in headers, groups or other attributes"""
-        return "Snp_Count"
-
-    @property
-    def count_iid(self):
-        """Key used for accessing the number of individuals in headers, groups or other attributes"""
-        return "IID_Count"
-
-    @property
-    def avg_ld(self):
-        """Key used for accessing Average LD in headers, groups or other attributes"""
-        return "Avg_LD"
-
-    @property
-    def herit(self):
-        """Key used for accessing Heritability in headers, groups or other attributes"""
-        return "Heritability"
-
-    @property
-    def ld_scores(self):
-        """Key used for accessing LD_Scores in headers, groups or other attributes"""
-        return "LD_Scores"
-
-    @property
-    def ld_dict(self):
-        """Key used for accessing LD_Dict in headers, groups or other attributes"""
-        return "LD_Dict"
-
-    @property
-    def gibbs_beta(self):
-        """Key used for accessing Gibbs_Beta in headers, groups or other attributes"""
-        return "Gibbs_Beta"
 
     @property
     def c_chromosome(self):
@@ -945,63 +643,3 @@ class Input:
     def c_beta(self):
         """Beta header index in Cleaned Data file"""
         return self._clean_dict[self.beta]
-
-    @property
-    def genome_key(self):
-        """Key used for accessing Genome wide data in headers, groups or other attributes"""
-        return "Genome"
-
-    @property
-    def inf_dec(self):
-        """Key used for accessing Infinitesimal data in headers, groups or other attributes"""
-        return "Infinitesimal"
-
-    @property
-    def gibbs(self):
-        """Key used for accessing Gibbs data in headers, groups or other attributes"""
-        return "Gibbs"
-
-    @property
-    def fam(self):
-        """Key used for accessing the FamID Variants in headers, groups or other attributes"""
-        return "Family"
-
-    @property
-    def iid(self):
-        """Key used for accessing the Individual Identifiers in headers, groups or other attributes"""
-        return "IID"
-
-    @property
-    def fid(self):
-        """Key used for accessing the Family Identifiers in headers, groups or other attributes"""
-        return "FID"
-
-    @property
-    def f_id(self):
-        """Key used for accessing the Fathers Identifiers in headers, groups or other attributes"""
-        return "F_ID"
-
-    @property
-    def m_id(self):
-        """Key used for accessing the Mothers Identifiers in headers, groups or other attributes"""
-        return "F_ID"
-
-    @property
-    def sex(self):
-        """Key used for accessing the Sex in headers, groups or other attributes"""
-        return "Sex"
-
-    @property
-    def pc(self):
-        """Key used for accessing the Principle components in headers, groups or other attributes"""
-        return "PC"
-
-    @property
-    def phenotype(self):
-        """Key used for accessing the raw phenotype in headers, groups or other attributes"""
-        return "Phenotype"
-
-    @property
-    def covariants(self):
-        """Key used for accessing the covariants in headers, groups or other attributes"""
-        return "Covariants"
