@@ -19,22 +19,27 @@ import os
 class Input:
     def __init__(self, args):
         # General operational parameters
-        self.args = self._set_args(args)
+        self.args = mc.set_args(args)
         self._config = load_yaml(Path(Path(__file__).parent, "Keys.yaml"))
-        self.working_dir = self._validate_path(self.args["Working_Directory"], False)
-        self._make_sub_directory("meta_data")
-        custom_meta_path(Path(self.working_dir, "meta_data"))
+        self.working_dir = mc.validate_path(self.args["Working_Directory"], False)
         self.operation = self._set_current_job(self.args["Operation"])
+
+        print(self.operation.split("_")[0])
+
+        # PySnpTools will by default write memory files to the directory of the Gen files, but this is often undesirable
+        # on a sever environment where read and write permissions may not be universal.
+        self._make_sub_directory(None, "PySnpTools_Meta")
+        custom_meta_path(Path(self.working_dir, "PySnpTools_Meta"))
+
         self.target_chromosome = self.args["Target_Chromosome"]
         self._bgen_loader = self.args["PySnpTools_Bgen"]
-        self.verbose = self.args["Verbose"]
 
         # todo have a print config option which prints things like summary headers or whatever based on the job
         #  submitted
 
         # The project file for this project
-        self.summary_file = self._validate_path(self.args["Summary_Path"])
-        self.gen_directory = self._validate_path(self.args["Load_Directory"])
+        self.summary_file = mc.validate_path(self.args["Summary_Path"])
+        self.gen_directory = mc.validate_path(self.args["Load_Directory"])
         self.hap_map_3 = self._load_local_data("HapMap3")
         self.lr_ld_path = self._load_local_data("Filter_Long_Range_LD")
         self.gen_type = self.args["Load_Type"]
@@ -42,8 +47,8 @@ class Input:
         self.population_percent = 1
 
         # Set summary information
-        self._make_sub_directory("Chromosome_Cleaned")
-        self.clean_directory = Path(self.working_dir, "Chromosome_Cleaned")
+        self._make_sub_directory("PGS", "Chromosome_Cleaned")
+        self.clean_directory = Path(self.working_dir, "PGS", "Chromosome_Cleaned")
         self.zipped, self.sample_size = self._set_summary_stats()
         self._summary_headers = self._set_summary_headers()
         self.effect_type = self._set_effect_type(self.args["Summary_Effect_Type"])
@@ -51,8 +56,8 @@ class Input:
         self.ambiguous_snps, self.allowed_alleles, self.allele_flip = self._configure_alleles()
 
         # Set filter information
-        self._make_sub_directory("Filter_Cleaned")
-        self.filter_directory = Path(self.working_dir, "Filter_Cleaned")
+        self._make_sub_directory("PGS", "Filter_Cleaned")
+        self.filter_directory = Path(self.working_dir, "PGS", "Filter_Cleaned")
         self.maf_min = self._config["Min_Maf"]
         self.freq_discrepancy = self._config["Max_Freq_Discrepancy"]
         self.filter_index = self.args["Filter_Index"]
@@ -60,8 +65,8 @@ class Input:
         self.clean_headers, self._clean_dict = self._set_cleaned_headers()
 
         # Gibbs information
-        self._make_sub_directory("Weights")
-        self.weights_directory = Path(self.working_dir, "Weights")
+        self._make_sub_directory("PGS", "Weights")
+        self.weights_directory = Path(self.working_dir, "PGS", "Weights")
         self.gm = self._set_genome()
         self.ld_radius = self.args["LD_Radius"]
         self.herit_calculated = self.args["Heritability_Calculated"]
@@ -78,68 +83,44 @@ class Input:
         self.gibbs_breaker = True
 
         # Score information
-        self._make_sub_directory("Chromosome_Scores")
-        self.scores_directory = Path(self.working_dir, "Chromosome_Scores")
-        self.phenotype_file = self._validate_path(self.args["Phenotype"])
-        self.covariates_file = self._validate_path(self.args["Covariates"])
+        self._make_sub_directory("PGS", "Chromosome_Scores")
+        self.scores_directory = Path(self.working_dir, "PGS", "Chromosome_Scores")
+        self.phenotype_file = mc.validate_path(self.args["Phenotype"])
+        self.covariates_file = mc.validate_path(self.args["Covariates"])
 
         if (self.sm_case_freq is not None) or (self.sm_control_n is not None):
             raise NotImplementedError("Psychiatric Genomics Consortium Summary stats are untested and unfinished!")
 
     @staticmethod
-    def _set_args(args):
-        """
-        Args may be set as a dict, or as a yaml file with its path passed as the args. If the later then we need to load
-        in the dict of values
-        """
-        if isinstance(args, dict):
-            return args
-        else:
-            yaml_path = Path(args)
-            assert (yaml_path.exists() and yaml_path.suffix == ".yaml"), ec.path_invalid(yaml_path, "_set_args")
-
-            return load_yaml(yaml_path)
-
-    @staticmethod
     def _set_current_job(operation_dict):
         """
-        Set the current job from a dict of possible jobs or a string of the job
-        :param operation_dict: If A dict, each key is a method_call to be done via getattr and the value is a True or
-            False bool. Only one job should be true for each process. If a string, then just the string of method call
-        :return: the current job name to be processed via getattr
+        Set the current job to be processed
+
+        :param operation_dict:
+            May be None if the user is using the main method as an object
+            May be a string if the user is using a job submission form
+            May be a dict if the user is using the method for development or natively in python
+        :type operation_dict: None | str | dict
+
+        :return:
+            If None, Returns None
+            If str, Returns operation_dict
+            If Dict, Asserts that only 1 job is selected and then returns the job name as a string
+
+        :raises TypeError, AssertionError:
+            TypeError if job is not a None, str, or dict.
+            AssertionError if the job dict contains more than a single job
         """
         if not operation_dict:
             return None
         elif isinstance(operation_dict, str):
             return operation_dict
-        else:
+        elif isinstance(operation_dict, dict):
             job = [job_name for job_name, run in zip(operation_dict.keys(), operation_dict.values()) if run]
             assert len(job) == 1, ec.job_violation(job)
             return job[0]
-
-    @staticmethod
-    def _validate_path(path, allow_none=True):
-        """
-        We have multiple types of files and directories, some may be allow to be None as they will not be required
-        whilst others like the working directory will always be required. This method is a generalisation of individual
-        setters.
-
-        :param path: Path to a directory or file
-        :type path: str
-
-        :param allow_none: Defaults to True, if true if a path is set to none it will just return None. If False, an
-            assertion will be run to validate that it is not none. In both cases, should the file not be None, then the
-            path is validated via Path.exists()
-        :type allow_none: Bool
-
-        :return: Path to the current file or directory if None return is not allowed, otherwise the Path return is
-            optional and the return may be none.
-        """
-        if allow_none and not path:
-            return None
         else:
-            assert path and Path(path).exists(), ec.path_invalid(path, "_validate_path")
-            return Path(path)
+            raise TypeError(ec.job_type(type(operation_dict)))
 
     def _load_local_data(self, access_key):
         """
@@ -644,12 +625,30 @@ class Input:
         cleaned_dict = {header: i for i, header in enumerate(cleaned_headers)}
         return cleaned_headers, cleaned_dict
 
-    def _make_sub_directory(self, name):
-        """Making sub directories within the working directory"""
-        try:
-            os.mkdir(Path(self.working_dir, name))
-        except FileExistsError:
-            pass
+    def _make_sub_directory(self, job, name):
+        """
+        Make a sub-directory within the working directory
+
+        :param job: If this sub directory is part of a job make a job sub directory first, otherwise don't.
+        :type job: None | str
+
+        :param name: The name of the end directory you want
+        :type name: str
+        """
+        if job:
+            try:
+                os.mkdir(Path(self.working_dir, job))
+                try:
+                    os.mkdir(Path(self.working_dir, job, name))
+                except FileExistsError:
+                    pass
+            except FileExistsError:
+                pass
+        else:
+            try:
+                os.mkdir(Path(self.working_dir, name))
+            except FileExistsError:
+                pass
 
     def _set_gibbs_headers(self):
         """Construct the headers that will be used in the writing of weights"""

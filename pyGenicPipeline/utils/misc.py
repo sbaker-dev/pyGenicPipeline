@@ -1,9 +1,50 @@
+from ..utils import errors as ec
+
+from miscSupports import load_yaml
 from itertools import combinations
 from colorama import Fore
 from pathlib import Path
 import numpy as np
 import time
 import gzip
+
+
+def set_args(args):
+    """
+    Args may be set as a dict, or as a yaml file with its path passed as the args. If the later then we need to load
+    in the dict of values
+    """
+    if isinstance(args, dict):
+        return args
+    else:
+        yaml_path = Path(args)
+        assert (yaml_path.exists() and yaml_path.suffix == ".yaml"), ec.path_invalid(yaml_path, "_set_args")
+
+        return load_yaml(yaml_path)
+
+
+def validate_path(path, allow_none=True):
+    """
+    We have multiple types of files and directories, some may be allow to be None as they will not be required
+    whilst others like the working directory will always be required. This method is a generalisation of individual
+    setters.
+
+    :param path: Path to a directory or file
+    :type path: str
+
+    :param allow_none: Defaults to True, if true if a path is set to none it will just return None. If False, an
+        assertion will be run to validate that it is not none. In both cases, should the file not be None, then the
+        path is validated via Path.exists()
+    :type allow_none: Bool
+
+    :return: Path to the current file or directory if None return is not allowed, otherwise the Path return is
+        optional and the return may be none.
+    """
+    if allow_none and not path:
+        return None
+    else:
+        assert path and Path(path).exists(), ec.path_invalid(path, "_validate_path")
+        return Path(path)
 
 
 def open_setter(path):
