@@ -1,0 +1,34 @@
+Summary:
+  Mandatory_Headers: ["SNP_ID", "Effect_Allele", "Alt_Allele", "Effect_Size", "P_Value"]
+
+  header_keys:
+    Chromosome: ["CHR", "chr", "hg19chrc"]
+    SNP_ID: ["SNP_ID", "rs", "snpid", "MarkerName", "SNP", "rsid"]
+    Effect_Allele: ["REF", "ref", "a1", "A1", "Allele1", "reference_allele"]
+    Alt_Allele: ["ALT", "alt", "a2", "A2", "Allele2", "alternate_allele"]
+    BP_Position: ["POS", "pos", "bp", "BP", "position"]
+    P_Value: ["PVAL", "pval", "p", "P", "P.2gc", "European_ancestry_pval_fix"]
+    Effect_Size: ["LINREG", "OR", "European_ancestry_beta_fix"]
+    Minor_Allele_Freq: ["REF_FRQ", "reffreq", "Freq.Hapmap.Ceu", "Freq.Allele1.HapMapCEU", "MAF", "Freq.Hapmap.Ceu"]
+    Case_Freq: ["Case_Freq"]
+    Control_Freq: ["Control_Freq"]
+    Case_N: ["Case_N"]
+    Control_N: ["Control_N"]
+    Info: ["Info", "info"]
+    Standard_Errors: ["SE", "se", "SE.2gc"]
+
+  effect_types: ["OR", "LINREG", "LOGOR", "BLUP"]
+
+  # Snp types
+  ambiguous_snps: [['A', 'T'], ['T', 'A'], ['G', 'C'], ['C', 'G']]
+  allowed_alleles: ['A', 'T', 'C', 'G']
+  allele_flip:
+    'A': 'T'
+    'G': 'C'
+    'T': 'A'
+    'C': 'G'
+
+Other:
+  #todo These should be in args not config
+  Min_Maf: 0.01
+  Max_Freq_Discrepancy: 0.1
