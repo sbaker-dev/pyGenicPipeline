@@ -478,7 +478,7 @@ class SummaryCleaner(Input):
         If we are running without multi-core positioning then we can log the differing seek values to jump to the next
         position when calling the next chromosome. Otherwise it will just skip the header
         """
-        if self.multi_core_splitter:
+        if self.target_chromosome:
             start_line = file.readline()
             self._summary_last_position = len(start_line)
         else:

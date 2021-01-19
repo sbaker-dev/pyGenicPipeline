@@ -25,7 +25,7 @@ class Input:
         self._make_sub_directory("meta_data")
         custom_meta_path(Path(self.working_dir, "meta_data"))
         self.operation = self._set_current_job(self.args["Operation"])
-        self.multi_core_splitter = self.args["Multi_Core_Splitter"]
+        self.target_chromosome = self.args["Multi_Core_Splitter"]
         self._bgen_loader = self.args["PySnpTools_Bgen"]
         self.verbose = self.args["Verbose"]
 

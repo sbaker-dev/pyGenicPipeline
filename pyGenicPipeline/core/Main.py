@@ -38,8 +38,8 @@ class Main(Shell, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input, ABC)
         validated for convergence based on genome wide heritability and be used to construct the pgs in
         _pgs_construct_scores
         """
-        if self.multi_core_splitter:
-            self.chromosome_clean_and_filter(self.multi_core_splitter)
+        if self.target_chromosome:
+            self.chromosome_clean_and_filter(self.target_chromosome)
 
         else:
             valid_chromosomes = self.validation_chromosomes()
@@ -48,8 +48,8 @@ class Main(Shell, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input, ABC)
 
     def pgs_clean_summary_stats(self):
         """Filtering may take a lot of computing, so we can split these operations. This is the Cleaner"""
-        if self.multi_core_splitter:
-            self.chromosome_clean_summary_stats(self.multi_core_splitter)
+        if self.target_chromosome:
+            self.chromosome_clean_summary_stats(self.target_chromosome)
         else:
             valid_chromosomes = self.validation_chromosomes()
             for chromosome in valid_chromosomes:
@@ -57,8 +57,8 @@ class Main(Shell, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input, ABC)
 
     def pgs_filter_cleaned(self):
         """Filtering may take a lot of computing, so we can split these operations. This is the Filter"""
-        if self.multi_core_splitter:
-            self.chromosome_filter(self.multi_core_splitter)
+        if self.target_chromosome:
+            self.chromosome_filter(self.target_chromosome)
         else:
             valid_chromosomes = self.validation_chromosomes()
             for chromosome in valid_chromosomes:
@@ -66,24 +66,24 @@ class Main(Shell, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input, ABC)
 
     def pgs_ld_scores(self):
         """Compute LD scores for Genome-wide regression"""
-        if self.multi_core_splitter:
-            self.chromosome_ld_score(self.multi_core_splitter)
+        if self.target_chromosome:
+            self.chromosome_ld_score(self.target_chromosome)
         else:
             valid_chromosomes = self.validation_chromosomes()
             for chromosome in valid_chromosomes:
                 self.chromosome_ld_score(chromosome)
 
     def pgs_weights(self):
-        if self.multi_core_splitter:
-            self.chromosome_weights(self.multi_core_splitter)
+        if self.target_chromosome:
+            self.chromosome_weights(self.target_chromosome)
         else:
             valid_chromosomes = self.validation_chromosomes()
             for chromosome in valid_chromosomes:
                 self.chromosome_weights(chromosome)
 
     def pgs_scores(self):
-        if self.multi_core_splitter:
-            self.chromosome_scores(self.multi_core_splitter)
+        if self.target_chromosome:
+            self.chromosome_scores(self.target_chromosome)
         else:
             valid_chromosomes = self.validation_chromosomes()
             for chromosome in valid_chromosomes:
@@ -94,8 +94,8 @@ class Main(Shell, SummaryCleaner, FilterSnps, LDHerit, Gibbs, Score, Input, ABC)
         This will construct pgs scores based on the cleaned data produced from pgs_clean_and_coordinate and the genome
         type file create from genome_wide_heritability.
         """
-        if self.multi_core_splitter:
-            self.chromosome_pgs_weights_and_scores(self.multi_core_splitter)
+        if self.target_chromosome:
+            self.chromosome_pgs_weights_and_scores(self.target_chromosome)
         else:
             valid_chromosomes = self.validation_chromosomes()
             for chromosome in valid_chromosomes:
