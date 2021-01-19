@@ -180,75 +180,21 @@ class Input(SummaryLoader, ArgsParser):
 
         return np.unique(ok_chromosomes)
 
-    def select_file_on_chromosome(self, load_directory, load_type):
+    def select_file_on_chromosome(self):
         """
-        For a given chromosome, get the respective file
-        :param load_type: The suffix of the file you want to validate against
-        :param load_directory: The directory to iterate through
+        For a given chromosome, get the respective file from the genetic directory
+
         :return: Path to the current file as a Path from pathlib
         """
-        for file in directory_iterator(load_directory):
-            if Path(load_directory, file).suffix == load_type:
+        for file in directory_iterator(self.gen_directory):
+            if Path(self.gen_directory, file).suffix == self.gen_type:
                 try:
-                    if int(re.sub(r'[\D]', "", Path(load_directory, file).stem)) == self.target_chromosome:
-                        return Path(load_directory, file)
+                    if int(re.sub(r'[\D]', "", Path(self.gen_directory, file).stem)) == self.target_chromosome:
+                        return Path(self.gen_directory, file)
                 except (ValueError, TypeError):
                     continue
 
-        raise Exception(f"Failed to find any relevant file for {self.target_chromosome} in {load_directory}")
-
-    def _check_header(self, sum_header, headers, summary_headers):
-        """
-        We need to standardise our headers, and locate where the current header is in our summary file in terms of a
-        base zero index.
-
-        :param sum_header: Standardised header
-        :param headers: summary statistics headers
-        :return: None if not found else the index of the header in our file for this standardised header
-        :rtype: None | int
-        """
-        header_indexes = [i for i, h in enumerate(headers) if h in summary_headers[sum_header]]
-
-        assert len(header_indexes) < 2, ec.ambiguous_header(sum_header, headers, summary_headers[sum_header])
-        if len(header_indexes) == 0:
-            assert sum_header not in self._config["Mandatory_Headers"], ec.mandatory_header(
-                sum_header, headers, summary_headers[sum_header])
-            return None
-        else:
-            return header_indexes[0]
-
-    def _set_summary_headers(self):
-        """
-        We may have users using custom headers, or they may be using a format we already have covered
-
-        Note
-        -----
-        In GUI we basically want to call the header check to make sure we align columns correctly. If not they can set
-        it themselves
-
-        :return: The headers to validate
-        """
-        if not self.summary_file:
-            return None
-
-        custom_headers = self.args["Custom_Summary_Header"]
-        if custom_headers:
-            # Recast so that the values are in a list so they can be checked by the same method as defaults
-            header_sets = {key: [v] for key, v in zip(custom_headers.keys(), custom_headers.values())}
-        else:
-            # Based on known summary statistics from LDPred sum_stats_parsers.py
-            header_sets = self._config["header_keys"]
-
-        with mc.open_setter(self.summary_file)(self.summary_file) as file:
-
-            # Determine if we have custom headers or not via _loaded_sum_headers
-            raw_headers = file.readline()
-
-            headers = {header: self._check_header(header, mc.decode_line(raw_headers, self.zipped), header_sets)
-                       for header in header_sets}
-
-            file.close()
-            return headers
+        raise Exception(f"Failed to find any relevant file for {self.target_chromosome} in {self.gen_directory}")
 
     @staticmethod
     def _set_validation_size(validation_size):

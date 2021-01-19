@@ -18,7 +18,10 @@ class PGS(SummaryCleaner, Input, ABC):
         # Load the validation and core samples, as well as the indexer
         start_time = time.time()
 
-        load_path = str(self.select_file_on_chromosome(self.gen_directory, self.gen_type))
+        # Todo, this doesn't need to be outside the summary statistics holder
+        # todo Futhermore, we may be able to just rename the clean_summary_statistics file within THe processors as this
+        #   won't really do anything
+        load_path = str(self.select_file_on_chromosome())
         validation, ref = self.construct_validation(load_path)
 
         # Then we need to take these samples to construct valid snps, these snps are extract for this chromosome from
@@ -32,7 +35,7 @@ class PGS(SummaryCleaner, Input, ABC):
                                             sm_dict[self.freq]):
             rows_out.append(v.items() + [log_odds, beta, freq])
 
-        write_csv(self.clean_directory, f"Cleaned_{self.target_chromosome}", self.clean_headers[:-1], rows_out)
+        write_csv(self.summary_directory, f"Cleaned_{self.target_chromosome}", self.clean_headers[:-1], rows_out)
         print(Fore.LIGHTCYAN_EX + f"Finished {self.operation} for chromosome {self.target_chromosome} at "
                                   f"{terminal_time()}.\nTotal time spent was {round(time.time() - start_time, 2)}"
                                   f" Seconds\n")
