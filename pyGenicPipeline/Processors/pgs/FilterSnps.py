@@ -19,6 +19,9 @@ class FilterSnps(Input):
         Large numbers of snps and individuals can lead to significant memory issues. This will filter the snps in chunks
         vus allowing it to run with less memory
         """
+
+        # Construct the reference panel
+        gen_file = self.construct_reference_panel()
         t0 = time.time()
 
         # Chunk the snps, freqs, and bp positions so we can load raw dosage data in a memory conscious way
@@ -27,29 +30,12 @@ class FilterSnps(Input):
         bp_positions = np.array_split(mc.variant_array(self.bp_position.lower(), sm_dict[self.sm_variants]), chunks)
         freqs = np.array_split(sm_dict[self.freq], chunks)
 
-        # accepted_snps = []
-        # for index, (snps, f, bp) in enumerate(zip(snp_list, freqs, bp_positions), start=1):
-        #     print(f"Filtering chunk {index} out of {len(snp_list)}: {terminal_time()}")
-        #     # Setup the base filter from our extract chunks
-        #     filter_dict = {self.snp_id: snps, self.freq: f, self.bp_position: bp,
-        #                    self.filter_key: np.full(len(snps), True)}
-        #
-        #     # Filter out undesirable snps, then store the new snps into a list
-        #     filter_dict = self.filter_snp_chunk(ref, filter_dict, chromosome)
-        #
-        #     # If we also have a validation file, filter on that as well. This will likely have a different std/freq so
-        #     # may filter out additional snps
-        #     if validation:
-        #         filter_dict = self.filter_snp_chunk(validation, filter_dict, chromosome)
-        #
-        #     # Store any remaining snps to a list
-        #     accepted_snps.append(filter_dict[self.filter_key])
-        #
-        # # Return the filter summary dict
-        # t1 = mc.error_dict_to_terminal(self._filter_error_dict)
-        #
-        # print(f"Cleaned summary stats for Chromosome {chromosome} in {round(t1 - t0, 2)} Seconds\n")
-        # return mc.filter_array(sm_dict, flatten(accepted_snps))
+        # Filter each chunk to clean any snps that may be probabilistic
+        accepted_snps = [self.filter_snp_chunk(gen_file, snps, f, bp, index, len(snp_list))
+                         for index, (snps, f, bp) in enumerate(zip(snp_list, freqs, bp_positions), start=1)]
+
+        mc.filter_array(sm_dict, flatten(accepted_snps), "Filter")
+        print(f"Found {len(sm_dict[self.sm_variants])} Snps that passed filtering")
 
     def filter_snp_chunk(self, gen_file, filter_dict, chromosome):
         """
@@ -60,13 +46,8 @@ class FilterSnps(Input):
         If we have information on summary frequencies, the user has specified a maf_min or wants to filter snps in long
         range LD then we can filter those out. This process will always filter out monomorphic snps.
         """
-        # Load the raw snps from the .bed or .bgen file and use it to isolate statistical information
-        raw_snps = self.isolate_raw_snps(gen_file, filter_dict[self.snp_id])
-        filter_dict[self.f_std] = np.std(raw_snps, 1, dtype='float32')
-        filter_dict[self.f_freq] = np.sum(raw_snps, 1, dtype='float32') / (2 * float(gen_file.iid_count))
-
-        raw_snps = None
-        print(f"Loaded raw snps {len(filter_dict[self.snp_id])} row removing from memory: raw_snps = {raw_snps}")
+        print(f"Filtering chunk {index} out of {total}: {terminal_time()}")
+        filter_dict = self._set_filter_dict(gen_file, snps, freqs, base_positions)
 
         # If the frequencies in the summary stats are not just a list of -1 errors then screen genetic snp frequencies
         if (self.freq_discrepancy < 1) and (np.sum(filter_dict[self.freq] == -1) != len(filter_dict[self.freq])):
@@ -83,10 +64,21 @@ class FilterSnps(Input):
         if self.lr_ld_path:
             self._long_range_ld_filter(filter_dict, chromosome)
 
-        return filter_dict
+    def _set_filter_dict(self, gen_file, snps, freqs, base_positions):
+        """
+        This sets up the filtered dict, which acts similar to our sm_dict, but just for our filter variables. We
+        construct this in a method call so that the memory of the raw_snps, that are not required after this is
+        constructed, can be garbage collected.
+        """
+        # Setup the base filter of all snps are valid from our extract chunks
+        filter_dict = {self.snp_id: snps, self.freq: freqs, self.bp_position: base_positions,
+                       self.filter_key: np.full(len(snps), True)}
 
-    def combined_filter_chunks(self):
-        raise NotImplementedError("Not done yet!")
+        # Load the raw snps from the .bed or .bgen file and use it to isolate statistical information
+        raw_snps = self.isolate_raw_snps(gen_file, filter_dict[self.snp_id])
+        filter_dict[self.f_std] = np.std(raw_snps, 1, dtype='float32')
+        filter_dict[self.f_freq] = np.sum(raw_snps, 1, dtype='float32') / (2 * float(gen_file.iid_count))
+        return filter_dict
 
     def _summary_frequencies(self, filter_dict):
         """
