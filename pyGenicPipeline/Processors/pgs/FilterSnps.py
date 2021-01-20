@@ -14,41 +14,42 @@ class FilterSnps(Input):
         self._filter_error_dict = {"Filter case": "Count", f"{self.freq} Discrepancy": 0, "MAF": 0,
                                    "Monomorphic": 0, "In Long Range LD": 0}
 
-    def filter_snps(self, sm_dict, ref, chromosome, validation=None):
+    def pgs_filter_snps(self):
         """
         Large numbers of snps and individuals can lead to significant memory issues. This will filter the snps in chunks
         vus allowing it to run with less memory
         """
-        t0 = self._assert_filter_snps()
+        t0 = time.time()
 
-        # Extract the information we need for filtering and then filter our references
+        # Chunk the snps, freqs, and bp positions so we can load raw dosage data in a memory conscious way
+        sm_dict = self.sm_dict_from_csv()
         snp_list, chunks = self.chunked_snp_names(sm_dict, chunk_return=True)
         bp_positions = np.array_split(mc.variant_array(self.bp_position.lower(), sm_dict[self.sm_variants]), chunks)
         freqs = np.array_split(sm_dict[self.freq], chunks)
 
-        accepted_snps = []
-        for index, (snps, f, bp) in enumerate(zip(snp_list, freqs, bp_positions), start=1):
-            print(f"Filtering chunk {index} out of {len(snp_list)}: {terminal_time()}")
-            # Setup the base filter from our extract chunks
-            filter_dict = {self.snp_id: snps, self.freq: f, self.bp_position: bp,
-                           self.filter_key: np.full(len(snps), True)}
-
-            # Filter out undesirable snps, then store the new snps into a list
-            filter_dict = self.filter_snp_chunk(ref, filter_dict, chromosome)
-
-            # If we also have a validation file, filter on that as well. This will likely have a different std/freq so
-            # may filter out additional snps
-            if validation:
-                filter_dict = self.filter_snp_chunk(validation, filter_dict, chromosome)
-
-            # Store any remaining snps to a list
-            accepted_snps.append(filter_dict[self.filter_key])
-
-        # Return the filter summary dict
-        t1 = mc.error_dict_to_terminal(self._filter_error_dict)
-
-        print(f"Cleaned summary stats for Chromosome {chromosome} in {round(t1 - t0, 2)} Seconds\n")
-        return mc.filter_array(sm_dict, flatten(accepted_snps))
+        # accepted_snps = []
+        # for index, (snps, f, bp) in enumerate(zip(snp_list, freqs, bp_positions), start=1):
+        #     print(f"Filtering chunk {index} out of {len(snp_list)}: {terminal_time()}")
+        #     # Setup the base filter from our extract chunks
+        #     filter_dict = {self.snp_id: snps, self.freq: f, self.bp_position: bp,
+        #                    self.filter_key: np.full(len(snps), True)}
+        #
+        #     # Filter out undesirable snps, then store the new snps into a list
+        #     filter_dict = self.filter_snp_chunk(ref, filter_dict, chromosome)
+        #
+        #     # If we also have a validation file, filter on that as well. This will likely have a different std/freq so
+        #     # may filter out additional snps
+        #     if validation:
+        #         filter_dict = self.filter_snp_chunk(validation, filter_dict, chromosome)
+        #
+        #     # Store any remaining snps to a list
+        #     accepted_snps.append(filter_dict[self.filter_key])
+        #
+        # # Return the filter summary dict
+        # t1 = mc.error_dict_to_terminal(self._filter_error_dict)
+        #
+        # print(f"Cleaned summary stats for Chromosome {chromosome} in {round(t1 - t0, 2)} Seconds\n")
+        # return mc.filter_array(sm_dict, flatten(accepted_snps))
 
     def filter_snp_chunk(self, gen_file, filter_dict, chromosome):
         """
@@ -137,7 +138,3 @@ class FilterSnps(Input):
                 self._filter_error_dict["In Long Range LD"] += len(long_filter) - np.sum(long_filter)
                 filter_dict[self.filter_key] = filter_dict[self.filter_key] * long_filter
 
-    def _assert_filter_snps(self):
-        """Different files require different load type operations, so load type must be set"""
-        assert self.gen_type, ec.missing_arg(self.operation, "Load_Type")
-        return time.time()
