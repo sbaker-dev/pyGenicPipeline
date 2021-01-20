@@ -27,7 +27,7 @@ class SummaryLoader(ArgsParser):
         self.ambiguous_snps, self.allowed_alleles, self.allele_flip = self._configure_alleles()
         self.z_scores = self._set_z_scores(self.args["Z_Scores"])
 
-        self.clean_headers, self._clean_dict = self._set_cleaned_headers()
+        self.summary_headers, self.summary_dict = self._set_summary_write_headers()
 
     def _set_summary_stats(self):
         """
@@ -140,13 +140,13 @@ class SummaryLoader(ArgsParser):
         else:
             return None
 
-    def _set_cleaned_headers(self):
+    def _set_summary_write_headers(self):
         """Construct headers to be used for writing and reading cleaned files"""
-        cleaned_headers = [self.chromosome, self.bp_position, self.snp_id, self.effect_allele, self.alt_allele,
-                           self.log_odds, self.beta, self.freq]
+        write_headers = [self.chromosome, self.bp_position, self.snp_id, self.effect_allele, self.alt_allele,
+                         self.log_odds, self.beta, self.freq]
 
-        cleaned_dict = {header: i for i, header in enumerate(cleaned_headers)}
-        return cleaned_headers, cleaned_dict
+        write_dict = {header: i for i, header in enumerate(write_headers)}
+        return write_headers, write_dict
 
     @property
     def cleaned_types(self):

@@ -159,14 +159,14 @@ class Input(CommonGenetic, SummaryLoader, ArgsParser):
         load_file = CsvObject(Path(self.summary_directory, f"Cleaned_{self.target_chromosome}.csv"), self.cleaned_types,
                               set_columns=True)
 
-        chromo = load_file.column_data[self._clean_dict[self.chromosome]]
-        bp_pos = load_file.column_data[self._clean_dict[self.bp_position]]
-        snp_id = load_file.column_data[self._clean_dict[self.snp_id]]
-        effect = load_file.column_data[self._clean_dict[self.effect_allele]]
-        alt = load_file.column_data[self._clean_dict[self.alt_allele]]
-        log = load_file.column_data[self._clean_dict[self.log_odds]]
-        beta = load_file.column_data[self._clean_dict[self.beta]]
-        freq = load_file.column_data[self._clean_dict[self.freq]]
+        chromo = load_file.column_data[self.summary_dict[self.chromosome]]
+        bp_pos = load_file.column_data[self.summary_dict[self.bp_position]]
+        snp_id = load_file.column_data[self.summary_dict[self.snp_id]]
+        effect = load_file.column_data[self.summary_dict[self.effect_allele]]
+        alt = load_file.column_data[self.summary_dict[self.alt_allele]]
+        log = load_file.column_data[self.summary_dict[self.log_odds]]
+        beta = load_file.column_data[self.summary_dict[self.beta]]
+        freq = load_file.column_data[self.summary_dict[self.freq]]
 
         sm_variants = [Variant(ch, bp, sn, ef, al) for ch, bp, sn, ef, al in zip(chromo, bp_pos, snp_id, effect, alt)]
         return {self.sm_variants: np.array(sm_variants), self.log_odds: np.array(log), self.beta: np.array(beta),
@@ -219,9 +219,9 @@ class Input(CommonGenetic, SummaryLoader, ArgsParser):
     @property
     def c_ld_score(self):
         """LD_Score header index in Cleaned Data file"""
-        return self._clean_dict[self.ld_scores]
+        return self.summary_dict[self.ld_scores]
 
     @property
     def c_beta(self):
         """Beta header index in Cleaned Data file"""
-        return self._clean_dict[self.beta]
+        return self.summary_dict[self.beta]
