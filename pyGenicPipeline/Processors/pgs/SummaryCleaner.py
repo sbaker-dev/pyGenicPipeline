@@ -61,10 +61,9 @@ class SummaryCleaner(Input):
         self._sum_error_dict["Total Duplicates"] += duplicates
         print(f"Loaded {len(validation_snps)} snps to check against the summary stats")
 
-        # If we don't have chromosomes within the summary stats then we have to parse every line
-        else:
-            print("WARNING - Summary stats do not have a chromosome column. Will take a LONG time")
-            sm_line = self._line_by_line_summary(validation_snps, chromosome)
+        # Extract the lines from the summary, and create an array of snps found in the summary statistics
+        sm_line = self._line_by_line_summary(validation_snps)
+        sm_snps = mc.line_array(self.sm_snp_id, sm_line)
 
         # Extract the snp ids from lines
         variants = mc.line_array(self.sm_snp_id, sm_line)
@@ -82,11 +81,12 @@ class SummaryCleaner(Input):
         # Return the filtered lines, variant information for the filtered snps, and the validation snp count
         return sm_line[variants_filter], sm_variants, len(validation_snps)
 
-    def _line_by_line_summary(self, validation_snps, chromosome):
+    def _line_by_line_summary(self, validation_snps):
         """This will check, for every line in the summary statistics, if a snp is within our list of accept snps."""
         sm_line = []
         with mc.open_setter(self.summary_file)(self.summary_file) as file:
-            self._seek_to_start(chromosome, file)
+            # Skip the header
+            file.readline()
 
             # For each line in the GWAS Summary file
             for index, line_byte in enumerate(file):
@@ -101,35 +101,6 @@ class SummaryCleaner(Input):
 
                 else:
                     self._sum_error_dict["Invalid_Snps"] += 1
-
-        return np.array(sm_line)
-
-    def _array_summary(self, chromosome):
-        """This will use chromosome positioning to parse all chromosome lines, and then filter then post location"""
-
-        sm_line = []
-        with mc.open_setter(self.summary_file)(self.summary_file) as file:
-            self._seek_to_start(chromosome, file)
-
-            # For each line in the GWAS Summary file
-            for line_byte in file:
-
-                # Decode the line and extract the chromosome
-                line = mc.decode_line(line_byte, self.zipped)
-                line_chromosome = int(line[self.sm_chromosome])
-
-                # If the chromosome is equal to the chromosome we are looking for we keep it
-                if line_chromosome == chromosome:
-                    sm_line.append(line)
-
-                # If the chromosomes exist in summary statistics we can terminate this for loop when we are no
-                # longer in the right zone and set tell to seek to this position for the next chromosome
-                else:
-                    if line_chromosome > chromosome:
-                        if self.zipped:
-                            self._summary_last_position = file.tell() - len(line_byte)
-                        file.close()
-                        break
 
         return np.array(sm_line)
 
@@ -386,50 +357,6 @@ class SummaryCleaner(Input):
             infos = np.empty(len(sm_line))
             infos.fill(-1)
         return infos
-
-    def _assert_clean_summary_statistics(self):
-        """
-        clean_summary_statistics requires
-
-        The project file, for writing too
-        That the cleaning has not already been undertaken
-        That the summary file path exists
-        That the load type for the genetic data exists
-        That the load directory containing the chromosome split data exists
-        That the Validation_Size has been set
-        """
-        # Check parameters, validate that validation has been run, and that clean summary has not.
-        assert self.summary_file, ec.missing_arg(self.operation, "Summary_Path")
-        assert self.gen_type, ec.missing_arg(self.operation, "Load_Type")
-        assert self.gen_directory, ec.missing_arg(self.operation, "Load_Directory")
-        assert self.validation_size, ec.missing_arg(self.operation, "Validation_Size")
-
-        return time.time()
-
-    def _set_variant(self, variant_id, indexer):
-        """
-        Get the variant id from genetic information based on load type
-        :param variant_id: Current snp name to extract
-        :param indexer: Indexer to extract from
-
-        :return: Variant
-        :rtype: Variant
-        """
-        index_dict, indexer = indexer
-
-        if self.gen_type == ".bgen":
-            return indexer.get_variant(index_dict[variant_id])
-        else:
-            return indexer.get_variant(index_dict[variant_id], True)
-
-    def _beta_by_type(self, sm_dict):
-        """
-        If we are working with Odds ratios we need to take the log of the read beta
-        """
-        if self.effect_type == "OR":
-            return np.array([np.log(beta) for beta in sm_dict[self.effect_size]])
-        else:
-            return sm_dict[self.effect_size].copy()
 
     def _flip_nucleotide(self, variant, sm_nucleotide):
         """
