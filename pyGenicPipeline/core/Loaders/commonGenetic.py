@@ -144,7 +144,7 @@ class CommonGenetic(ArgsParser):
         if self.ref_panel:
             return gen_file[gen_file.iid_to_index(self.ref_panel), :]
         else:
-            return gen_file[int(gen_file.iid_count * 0.1), :]
+            return gen_file[:int(gen_file.iid_count * 0.1), :]
 
     def load_variants(self):
         """
