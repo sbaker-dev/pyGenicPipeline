@@ -77,8 +77,10 @@ class SummaryCleaner(Input):
         else:
             sm_variants = indexer.info_from_sid(filtered_snps)
 
-        # Return the filtered lines, variant information for the filtered snps, and the validation snp count
-        return sm_line[variants_filter], sm_variants, len(validation_snps)
+        # Return arrays as a dict for further cleaning and filtering, and the validation snp count
+        print(f"Found valid lines {len(sm_line)} and Variants {len(sm_variants)}")
+        sm_dict = {self.sm_lines: np.array(sm_line[variants_filter]), self.sm_variants: np.array(sm_variants)}
+        return sm_dict, len(validation_snps)
 
     def _line_by_line_summary(self, validation_snps):
         """This will check, for every line in the summary statistics, if a snp is within our list of accept snps."""
@@ -108,52 +110,38 @@ class SummaryCleaner(Input):
 
         # If we have chromosomes in our summary statistics check the chromosome of the snps against the validation
         if self.sm_chromosome is not None:
-            if not self._validation_equality(self.sm_chromosome, self.chromosome, sm_dict):
-                print("Failed chromosome equality\n")
-                return None
+            self._validation_equality(self.sm_chromosome, self.chromosome, sm_dict)
 
         # If we have base pair position in our summary then validate the base pair
         if self.sm_bp_position is not None:
-            if not self._validation_equality(self.sm_bp_position, self.bp_position, sm_dict, int):
-                print("Failed base Position Equality\n")
-                return None
+            self._validation_equality(self.sm_bp_position, self.bp_position, sm_dict, int)
 
         # Clean the summary stats effect sizes for calculation of beta later
-        if not self._validation_finite(sm_dict, self.sm_effect_size, self.effect_size):
-            print("Failed to find any finite effect sizes\n")
-            return None
+        self._validation_finite(sm_dict, self.sm_effect_size, self.effect_size)
 
         # Clean the P values
-        if not self._validation_finite(sm_dict, self.sm_p_value, self.p_value):
-            print("Failed to find any finite p values\n")
-            return None
+        self._validation_finite(sm_dict, self.sm_p_value, self.p_value)
 
         # If we are using z scores we need to load and clean the standard errors column
         if self.z_scores:
-            if not self._validation_finite(sm_dict, self.sm_standard_errors, self.standard_errors):
-                print("Failed to find any finite standard errors for computing z scores\n")
-                return None
+            self._validation_finite(sm_dict, self.sm_standard_errors, self.standard_errors)
 
         # Use the raw beta, standard errors, and p value if required to construct beta and beta_odds
         self._validation_betas(sm_dict)
 
         # Check that the nucleotides are sane and flip them if required
-        sm_dict = self._validate_nucleotides(sm_dict)
-        if not sm_dict:
-            print("Failed to validate lines\n")
-            return None
-        else:
-            print("Validated lines, now calculating frequencies\n")
-            # Calculate the frequencies and set info if it exists, remove sm_lines as we no longer require this
-            sm_dict[self.freq] = np.array([self._sum_stats_frequencies(line) for line in sm_dict[self.sm_lines]])
+        self._validate_nucleotides(sm_dict)
 
-            # todo We currently log info, but then never use it?
-            sm_dict[self.info] = self._validate_info(sm_dict[self.sm_lines])
+        # Calculate the frequencies and set info if it exists, remove sm_lines as we no longer require this
+        sm_dict[self.freq] = np.array([self._sum_stats_frequencies(line) for line in sm_dict[self.sm_lines]])
 
-            # Remove the temporary flip status and summary nucleotides keys as we no longer need them
-            mc.cleanup_dict(sm_dict, ["Flip", self.nucleotide, self.sm_lines, self.p_value, self.effect_size,
-                                      self.info])
-            return sm_dict
+        # todo We currently log info, but then never use it?
+        sm_dict[self.info] = self._validate_info(sm_dict[self.sm_lines])
+
+        # Remove the temporary flip status and summary nucleotides keys as we no longer need them
+        mc.cleanup_dict(sm_dict, ["Flip", self.nucleotide, self.sm_lines, self.p_value, self.effect_size,
+                                  self.info])
+        return sm_dict
 
     def _validation_equality(self, line_index, variant_key, summary_dict, line_type=None):
         """
@@ -183,7 +171,7 @@ class SummaryCleaner(Input):
         # Filter of True if the variant and summary match, else False which will remove this snp
         obj_filter = summary_array == variant_array
         self._sum_error_dict[f"Miss Matching {variant_key}"] = len(obj_filter) - np.sum(obj_filter)
-        return mc.filter_array(summary_dict, obj_filter)
+        mc.filter_array(summary_dict, obj_filter, variant_key)
 
     def _validation_finite(self, summary_dict, line_index, summary_key):
         """
@@ -208,7 +196,7 @@ class SummaryCleaner(Input):
         # Filter out anything that is not finite or is equal to zero
         obj_filter = np.array([True if np.isfinite(obj) and obj != 0 else False for obj in summary_dict[summary_key]])
         self._sum_error_dict[f"Non Finite {summary_key}"] = len(obj_filter) - np.sum(obj_filter)
-        return mc.filter_array(summary_dict, obj_filter)
+        mc.filter_array(summary_dict, obj_filter, summary_key)
 
     def _validation_betas(self, sm_dict):
         """
@@ -248,6 +236,15 @@ class SummaryCleaner(Input):
             sm_dict[self.beta] = np.array([np.sign(beta_t) * (pdf / np.sqrt(self.sample_size))
                                            for beta_t, pdf in zip(sm_dict[self.log_odds], pdf)])
 
+    def _beta_by_type(self, sm_dict):
+        """
+        If we are working with Odds ratios we need to take the log of the read beta
+        """
+        if self.effect_type == "OR":
+            return np.array([np.log(beta) for beta in sm_dict[self.effect_size]])
+        else:
+            return sm_dict[self.effect_size].copy()
+
     def _validate_nucleotides(self, sm_dict):
         """
         This wil validate the nucleotides against ambiguous snps, invalid snps, and flip the snps if possible whilst
@@ -271,9 +268,7 @@ class SummaryCleaner(Input):
                             else True
                             for sm_nuc, var_nuc in zip(sm_dict[self.nucleotide], sm_dict[self.sm_variants])]
         self._sum_error_dict["Ambiguous_SNP"] = len(filter_ambiguous) - np.sum(filter_ambiguous)
-        if not mc.filter_array(sm_dict, filter_ambiguous):
-            print("All Snps ambiguous\n")
-            return None
+        mc.filter_array(sm_dict, filter_ambiguous, "Ambiguous Snps")
 
         # Sanity Check
         # Filter out any snps that do not pass a sanity check (Only a t c and g)
@@ -284,9 +279,7 @@ class SummaryCleaner(Input):
                           else True
                           for sm_nuc, var_nuc in zip(sm_dict[self.nucleotide], sm_dict[self.sm_variants])]
         self._sum_error_dict["Non_Allowed_Allele"] = len(allowed_filter) - np.sum(allowed_filter)
-        if not mc.filter_array(sm_dict, allowed_filter):
-            print("All Snps are Non-sense values (ie not a, t, c, or g)\n")
-            return None
+        mc.filter_array(sm_dict, allowed_filter, "Snp Sanity Check")
 
         # Determine Flipping
         # Construct a flip status of 1, 0, -1 for No flipping, failed flipping, and flipped successfully which we can
@@ -296,16 +289,12 @@ class SummaryCleaner(Input):
         filter_flipped = np.array([False if flipped == 0 else True for flipped in sm_dict["Flip"]])
         self._sum_error_dict["Non_Matching"] = int(np.sum([1 if f == 0 else 0 for f in sm_dict["Flip"]]))
         self._sum_error_dict["Flipped"] = int(np.sum([1 if f == -1 else 0 for f in sm_dict["Flip"]]))
-
-        if not mc.filter_array(sm_dict, filter_flipped):
-            print("All snps failed even after trying to flip\n")
-            return None
+        mc.filter_array(sm_dict, filter_flipped, "Snp Flipping")
 
         # Now we have filtered away any errors, multiple the dicts beta and log_odds elements by 1 or -1 based on no
         # flipping or requiring flipping
         sm_dict[self.beta] = sm_dict[self.beta] * sm_dict["Flip"]
         sm_dict[self.log_odds] = sm_dict[self.log_odds] * sm_dict["Flip"]
-        return sm_dict
 
     def _sum_stats_frequencies(self, line):
         """
