@@ -65,18 +65,17 @@ class SummaryCleaner(Input):
         sm_line = self._line_by_line_summary(validation_snps)
         sm_snps = mc.line_array(self.sm_snp_id, sm_line)
 
-        # Extract the snp ids from lines
-        variants = mc.line_array(self.sm_snp_id, sm_line)
-
-        # Create a filter that will remove snps not found in our validation snps
-        variants_filter = np.array([True if v in validation_snps else False for v in variants])
+        # Filter out snps that where not found in our validation snp set
+        variants_filter = np.array([True if snp in validation_snps else False for snp in sm_snps])
         self._sum_error_dict[f"Invalid_Snps"] = len(variants_filter) - np.sum(variants_filter)
+        filtered_snps = sm_snps[variants_filter]
 
-        # Bed files also have morgan position which we don't currently use, so filter them out
+        # Create an array of Variants from the gen indexer based on valid snps found in the summary stats
         if self.gen_type == ".bed":
-            sm_variants = indexer.info_from_sid(variants[variants_filter], True)
+            # Bed files also have morgan position which we don't currently use so filter out with True
+            sm_variants = indexer.info_from_sid(filtered_snps, True)
         else:
-            sm_variants = indexer.info_from_sid(variants[variants_filter])
+            sm_variants = indexer.info_from_sid(filtered_snps)
 
         # Return the filtered lines, variant information for the filtered snps, and the validation snp count
         return sm_line[variants_filter], sm_variants, len(validation_snps)
