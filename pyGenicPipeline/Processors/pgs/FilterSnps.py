@@ -1,4 +1,3 @@
-from pyGenicPipeline.utils import errors as ec
 from pyGenicPipeline.utils import misc as mc
 from pyGenicPipeline.core.Input import Input
 
@@ -10,11 +9,10 @@ import time
 class FilterSnps(Input):
     def __init__(self, args):
         super().__init__(args)
-        # todo: Counts are not considering already filtered snps - change sum to be the sum of filter?
         self._filter_error_dict = {"Filter case": "Count", f"{self.freq} Discrepancy": 0, "MAF": 0,
                                    "Monomorphic": 0, "In Long Range LD": 0}
 
-    def pgs_filter_snps(self):
+    def pgs_filter_snps(self, write=True):
         """
         Large numbers of snps and individuals can lead to significant memory issues. This will filter the snps in chunks
         vus allowing it to run with less memory
@@ -37,7 +35,11 @@ class FilterSnps(Input):
         mc.filter_array(sm_dict, flatten(accepted_snps), "Filter")
         print(f"Found {len(sm_dict[self.sm_variants])} Snps that passed filtering")
 
-    def filter_snp_chunk(self, gen_file, filter_dict, chromosome):
+        # Return the filter summary dict
+        mc.error_dict_to_terminal(self._filter_error_dict, "PGS_Filter_Snps", t0)
+        return self.write_summary_files(sm_dict, write, self.target_chromosome, "Filtered", self.filter_directory)
+
+    def filter_snp_chunk(self, gen_file, snps, freqs, base_positions, index, total):
         """
         From our cleaned summary statistics we can construct a set of information for our validation and reference
         genetic samples. These samples need there raw snps to be loaded, and then we can use these to calculate genetic
@@ -62,7 +64,9 @@ class FilterSnps(Input):
 
         # Filter long range LD if set
         if self.lr_ld_path:
-            self._long_range_ld_filter(filter_dict, chromosome)
+            self._long_range_ld_filter(filter_dict)
+
+        return filter_dict[self.filter_key]
 
     def _set_filter_dict(self, gen_file, snps, freqs, base_positions):
         """
@@ -115,13 +119,13 @@ class FilterSnps(Input):
         # Log filter to dict
         filter_dict[self.filter_key] = filter_dict[self.filter_key] * monomorphic_filter
 
-    def _long_range_ld_filter(self, filter_dict, chromosome):
+    def _long_range_ld_filter(self, filter_dict):
         """
         If we have filtering of long range LD in place then we load a dict of long range ld from Price et all 2008 as
         was done within, and data taken from, LdPred. Then we isolate the long range ld regions for this chromosome,
         and filter any in long range LD.
         """
-        lr_pos = self.load_lr_ld_dict()[chromosome]
+        lr_pos = self.load_lr_ld_dict()[self.target_chromosome]
         if len(lr_pos) != 0:
             for key in lr_pos.keys():
                 position = filter_dict[self.bp_position]
@@ -129,4 +133,3 @@ class FilterSnps(Input):
                                        False, True)
                 self._filter_error_dict["In Long Range LD"] += len(long_filter) - np.sum(long_filter)
                 filter_dict[self.filter_key] = filter_dict[self.filter_key] * long_filter
-
