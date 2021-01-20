@@ -94,7 +94,7 @@ def variant_array(variant_key, variant_numpy_array):
     return np.array([variant[variant_key] for variant in variant_numpy_array])
 
 
-def filter_array(dict_to_filter, array_filter):
+def filter_array(dict_to_filter, array_filter, error_process):
     """
     Filter out anything that is no longer required If the length of the array becomes zero, pass an error code of
     1. Otherwise return 0.
@@ -103,9 +103,7 @@ def filter_array(dict_to_filter, array_filter):
         dict_to_filter[key] = value[array_filter]
 
     if np.array([len(value) for value in dict_to_filter.values()])[0] == 0:
-        return None
-    else:
-        return "OK"
+        raise TypeError(f"Filter out all elements after filtering on {error_process}")
 
 
 def shrink_r2_matrix(distance_dp, n):
