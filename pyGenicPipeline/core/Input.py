@@ -26,7 +26,6 @@ class Input(CommonGenetic, SummaryLoader, ArgsParser):
         self.freq_discrepancy = self._config["Max_Freq_Discrepancy"]
         self.filter_index = self.args["Filter_Index"]
         self._filter_iter_size = self.args["Filter_Range"]
-        self.clean_headers, self._clean_dict = self._set_cleaned_headers()
 
         # Gibbs information
         self.make_sub_directory("PGS", "Weights")
@@ -152,57 +151,26 @@ class Input(CommonGenetic, SummaryLoader, ArgsParser):
         else:
             return [1, 0.3, 0.1, 0.03, 0.01, 0.003, 0.001]
 
-    def sm_dict_from_csv(self, load_path, different_types=None):
+    def sm_dict_from_csv(self):
         """
         Load a saved cleaned file from summary statistics for a given chromosome found at the load_path provided, and
         use this to construct the sm_dict we pass between methods
         """
-        header_length = len(CsvObject(load_path).headers)
-        if header_length == len(self.cleaned_types):
-            load_file = CsvObject(load_path, self.cleaned_types, set_columns=True)
-        elif header_length == len(self.cleaned_types) - 1:
-            load_file = CsvObject(load_path, self.cleaned_types[:-1], set_columns=True)
-        elif different_types:
-            print("No sm dict construction - returning headers and column values")
-            load_file = CsvObject(load_path, different_types, set_columns=True)
-            return {header: np.array(columns) for header, columns in zip(load_file.headers, load_file.column_data)}
-        else:
-            print("No Know specification - returning untyped headers and column values")
-            load_file = CsvObject(load_path, set_columns=True)
-            return {header: columns for header, columns in zip(load_file.headers, load_file.column_data)}
+        load_file = CsvObject(Path(self.summary_directory, f"Cleaned_{self.target_chromosome}.csv"), self.cleaned_types,
+                              set_columns=True)
 
-        chromo = load_file.column_data[self.c_chromosome]
+        chromo = load_file.column_data[self._clean_dict[self.chromosome]]
         bp_pos = load_file.column_data[self._clean_dict[self.bp_position]]
         snp_id = load_file.column_data[self._clean_dict[self.snp_id]]
         effect = load_file.column_data[self._clean_dict[self.effect_allele]]
         alt = load_file.column_data[self._clean_dict[self.alt_allele]]
         log = load_file.column_data[self._clean_dict[self.log_odds]]
-        beta = load_file.column_data[self.c_beta]
+        beta = load_file.column_data[self._clean_dict[self.beta]]
         freq = load_file.column_data[self._clean_dict[self.freq]]
 
         sm_variants = [Variant(ch, bp, sn, ef, al) for ch, bp, sn, ef, al in zip(chromo, bp_pos, snp_id, effect, alt)]
         return {self.sm_variants: np.array(sm_variants), self.log_odds: np.array(log), self.beta: np.array(beta),
                 self.freq: np.array(freq)}
-
-    @property
-    def _chromosome_map(self):
-        """
-        By default we assume chromosome are numeric, but can catch X and turn it into 23. If someone wants to specific
-        a new map, for example if they have a y chromosome and want to map it to a number, they can do so with a custom
-        dict. Otherwise we just return the dict that was embedded in ldpred
-        """
-        if self.args["Chromosome_Map"]:
-            return self.args["Chromosome_Map"]
-        else:
-            return {"X": 23, "chr_x": 23, "chrom_x": 23}
-
-    def _set_cleaned_headers(self):
-        """Construct headers to be used for writing and reading cleaned files"""
-        cleaned_headers = [self.chromosome, self.bp_position, self.snp_id, self.effect_allele, self.alt_allele,
-                           self.log_odds, self.beta, self.freq, self.ld_scores]
-
-        cleaned_dict = {header: i for i, header in enumerate(cleaned_headers)}
-        return cleaned_headers, cleaned_dict
 
     def _set_gibbs_headers(self):
         """Construct the headers that will be used in the writing of weights"""
@@ -240,13 +208,6 @@ class Input(CommonGenetic, SummaryLoader, ArgsParser):
         else:
             return None
 
-    # todo: Often, this will not be 9 but 8 long. We need to make it 8, then correct when its 9
-    @property
-    def cleaned_types(self):
-        """The types of each column in the cleaned data"""
-        return [int, int, str, str, str, float, float, float, float]
-
-
     @property
     def f_std(self):
         return f"{self.filter_key}_{self.stds}"
@@ -254,12 +215,6 @@ class Input(CommonGenetic, SummaryLoader, ArgsParser):
     @property
     def f_freq(self):
         return f"{self.filter_key}_{self.freq}"
-
-
-    @property
-    def c_chromosome(self):
-        """Chromosome header index in Cleaned Data file"""
-        return self._clean_dict[self.chromosome]
 
     @property
     def c_ld_score(self):

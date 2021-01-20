@@ -27,6 +27,8 @@ class SummaryLoader(ArgsParser):
         self.ambiguous_snps, self.allowed_alleles, self.allele_flip = self._configure_alleles()
         self.z_scores = self._set_z_scores(self.args["Z_Scores"])
 
+        self.clean_headers, self._clean_dict = self._set_cleaned_headers()
+
     def _set_summary_stats(self):
         """
         If we are reading in the summary statistics file then validate its path, construct a valid set of snps in a set
@@ -113,6 +115,14 @@ class SummaryLoader(ArgsParser):
         else:
             return None
 
+    def _configure_alleles(self):
+        """
+        Yaml storage of tuples/ sets didn't work so this configures a list of lists into a set of tuples for ambiguous,
+        sets a set of allow alleles, and also returns the dict of allele_flip
+        """
+        ambiguous = set(tuple(ambiguous) for ambiguous in self._config["ambiguous_snps"])
+        return ambiguous, set(self._config["allowed_alleles"]), self._config["allele_flip"]
+
     def _set_z_scores(self, set_z_scores):
         """
         If the user wants to compute z scores, then standard_errors most be set but otherwise it isn't a mandatory
@@ -130,13 +140,18 @@ class SummaryLoader(ArgsParser):
         else:
             return None
 
-    def _configure_alleles(self):
-        """
-        Yaml storage of tuples/ sets didn't work so this configures a list of lists into a set of tuples for ambiguous,
-        sets a set of allow alleles, and also returns the dict of allele_flip
-        """
-        ambiguous = set(tuple(ambiguous) for ambiguous in self._config["ambiguous_snps"])
-        return ambiguous, set(self._config["allowed_alleles"]), self._config["allele_flip"]
+    def _set_cleaned_headers(self):
+        """Construct headers to be used for writing and reading cleaned files"""
+        cleaned_headers = [self.chromosome, self.bp_position, self.snp_id, self.effect_allele, self.alt_allele,
+                           self.log_odds, self.beta, self.freq]
+
+        cleaned_dict = {header: i for i, header in enumerate(cleaned_headers)}
+        return cleaned_headers, cleaned_dict
+
+    @property
+    def cleaned_types(self):
+        """The types of each column in the cleaned data"""
+        return [int, int, str, str, str, float, float, float]
 
     @property
     def sm_chromosome(self):
