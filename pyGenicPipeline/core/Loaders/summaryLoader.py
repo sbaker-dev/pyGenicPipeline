@@ -2,6 +2,7 @@ from pyGenicPipeline.utils import errors as ec
 from pyGenicPipeline.utils import misc as mc
 from .argsParser import ArgsParser
 
+from csvObject import write_csv
 from pathlib import Path
 
 
@@ -14,8 +15,8 @@ class SummaryLoader(ArgsParser):
         self._config = self.config["Summary"]
 
         # Set the write directory for Summary Files
-        self.make_sub_directory("PGS", "Chromosome_Cleaned")
-        self.summary_directory = Path(self.working_dir, "PGS", "Chromosome_Cleaned")
+        self.make_sub_directory("PGS", "Cleaned")
+        self.summary_directory = Path(self.working_dir, "PGS", "Cleaned")
 
         # Validate the summary file, and set the load type, sample size and header indexing
         self.summary_file = mc.validate_path(self.args["Summary_Path"])
@@ -147,6 +148,18 @@ class SummaryLoader(ArgsParser):
 
         write_dict = {header: i for i, header in enumerate(write_headers)}
         return write_headers, write_dict
+
+    def write_summary_files(self, sm_dict, write, chromosome, summary_type, directory):
+        """Write out the information from sm_dict into a csv"""
+        if write:
+            rows_out = []
+            for v, log_odds, beta, freq, in zip(sm_dict[self.sm_variants], sm_dict[self.log_odds], sm_dict[self.beta],
+                                                sm_dict[self.freq]):
+                rows_out.append(v.items() + [log_odds, beta, freq])
+
+            print(directory)
+            write_csv(directory, f"{summary_type}_{chromosome}", self.summary_headers, rows_out)
+        return sm_dict
 
     @property
     def cleaned_types(self):

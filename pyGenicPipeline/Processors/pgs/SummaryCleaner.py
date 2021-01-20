@@ -3,7 +3,6 @@ from pyGenicPipeline.utils import misc as mc
 from pyGenicPipeline.core.Input import Input
 
 from pyGenicParser import Nucleotide
-from csvObject import write_csv
 from scipy import stats
 import numpy as np
 import time
@@ -45,7 +44,7 @@ class SummaryCleaner(Input):
         # Log to terminal what has been filtered / removed, then write out if requested, and return the sm dict
         mc.error_dict_to_terminal(self._sum_error_dict, "Summary_Stats", t0)
         print(f"Found {len(sm_dict[self.sm_variants])}, will create {len(self.chunked_snp_names(sm_dict)[0])} Chunks")
-        return self._write_out(sm_dict, write)
+        return self.write_summary_files(sm_dict, write, self.target_chromosome, "Cleaned", self.summary_directory)
 
     def _valid_snps_lines_and_variants(self):
         """
@@ -371,14 +370,3 @@ class SummaryCleaner(Input):
                 return 0
         else:
             return 1
-
-    def _write_out(self, sm_dict, write):
-        """Write out the information into a csv if requested"""
-        if write:
-            rows_out = []
-            for v, log_odds, beta, freq, in zip(sm_dict[self.sm_variants], sm_dict[self.log_odds], sm_dict[self.beta],
-                                                sm_dict[self.freq]):
-                rows_out.append(v.items() + [log_odds, beta, freq])
-
-            write_csv(self.summary_directory, f"Cleaned_{self.target_chromosome}", self.clean_headers[:-1], rows_out)
-        return sm_dict
