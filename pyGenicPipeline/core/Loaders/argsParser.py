@@ -35,7 +35,10 @@ class ArgsParser:
                 except FileExistsError:
                     pass
             except FileExistsError:
-                pass
+                try:
+                    os.mkdir(Path(self.working_dir, job, name))
+                except FileExistsError:
+                    pass
         else:
             try:
                 os.mkdir(Path(self.working_dir, name))
