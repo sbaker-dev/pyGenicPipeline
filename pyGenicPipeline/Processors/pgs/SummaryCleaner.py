@@ -3,6 +3,7 @@ from pyGenicPipeline.utils import misc as mc
 from pyGenicPipeline.core.Input import Input
 
 from pyGenicParser import Nucleotide
+from csvObject import write_csv
 from scipy import stats
 import numpy as np
 import time
@@ -24,31 +25,27 @@ class SummaryCleaner(Input):
     def pgs_clean_summary_stats(self, write=True):
         """
         This will take the summary statistics and access the validatable snps, found by cross referencing the genetic
-        validation and core samples, and clean them of possible errors. It then returns a ordered on base pair position
-        dictionary of information required for constructing poly-genetic scores
+        validation and core samples, and clean them of possible errors. It then returns an ordered on base pair position
+        dictionary of information required for constructing poly-genetic scores and by default writes this information
+        to a csv.
         """
-        # Check for input arguments
-        t0 = self._assert_clean_summary_statistics()
-        print(f"Starting Chromosome: {self.target_chromosome}")
+        t0 = time.time()
 
         # Clean the summary lines to only include validatable snps from our genetic samples in target_chromosome
         sm_dict, validation_snps_count = self._valid_snps_lines_and_variants()
 
         # Clean the summary lines of valid snps for potential errors, if we ever wipe all our samples return None
         sm_dict = self._validate_summary_lines(sm_dict)
-        if not sm_dict:
-            print("Failed to validate lines")
-            return None
 
-        # Construct the order from the base pair position
+        # Construct the order from the base pair position, check we don't have an overflow issue
         order = np.argsort(mc.variant_array(self.bp_position.lower(), sm_dict[self.sm_variants]))
-
-        # Given we have only accepted snps that are within the validation / core, we should never have more snps in
-        # summary than within the validation. If we do, something has gone critically wrong.
         assert len(order) <= validation_snps_count, ec.snp_overflow(len(order), validation_snps_count)
+        mc.filter_array(sm_dict, order, "Order")
 
-        # In this case we can order the array using filter array as well, and we return this ordered dict
-        mc.filter_array(sm_dict, order)
+        # Log to terminal what has been filtered / removed, then write out if requested, and return the sm dict
+        mc.error_dict_to_terminal(self._sum_error_dict, "Summary_Stats", t0)
+        print(f"Found {len(sm_dict[self.sm_variants])}, will create {len(self.chunked_snp_names(sm_dict)[0])} Chunks")
+        return self._write_out(sm_dict, write)
 
     def _valid_snps_lines_and_variants(self):
         """
@@ -375,17 +372,13 @@ class SummaryCleaner(Input):
         else:
             return 1
 
-    def _seek_to_start(self, chromosome, file):
-        """
-        If we are running without multi-core positioning then we can log the differing seek values to jump to the next
-        position when calling the next chromosome. Otherwise it will just skip the header
-        """
-        if self.target_chromosome:
-            start_line = file.readline()
-            self._summary_last_position = len(start_line)
-        else:
-            if chromosome == 1:
-                start_line = file.readline()
-                self._summary_last_position = len(start_line)
-            else:
-                file.seek(self._summary_last_position)
+    def _write_out(self, sm_dict, write):
+        """Write out the information into a csv if requested"""
+        if write:
+            rows_out = []
+            for v, log_odds, beta, freq, in zip(sm_dict[self.sm_variants], sm_dict[self.log_odds], sm_dict[self.beta],
+                                                sm_dict[self.freq]):
+                rows_out.append(v.items() + [log_odds, beta, freq])
+
+            write_csv(self.summary_directory, f"Cleaned_{self.target_chromosome}", self.clean_headers[:-1], rows_out)
+        return sm_dict
