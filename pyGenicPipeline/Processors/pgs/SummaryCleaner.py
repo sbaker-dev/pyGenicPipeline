@@ -21,7 +21,7 @@ class SummaryCleaner(Input):
                                 "Flipped": 0, "Non_Matching": 0}
         self._summary_last_position = 0
 
-    def clean_summary_statistics(self, load_path, validation, ref):
+    def pgs_clean_summary_stats(self, write=True):
         """
         This will take the summary statistics and access the validatable snps, found by cross referencing the genetic
         validation and core samples, and clean them of possible errors. It then returns a ordered on base pair position
@@ -31,13 +31,8 @@ class SummaryCleaner(Input):
         t0 = self._assert_clean_summary_statistics()
         print(f"Starting Chromosome: {self.target_chromosome}")
 
-        # Clean the summary lines to only include validatable snps from our genetic samples that exit in this chromosome
-        sm_line, sm_variants, validation_snps_count = self._valid_snps_lines_and_variants(
-            self.target_chromosome, ref, load_path, validation)
-        print(f"Extracted snps from summary file.\nFound valid lines {len(sm_line)} and Variants {len(sm_variants)}\n")
-
-        # Construct the summary dict with our summary lines and Variants objects of our valid snps
-        sm_dict = {self.sm_lines: np.array(sm_line), self.sm_variants: np.array(sm_variants)}
+        # Clean the summary lines to only include validatable snps from our genetic samples in target_chromosome
+        sm_dict, validation_snps_count = self._valid_snps_lines_and_variants()
 
         # Clean the summary lines of valid snps for potential errors, if we ever wipe all our samples return None
         sm_dict = self._validate_summary_lines(sm_dict)
