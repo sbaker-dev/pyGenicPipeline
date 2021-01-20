@@ -50,24 +50,16 @@ class SummaryCleaner(Input):
         # In this case we can order the array using filter array as well, and we return this ordered dict
         mc.filter_array(sm_dict, order)
 
-        # Log to terminal what has been filtered / removed
-        t1 = mc.error_dict_to_terminal(self._sum_error_dict)
-        print(f"Cleaned summary stats for Chromosome {self.target_chromosome} in {round(t1 - t0, 2)} Seconds\n")
-        return sm_dict
-
-    def _valid_snps_lines_and_variants(self, chromosome, ref, load_path, validation):
+    def _valid_snps_lines_and_variants(self):
         """
         We will load our variants from our validation and core samples and use those to check if the snp found in the
         summary line is within our validation and core sample sets of snps. If this is the case, then we will add the
         line to sm_line as well as a Variant object of the current snp valid snp to sm_variants
         """
-        validation_snps, indexer, duplicates = self.load_variants(load_path, validation, ref)
+        # Load the validation snps from the genetic file, as well as the genetic indexer to get the variants from.
+        validation_snps, indexer, duplicates = self.load_variants()
         self._sum_error_dict["Total Duplicates"] += duplicates
-        print(f"Constructed snp set with {len(validation_snps)} to be used to check against the summary stats")
-
-        # If we have chromosomes then run this process of isolation based on arrays
-        if isinstance(self.sm_chromosome, int):
-            sm_line = self._array_summary(chromosome)
+        print(f"Loaded {len(validation_snps)} snps to check against the summary stats")
 
         # If we don't have chromosomes within the summary stats then we have to parse every line
         else:
