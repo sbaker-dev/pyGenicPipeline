@@ -92,35 +92,6 @@ class Input(CommonGenetic, SummaryLoader, ArgsParser):
         else:
             raise TypeError(ec.job_type(type(operation_dict)))
 
-    def _load_local_data(self, access_key):
-        """
-        This will set a dataset path that has been embedded into the package as a non yaml file sourced from LDPred if
-        the current arg is set to be true
-
-        :param access_key: The key to access the data file
-        :type access_key: str
-
-        :return: Path to the relevant file if request is not equal to None, else None
-        :rtype: Path | None
-        """
-
-        if self.args[access_key]:
-            package_root = Path(__file__).parent.parent
-
-            if access_key == "HapMap3":
-                access_path = Path(package_root, "Data", "hm3_sids.txt.gz")
-                assert access_path, ec.path_invalid(access_path, "_load_local_data")
-                return access_path
-            elif access_key == "Filter_Long_Range_LD":
-                access_path = Path(package_root, "Data", "long-range-ld-price-2008hg38.txt")
-                assert access_path, ec.path_invalid(access_path, "_load_local_data")
-                return access_path
-            else:
-                raise Exception(f"Unknown Key provided to _load_local_data: {access_key}")
-
-        else:
-            return None
-
     def validation_chromosomes(self):
         """
         This will create a dataset of all the chromosomes that we have to work with
@@ -199,18 +170,15 @@ class Input(CommonGenetic, SummaryLoader, ArgsParser):
         else:
             raise Exception("Unknown load type set")
 
-    def _set_validation_sample_size(self, full_sample_size):
+    def construct_reference_panel(self):
         """
-        This will return the value of the validation in terms of individuals rather than a percentage that the user
-        specified
-
-        :param full_sample_size: An integer of the number of samples in the full sample
-        :type full_sample_size: int
-
-        :return: Integer of the number of samples required in the validation sample
-        :rtype: int
+        Take in a list of names if provide and index our gen file accordingly, else returns the first 10% of iid samples
         """
-        return int((full_sample_size * self.population_percent) * self.validation_size)
+        gen_file = self.gen_reference(self.select_file_on_chromosome())
+        if self.ref_panel:
+            return gen_file[gen_file.iid_to_index(self.ref_panel), :]
+        else:
+            return gen_file[int(gen_file.iid_count * 0.1), :]
 
     def construct_validation(self, load_path):
         """
