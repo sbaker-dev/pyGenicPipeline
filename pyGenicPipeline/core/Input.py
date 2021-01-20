@@ -190,7 +190,7 @@ class Input(SummaryLoader, ArgsParser):
             if Path(self.gen_directory, file).suffix == self.gen_type:
                 try:
                     if int(re.sub(r'[\D]', "", Path(self.gen_directory, file).stem)) == self.target_chromosome:
-                        return Path(self.gen_directory, file)
+                        return str(Path(self.gen_directory, file).absolute())
                 except (ValueError, TypeError):
                     continue
 
