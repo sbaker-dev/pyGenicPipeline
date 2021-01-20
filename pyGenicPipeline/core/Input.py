@@ -2,17 +2,11 @@ from pyGenicPipeline.utils import errors as ec
 from pyGenicPipeline.utils import misc as mc
 from .Loaders import *
 
-from miscSupports import load_yaml, directory_iterator, flatten
-from pysnptools.distreader import Bgen
-from pysnptools.snpreader import Bed
+from miscSupports import load_yaml
 from csvObject import CsvObject
-from collections import Counter
 from pyGenicParser import *
 from pathlib import Path
 import numpy as np
-import pickle
-import gzip
-import re
 
 
 class Input(CommonGenetic, SummaryLoader, ArgsParser):
@@ -92,167 +86,6 @@ class Input(CommonGenetic, SummaryLoader, ArgsParser):
         else:
             raise TypeError(ec.job_type(type(operation_dict)))
 
-    def validation_chromosomes(self):
-        """
-        This will create a dataset of all the chromosomes that we have to work with
-
-        :return: A list of valid chromosomes
-        :rtype: list
-        """
-
-        valid_chromosomes = []
-        for file in directory_iterator(self.gen_directory):
-            if Path(self.gen_directory, file).suffix == self.gen_type:
-                valid_chromosomes.append(int(re.sub(r'[\D]', "", Path(self.gen_directory, file).stem)))
-        valid_chromosomes.sort()
-        return valid_chromosomes
-
-    def validate_chromosomes(self, chromosome_set):
-        """
-        It is possible for non valid chromosomes, this will validate for numeric or known maps from str chromosomes to
-        numeric, for example X: 23,  and flag and error if it fails to find a map.
-        """
-        ok_chromosomes = []
-        for chromosome in chromosome_set:
-            try:
-                ok_chromosomes.append(int(chromosome))
-            except ValueError:
-                try:
-                    ok_chromosomes.append(self._chromosome_map[chromosome])
-                except KeyError:
-                    raise Exception(f"Found chromosome {chromosome} which could not be mapped!")
-
-        return np.unique(ok_chromosomes)
-
-    def select_file_on_chromosome(self):
-        """
-        For a given chromosome, get the respective file from the genetic directory
-
-        :return: Path to the current file as a Path from pathlib
-        """
-        for file in directory_iterator(self.gen_directory):
-            if Path(self.gen_directory, file).suffix == self.gen_type:
-                try:
-                    if int(re.sub(r'[\D]', "", Path(self.gen_directory, file).stem)) == self.target_chromosome:
-                        return str(Path(self.gen_directory, file).absolute())
-                except (ValueError, TypeError):
-                    continue
-
-        raise Exception(f"Failed to find any relevant file for {self.target_chromosome} in {self.gen_directory}")
-
-    @staticmethod
-    def _set_validation_size(validation_size):
-        """
-        If Validation_Size is set, validate it is between 0 and 1 and then return it, otherwise None.
-
-        :param validation_size: The size of the validation group
-        :type validation_size: None | float
-
-        :return: A None or a float
-        :rtype: None | float
-        """
-
-        if not validation_size:
-            return None
-        else:
-            assert 0 <= float(validation_size) <= 1, ec.validation_size_invalid(validation_size)
-            return float(validation_size)
-
-    def gen_reference(self, load_path):
-        """Get the pysnptools reference via the load type"""
-        if self.gen_type == ".bed":
-            return Bed(load_path, count_A1=True)
-        elif self.gen_type == ".bgen":
-            if self._snp_tools:
-                return Bgen(load_path)
-            else:
-                return BgenObject(load_path)
-        else:
-            raise Exception("Unknown load type set")
-
-    def construct_reference_panel(self):
-        """
-        Take in a list of names if provide and index our gen file accordingly, else returns the first 10% of iid samples
-        """
-        gen_file = self.gen_reference(self.select_file_on_chromosome())
-        if self.ref_panel:
-            return gen_file[gen_file.iid_to_index(self.ref_panel), :]
-        else:
-            return gen_file[int(gen_file.iid_count * 0.1), :]
-
-    def construct_validation(self, load_path):
-        """
-        We need to construct a validation sample from the percentage the user provided and the iid_count, this then
-        returns this slice of the sample from the start up to this percentage (Uses int so may be slightly above or
-        below the percentage provided based on rounding / floating point errors), and then the rest of the sample of the
-        core set
-
-        :param load_path: Path to the relevant load file
-        :return: The validation and ref sample class holders
-        """
-
-        # todo Before splitting in to validation and core, allow a sample size modifier to remove people (ie for ukb)
-        # Set validation and core sets of sids based on the load type
-        validation_size = self._set_validation_sample_size(self.gen_reference(load_path).iid_count)
-        validation = self.gen_reference(load_path)[:validation_size, :]
-        ref = self.gen_reference(load_path)[validation_size:, :]
-        return validation, ref
-
-    def load_variants(self, load_path, validation, ref):
-        """
-        Load variants, for .bgen or plink files, as a set of snps that exist within the current chromosome. Uses the
-        validation percentage to construct a validation group, and returns the set of snps for each group. If hap_map_3
-        is enabled, it will strip out snps not in hap_map_3.
-
-        We will also need a way to index out the variant information, so we set the indexer according to the load type
-
-        :return: Set of the validation and core set of snps, as well as an indexer to extract information from them
-        """
-
-        #  Set validation and core sets of sids based on the load type
-        if self.gen_type == ".bed":
-            validation = validation.sid
-            ref = ref.sid
-            indexer = PlinkObject(load_path, True)
-
-        elif self.gen_type == ".bgen":
-            indexer = BgenObject(load_path)
-            if self._snp_tools:
-                print("Loading bgen with PySnpTools\n")
-                # Bgen files store [variant id, rs_id], we just want the rs_id hence the [1]; see https://bit.ly/2J0C1kC
-                validation = [snp.split(",")[1] for snp in validation.sid]
-                ref = [snp.split(",")[1] for snp in ref.sid]
-
-            else:
-                print("Loading bgen with custom pybgen via pyGenicParser\n")
-                validation = validation.sid_array()
-                ref = ref.sid_array()
-
-        else:
-            raise Exception("Unknown load type set")
-
-        # If we only want the hap_map_3 snps then check each snp against the set of hap_map_3
-        if self.hap_map_3:
-            hap_map_3_snps = self.load_hap_map_3()
-            validation = [snp for snp in validation if snp in hap_map_3_snps]
-            ref = [snp for snp in ref if snp in hap_map_3_snps]
-
-        # Check for duplicates that may be loaded later in the pipeline if we don't filter them out and will otherwise
-        # not be detected due to returning a set
-        v_count = len(validation)
-        validation = [snp for (snp, count) in Counter(validation).items() if count == 1]
-
-        r_count = len(ref)
-        ref = [snp for (snp, count) in Counter(ref).items() if count == 1]
-
-        # Count total duplicates
-        duplicates = np.sum([(v_count - len(validation)) + (r_count - len(ref))])
-        return set(flatten([validation, ref])), indexer, duplicates
-
-    def variant_names(self, sm_dict):
-        """Variant names differ in pysnptools bgen, so account for this and just return rs_id's"""
-        return mc.variant_array(self.snp_id.lower(), sm_dict[self.sm_variants])
-
     def chunked_snp_names(self, sm_dict, chunk_return=False):
         """
         Even a couple of 10's of thousands of snps will lead to memory issues especially if there are large numbers of
@@ -277,62 +110,6 @@ class Input(CommonGenetic, SummaryLoader, ArgsParser):
             return np.array_split(variant_names, chunks), chunks
         else:
             return np.array_split(variant_names, chunks)
-
-    def isolate_raw_snps(self, gen_file, variant_names):
-        """
-        This will isolate the raw snps for a given bed or bgen file
-
-        :param gen_file: Genetic file you wish to load from
-        :param variant_names: The snp names to isolate the dosage for
-        :return: raw snps
-        """
-
-        # bed returns 2, 1, 0 rather than 0, 1, 2 although it says its 0, 1, 2; so this inverts it
-        if self.gen_type == ".bed":
-            ordered_common = gen_file[:, gen_file.sid_to_index(variant_names)].read(dtype=np.int8).val
-            raw_snps = np.array([abs(snp - 2) for snp in ordered_common.T], dtype=np.int8)
-
-        # We have a [1, 0, 0], [0, 1, 0], [0, 0, 1] array return for 0, 1, 2 respectively. So if we multiple the arrays
-        # by their index position and then sum them we get [0, 1, 2]
-        elif self.gen_type == ".bgen":
-            if self._snp_tools:
-                # Re-construct the variant_id-rs_id
-                v_dict = {snp[1]: snp[0] for snp in [snp.split(",") for snp in gen_file.sid]}
-                variant_names = [f"{v_dict[rs_id]},{rs_id}" for rs_id in variant_names]
-
-                ordered_common = gen_file[:, gen_file.sid_to_index(variant_names)].read(dtype=np.int8).val
-                raw_snps = sum(np.array([snp * i for i, snp in enumerate(ordered_common.T)], dtype=np.int8))
-            else:
-                raw_snps = gen_file.dosage_from_sid(variant_names)
-
-        else:
-            raise Exception(f"Critical Error: Unknown load type {self.gen_type} found in _isolate_dosage")
-
-        assert len(raw_snps) == len(variant_names), "Failed to filter out duplicates"
-        return raw_snps
-
-    def normalise_snps(self, gen_file, variant_names, std_return=False):
-        """For gibbs we use normalised snps, this process will use the information we have filtered to construct it"""
-
-        raw_snps = self.isolate_raw_snps(gen_file, variant_names)
-
-        # Get the number of snps and individuals in the filtered dict
-        n_snps, n_individuals = raw_snps.shape
-
-        # Need to reformat the shape to construct the normalised snps
-        raw_means = np.mean(raw_snps, 1, dtype='float32')
-        raw_means.shape = (n_snps, 1)
-        raw_stds = np.std(raw_snps, 1, dtype='float32')
-        raw_stds.shape = (n_snps, 1)
-
-        # Use this information to construct a normalised snps
-        normalised_snps = np.array((raw_snps - raw_means) / raw_stds, dtype="float32")
-        assert normalised_snps.shape == raw_snps.shape
-
-        if std_return:
-            return normalised_snps, raw_stds
-        else:
-            return normalised_snps, None
 
     def genetic_phenotypes(self, gen_file, load_path):
         """
@@ -364,37 +141,6 @@ class Input(CommonGenetic, SummaryLoader, ArgsParser):
             raise Exception("Unknown load type set")
 
         return ph_dict
-
-    def load_hap_map_3(self):
-        """
-        Users may wish to limit valid snps to those found within HapMap3. If they do, we access them via the local file
-        and return them as a set
-        """
-
-        # If the HapMap3 file exists, then extract the snp ids as a set and return them
-        f = gzip.open(self.hap_map_3, 'r')
-        hm3_sids = pickle.load(f)
-        f.close()
-        return set(hm3_sids)
-
-    def load_lr_ld_dict(self):
-        """
-        This will read in the long rang ld dict from Price et al. AJHG 2008 long range LD tables taken from LDPred and
-        then filter out the keys relevant to this chromosome.
-        """
-        long_dict = {chromosome_key: {} for chromosome_key in range(1, 24)}
-        with open(str(self.lr_ld_path.absolute()), 'r') as f:
-            for line in f:
-                chromosome_line, start_pos, end_pos, hild = line.split()
-                try:
-                    long_dict[int(chromosome_line)][hild] = {'start_pos': int(start_pos), 'end_pos': int(end_pos)}
-                except ValueError:
-                    continue
-        return long_dict
-
-
-
-
 
     def _set_causal_fractions(self):
         """
@@ -493,12 +239,6 @@ class Input(CommonGenetic, SummaryLoader, ArgsParser):
             return load_yaml(genome_path)
         else:
             return None
-
-    @staticmethod
-    def check_sm_dict(sm_dict):
-        """Validate that sm dict still exists"""
-        if not sm_dict:
-            raise Exception("Failed to find any snps!\n\n")
 
     # todo: Often, this will not be 9 but 8 long. We need to make it 8, then correct when its 9
     @property
