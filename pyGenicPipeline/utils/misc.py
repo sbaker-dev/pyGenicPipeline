@@ -169,7 +169,7 @@ def possible_combinations(com_list):
     return sum([list(map(list, combinations(com_list, i))) for i in range(len(com_list) + 1)], [])[1:]
 
 
-def error_dict_to_terminal(error_dict):
+def error_dict_to_terminal(error_dict, process, start):
     """Print the error dict for this chromosome then reset the initialised to default 0"""
     print("")
     for index, (k, v) in enumerate(zip(error_dict.keys(), error_dict.values())):
@@ -184,4 +184,5 @@ def error_dict_to_terminal(error_dict):
     for k, v in zip(error_dict.keys(), error_dict.values()):
         if isinstance(v, (int, np.int32, np.int8)):
             error_dict[k] = 0
-    return time.time()
+
+    print(f"Finished {process} in {round(time.time() - start, 2)} Seconds\n")
