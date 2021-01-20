@@ -7,6 +7,9 @@ from pathlib import Path
 
 class SummaryLoader(ArgsParser):
     def __init__(self, args):
+        """
+        These arguments are specifically to assist with PGS SummaryCLeaner
+        """
         super().__init__(args)
         self._config = self.config["Summary"]
 
