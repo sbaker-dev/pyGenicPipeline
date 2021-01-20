@@ -3,7 +3,6 @@ from pyGenicPipeline.utils import misc as mc
 from .Loaders import *
 
 from miscSupports import load_yaml, directory_iterator, flatten
-from bgen_reader import custom_meta_path
 from pysnptools.distreader import Bgen
 from pysnptools.snpreader import Bed
 from csvObject import CsvObject
@@ -16,41 +15,15 @@ import gzip
 import re
 
 
-class Input(SummaryLoader, ArgsParser):
+class Input(CommonGenetic, SummaryLoader, ArgsParser):
     def __init__(self, args):
-        # General operational parameters
         super().__init__(args)
 
+        # General operational parameters
         self.operation = self._set_current_job(self.args["Operation"])
+
+        # Todo this is bad, needs to be removed at some point
         self._config = self.config["Other"]
-
-        # Genetic Common
-        # These attributes are or can be used by multiple processors so are not restricted to sub-loaders
-        self.target_chromosome = self.args["Target_Chromosome"]
-
-        # Internal data brought across with package, loaded if requested
-        self.hap_map_3 = self._load_local_data("HapMap3")
-        self.lr_ld_path = self._load_local_data("Filter_Long_Range_LD")
-
-        # Genetic files
-        self.gen_type = self.args["Load_Type"]
-        self.gen_directory = mc.validate_path(self.args["Load_Directory"])
-        self._snp_tools = self.args["PySnpTools_Bgen"]
-
-        # PySnpTools will by default write memory files to the directory of the Gen files, but this is often undesirable
-        # on a sever environment where read and write permissions may not be universal.
-        if self._snp_tools:
-            self.make_sub_directory(None, "PySnpTools_Meta")
-            custom_meta_path(Path(self.working_dir, "PySnpTools_Meta"))
-
-        # TODO DO THIS VIA HAVING A __REPR__ WITHIN EACH LOADER OBJECT
-        # todo have a print config option which prints things like summary headers or whatever based on the job
-        #  submitted
-
-        # Set summary information
-
-        print("HER")
-        self.construct_reference_panel()
 
         # Set filter information
         self.make_sub_directory("PGS", "Filter_Cleaned")
