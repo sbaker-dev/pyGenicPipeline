@@ -20,8 +20,8 @@ class Input(CommonGenetic, SummaryLoader, ArgsParser):
         self._config = self.config["Other"]
 
         # Set filter information
-        self.make_sub_directory("PGS", "Filter_Cleaned")
-        self.filter_directory = Path(self.working_dir, "PGS", "Filter_Cleaned")
+        self.make_sub_directory("PGS", "Filtered")
+        self.filter_directory = Path(self.working_dir, "PGS", "Filtered")
         self.maf_min = self._config["Min_Maf"]
         self.freq_discrepancy = self._config["Max_Freq_Discrepancy"]
         self.filter_index = self.args["Filter_Index"]
@@ -46,8 +46,8 @@ class Input(CommonGenetic, SummaryLoader, ArgsParser):
         self.gibbs_breaker = True
 
         # Score information
-        self.make_sub_directory("PGS", "Chromosome_Scores")
-        self.scores_directory = Path(self.working_dir, "PGS", "Chromosome_Scores")
+        self.make_sub_directory("PGS", "Scores")
+        self.scores_directory = Path(self.working_dir, "PGS", "Scores")
         self.phenotype_file = mc.validate_path(self.args["Phenotype"])
         self.covariates_file = mc.validate_path(self.args["Covariates"])
 
