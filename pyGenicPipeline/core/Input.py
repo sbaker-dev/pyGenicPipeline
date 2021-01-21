@@ -10,20 +10,12 @@ import numpy as np
 import re
 
 
-class Input(SummaryLoader, LDLoader, CommonGenetic, ArgsParser):
+class Input(SummaryLoader, FilterLoader, LDLoader, CommonGenetic, ArgsParser):
     def __init__(self, args):
         super().__init__(args)
 
         # General operational parameters
         self.operation = self._set_current_job(self.args["Operation"])
-
-        # Set filter information
-        self.make_sub_directory("PGS", "Filtered")
-        self.filter_directory = Path(self.working_dir, "PGS", "Filtered")
-        self.filter_index = self.args["Filter_Index"]
-        self._filter_iter_size = self.args["Filter_Range"]
-        self.maf_min = self.args["Min_Maf"]
-        self.freq_discrepancy = self.args["Max_Freq_Discrepancy"]
 
         # Score information
         self.make_sub_directory("PGS", "Scores")
@@ -100,7 +92,7 @@ class Input(SummaryLoader, LDLoader, CommonGenetic, ArgsParser):
         variant_names = self.snp_names(sm_dict)
 
         # Calculate the number of chunks required, then return the variant names split on chunk size
-        chunks = int(np.ceil(len(variant_names) / self._filter_iter_size))
+        chunks = int(np.ceil(len(variant_names) / self.filter_iter_size))
         if chunk_return:
             return np.array_split(variant_names, chunks), chunks
         else:
