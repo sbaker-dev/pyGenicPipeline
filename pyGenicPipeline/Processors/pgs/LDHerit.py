@@ -8,7 +8,6 @@ from csvObject import CsvObject
 from colorama import Fore
 from pathlib import Path
 import numpy as np
-import pickle
 import time
 
 
@@ -99,10 +98,10 @@ class LDHerit(Input):
             load_file = CsvObject(Path(self.summary_directory, file), self.cleaned_types, set_columns=True)
 
             # Isolate the generic information
-            chromosome, n_snps, n_iid = self._chromosome_from_load(load_file)
+            n_snps, n_iid = self._chromosome_from_load(load_file)
             chromosome_values = {self.count_snp: n_snps, self.count_iid: n_iid,
-                                 "Description": f"Chromosome {chromosome}"}
-            config_dict[chromosome] = chromosome_values
+                                 "Description": f"Chromosome {self.target_chromosome}"}
+            config_dict[self.target_chromosome] = chromosome_values
             total_snps += n_snps
 
         print(f"Suggested LD_Radius based on {total_snps} / 3000 is {total_snps / 3000}")
@@ -112,6 +111,19 @@ class LDHerit(Input):
 
         config_dict["Genome"] = {f"{self.genome_key}_{self.herit}": self.herit_calculated}
         ArgMaker().write_yaml_config_dict(config_dict, self.working_dir, "genome_wide_config")
+
+    def _chromosome_from_load(self, load_file):
+        """
+        We will need to extract the number of individuals, which requires re-parsing in the genetic file. We choose this
+        based on the chromosome of the load file.
+        """
+        # Set the target from the first row and column of data
+        self.target_chromosome = load_file.row_data[0][0]
+
+        # Isolate the genetic load file according to summary, and use this to isolate number of individuals
+        ref = self.construct_reference_panel()
+
+        return load_file.column_length, ref.iid_count
 
     def calculate_genome_wide_heritability(self):
         """
