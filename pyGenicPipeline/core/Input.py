@@ -2,10 +2,12 @@ from pyGenicPipeline.utils import errors as ec
 from pyGenicPipeline.utils import misc as mc
 from .Loaders import *
 
+from miscSupports import directory_iterator
 from csvObject import CsvObject
 from pyGenicParser import *
 from pathlib import Path
 import numpy as np
+import re
 
 
 class Input(SummaryLoader, LDLoader, CommonGenetic, ArgsParser):
@@ -79,6 +81,23 @@ class Input(SummaryLoader, LDLoader, CommonGenetic, ArgsParser):
             return job[0]
         else:
             raise TypeError(ec.job_type(type(operation_dict)))
+
+    def validation_chromosomes(self):
+        """
+        This will create a dataset of all the chromosomes that we have to work with
+
+        :Note: Mostly used externally to aid multi-core processing
+
+        :return: A list of valid chromosomes
+        :rtype: list
+        """
+
+        valid_chromosomes = []
+        for file in directory_iterator(self.gen_directory):
+            if Path(self.gen_directory, file).suffix == self.gen_type:
+                valid_chromosomes.append(int(re.sub(r'[\D]', "", Path(self.gen_directory, file).stem)))
+        valid_chromosomes.sort()
+        return valid_chromosomes
 
     def chunked_snp_names(self, sm_dict, chunk_return=False):
         """
