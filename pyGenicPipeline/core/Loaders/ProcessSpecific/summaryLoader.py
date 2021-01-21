@@ -1,6 +1,6 @@
 from pyGenicPipeline.utils import errors as ec
 from pyGenicPipeline.utils import misc as mc
-from .argsParser import ArgsParser
+from pyGenicPipeline.core.Loaders.argsParser import ArgsParser
 
 from csvObject import write_csv
 from pathlib import Path

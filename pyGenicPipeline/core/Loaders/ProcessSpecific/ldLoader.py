@@ -1,5 +1,5 @@
 from pyGenicPipeline.utils import errors as ec
-from .argsParser import ArgsParser
+from pyGenicPipeline.core.Loaders.argsParser import ArgsParser
 
 from miscSupports import load_yaml
 from pathlib import Path
