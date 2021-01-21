@@ -1,3 +1,4 @@
+from pyGenicPipeline.utils import errors as ec
 from .argsParser import ArgsParser
 
 from miscSupports import load_yaml
@@ -16,7 +17,7 @@ class LDLoader(ArgsParser):
 
         # Load genomic heritability calculations if set and the pre-calculated input if that was set
         self.gm = self._set_genome()
-        self.herit_calculated = self.args["Heritability_Calculated"]
+        self.herit_calculated = self._set_herit()
 
     def local_values(self, norm_snps, snp_index, number_of_snps):
         """
@@ -69,6 +70,25 @@ class LDLoader(ArgsParser):
             return load_yaml(genome_path)
         else:
             return None
+
+    def _set_herit(self):
+        """
+        Set pre-calculated heritability
+
+        If you are providing a heritability on a per chromosome biases then it needs to be a dict of chromosome: herit
+        If you want to distribute heritability over the chromosomes then provide float
+        If you want to calculate the heritability then provide None, if float is set it will still calculate it
+        :return: Nothing if not set, a dict or float if they where set
+        :rtype: None | float | dict
+        :raises TypeError: If type is not a None, float, or dict
+        """
+        herit = self.args["Heritability_Calculated"]
+        if not herit:
+            return None
+        elif isinstance(herit, (dict, float)):
+            return herit
+        else:
+            raise TypeError(ec.herit_type(type(herit)))
 
     @property
     def ld_dict(self):
