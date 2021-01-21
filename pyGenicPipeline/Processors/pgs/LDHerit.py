@@ -25,7 +25,7 @@ class LDHerit(Input):
         print(f"Suggested LD Radius based on total snps found after filtering / 3000 is {total_snps / 3000}")
         return total_snps / 3000
 
-    def calculate_ld(self):
+    def pgs_calculate_ld(self):
         """
         This will calculate the chromosome specific LD information which will be used later to construct genome_wide LD
         information, whilst also saving the values of the normalised Snps and standard errors
