@@ -195,9 +195,10 @@ class CommonGenetic(ArgsParser):
         return mc.variant_array(self.snp_id.lower(), sm_dict[self.sm_variants])
 
     @staticmethod
-    def revert_snp_names(snp_names):
+    def revert_snp_names(snp_names, gen_file):
         """PySnpTools stores snp_names as (snp,snp) and we may need to restore the names for some processes"""
-        return [f"{name},{name}" for name in snp_names]
+        v_dict = {snp[1]: snp[0] for snp in [snp.split(",") for snp in gen_file.sid]}
+        return [f"{v_dict[rs_id]},{rs_id}" for rs_id in snp_names]
 
     def isolate_raw_snps(self, gen_file, variant_names):
         """
@@ -218,8 +219,7 @@ class CommonGenetic(ArgsParser):
         elif self.gen_type == ".bgen":
             if self._snp_tools:
                 # Re-construct the variant_id-rs_id
-                v_dict = {snp[1]: snp[0] for snp in [snp.split(",") for snp in gen_file.sid]}
-                variant_names = [f"{v_dict[rs_id]},{rs_id}" for rs_id in variant_names]
+                variant_names = self.revert_snp_names(variant_names, gen_file)
 
                 ordered_common = gen_file[:, gen_file.sid_to_index(variant_names)].read(dtype=np.int8).val
                 raw_snps = sum(np.array([snp * i for i, snp in enumerate(ordered_common.T)], dtype=np.int8))
