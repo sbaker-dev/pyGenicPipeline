@@ -3,7 +3,7 @@ from pyGenicPipeline.utils import errors as ec
 from pyGenicPipeline.utils import misc as mc
 from pyGenicPipeline.core.Input import Input
 
-from miscSupports import directory_iterator, terminal_time
+from miscSupports import directory_iterator, terminal_time, write_pickle, load_pickle
 from csvObject import CsvObject
 from colorama import Fore
 from pathlib import Path
@@ -50,8 +50,7 @@ class LDHerit(Input):
         # Write the information as a combined dict to pickle file
         write_ld = {"LD_Dict": ld_dict, "LD_Scores": ld_scores, "LD_Matrix": ld_matrix, "Norm_Snps": normalised_snps,
                     "Snp_Std": std}
-        with open(f"{self.ld_directory}/LD{self.target_chromosome}", "wb") as f:
-            pickle.dump(write_ld, f)
+        write_pickle(self.ld_directory, f"LD{self.target_chromosome}", write_ld)
 
         print(f"Constructed LD for chromosome {self.target_chromosome} in {time.time() - t0} seconds")
         return write_ld
