@@ -3,11 +3,13 @@ from pyGenicPipeline.utils import errors as ec
 from pyGenicPipeline.utils import misc as mc
 from pyGenicPipeline.core.Input import Input
 
-from miscSupports import directory_iterator, write_json
+from miscSupports import directory_iterator, terminal_time
 from csvObject import CsvObject
 from colorama import Fore
 from pathlib import Path
 import numpy as np
+import pickle
+import time
 
 
 class LDHerit(Input):
@@ -18,8 +20,16 @@ class LDHerit(Input):
                              "Genome-Wide Heritability": 0.0}
 
     def calculate_ld(self):
+        """
+        This will calculate the chromosome specific LD information which will be used later to construct genome_wide LD
+        information, whilst also saving the values of the normalised Snps and standard errors
 
+        :return: Dict containing the LD dict, scores, matrix, the normalised snps and the standard errors of the raw
+            snps
+        :rtype: dict
+        """
         # Re load the filtered snps into memory
+        t0 = time.time()
         sm_dict = self.sm_dict_from_csv(self.filter_directory, f"Filtered_{self.target_chromosome}.csv")
 
         # Use the snps we found to filter down our reference panel, create the normalised snps, set the sid/iid counts
@@ -30,6 +40,15 @@ class LDHerit(Input):
         # Calculate the Ld scores, ld reference dict, and the ld matrix
         ld_dict, ld_scores = self._calculate_ld_scores(normalised_snps, sid_count, iid_count)
         ld_matrix = self._calculate_ld_matrix(normalised_snps, sid_count, iid_count)
+
+        # Write the information as a combined dict to pickle file
+        write_ld = {"LD_Dict": ld_dict, "LD_Scores": ld_scores, "LD_Matrix": ld_matrix, "Norm_Snps": normalised_snps,
+                    "Snp_Std": std}
+        with open(f"{self.ld_directory}/LD{self.target_chromosome}", "wb") as f:
+            pickle.dump(write_ld, f)
+
+        print(f"Constructed LD for chromosome {self.target_chromosome} in {time.time() - t0} seconds")
+        return write_ld
 
     def _calculate_ld_scores(self, normalised_snps, sid_count, iid_count):
         """This will calculate the Linkage Disequilibrium """
@@ -49,9 +68,11 @@ class LDHerit(Input):
             r2s = distance_dp ** 2
             ld_scores[i] = np.sum(r2s - ((1 - r2s) / (iid_count - 2)), dtype="float32")
 
+        print(f"Constructed LD scores {terminal_time()}")
         return ld_dict, ld_scores
 
     def _calculate_ld_matrix(self, normalised_snps, sid_count, iid_count):
+        """This will use a window of snps rather than snps in local LD to calculate the disequilibrium"""
         ld_matrix = {}
         for index, window in enumerate(range(0, sid_count, self.ld_radius * 2)):
             # Isolate the snps in the current window
@@ -60,6 +81,8 @@ class LDHerit(Input):
             # Calculate the disequilibrium, then append the shrunk r2 matrix to the ld_matrix
             disequilibrium_dp = np.dot(snp_window, snp_window.T) / iid_count
             ld_matrix[index] = mc.shrink_r2_matrix(disequilibrium_dp, iid_count)
+
+        print(f"Constructed LD matrix {terminal_time()}")
         return ld_matrix
 
     def calculate_genome_wide_heritability(self):
