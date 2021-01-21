@@ -202,13 +202,3 @@ class Input(SummaryLoader, LDLoader, CommonGenetic, ArgsParser):
     @property
     def f_freq(self):
         return f"{self.filter_key}_{self.freq}"
-
-    @property
-    def c_ld_score(self):
-        """LD_Score header index in Cleaned Data file"""
-        return self.summary_dict[self.ld_scores]
-
-    @property
-    def c_beta(self):
-        """Beta header index in Cleaned Data file"""
-        return self.summary_dict[self.beta]
