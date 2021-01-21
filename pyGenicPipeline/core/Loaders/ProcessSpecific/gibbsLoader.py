@@ -1,4 +1,4 @@
-from pyGenicPipeline.core.Loaders.argsParser import ArgsParser
+from ..argsParser import ArgsParser
 
 from pathlib import Path
 
