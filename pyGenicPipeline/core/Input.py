@@ -10,7 +10,7 @@ import numpy as np
 import re
 
 
-class Input(SummaryLoader, FilterLoader, LDLoader, CommonGenetic, ArgsParser):
+class Input(SummaryLoader, FilterLoader, LDLoader, GibbLoader, CommonGenetic, ArgsParser):
     def __init__(self, args):
         super().__init__(args)
 
@@ -22,8 +22,6 @@ class Input(SummaryLoader, FilterLoader, LDLoader, CommonGenetic, ArgsParser):
         self.scores_directory = Path(self.working_dir, "PGS", "Scores")
         self.phenotype_file = mc.validate_path(self.args["Phenotype"])
         self.covariates_file = mc.validate_path(self.args["Covariates"])
-
-
 
     @staticmethod
     def _set_current_job(operation_dict):
@@ -129,16 +127,6 @@ class Input(SummaryLoader, FilterLoader, LDLoader, CommonGenetic, ArgsParser):
 
         return ph_dict
 
-    def _set_causal_fractions(self):
-        """
-        If the user has provided a set of causal fractions of variants to use for the gibbs sampler then use those, else
-        use the default that LDPred used.
-        """
-        if self.args["Causal_Fractions"]:
-            return self.args["Causal_Fractions"]
-        else:
-            return [1, 0.3, 0.1, 0.03, 0.01, 0.003, 0.001]
-
     def sm_dict_from_csv(self, directory, name):
         """
         Load a saved cleaned file from summary statistics for a given chromosome found at the load_path provided, and
@@ -158,21 +146,3 @@ class Input(SummaryLoader, FilterLoader, LDLoader, CommonGenetic, ArgsParser):
         sm_variants = [Variant(ch, bp, sn, ef, al) for ch, bp, sn, ef, al in zip(chromo, bp_pos, snp_id, effect, alt)]
         return {self.sm_variants: np.array(sm_variants), self.log_odds: np.array(log), self.beta: np.array(beta),
                 self.freq: np.array(freq)}
-
-    def _set_gibbs_headers(self):
-        """Construct the headers that will be used in the writing of weights"""
-
-        gibbs_headers = [self.chromosome, self.bp_position, self.snp_id, self.effect_allele, self.alt_allele,
-                         self.beta, self.log_odds, self.ld_scores, self.gibbs_beta, self.effect_size]
-
-        gibbs_dict = {header: i for i, header in enumerate(gibbs_headers)}
-
-        return gibbs_headers, gibbs_dict
-
-    @property
-    def f_std(self):
-        return f"{self.filter_key}_{self.stds}"
-
-    @property
-    def f_freq(self):
-        return f"{self.filter_key}_{self.freq}"
