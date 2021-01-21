@@ -1,4 +1,4 @@
-from pyGenicPipeline.support.ArgMaker import ArgMaker
+from pyGenicPipeline.utils.ArgMaker import ArgMaker
 from pyGenicPipeline.utils import errors as ec
 from pyGenicPipeline.utils import misc as mc
 from pyGenicPipeline.core.Input import Input
@@ -16,6 +16,39 @@ class LDHerit(Input):
 
         self._genome_dict = {"Genome-wide Stats": "Values", "Lambda Inflation": 0.0, "Mean LD Score": 0.0,
                              "Genome-Wide Heritability": 0.0}
+
+    def calculate_ld(self):
+
+        # Re load the filtered snps into memory
+        sm_dict = self.sm_dict_from_csv(self.filter_directory, f"Filtered_{self.target_chromosome}.csv")
+
+        # use the snps we found to filter down our reference panel, create the normalised snps
+        ref = self.construct_reference_panel()
+        normalised_snps, std = self.normalise_snps(ref, self.snp_names(sm_dict), True)
+
+        # Calculate the Ld scores and dict
+        ld_dict, ld_scores = self._calculate_ld_scores(normalised_snps)
+
+    def _calculate_ld_scores(self, normalised_snps):
+        """This will calculate the Linkage Disequilibrium """
+
+        # Setup arrays and dicts, then iterate though the snps
+        sid_count, iid_count = normalised_snps.shape
+        ld_scores = np.ones(sid_count)
+        ld_dict = {}
+        for i, snp in enumerate(normalised_snps):
+            # Isolate the local snps in LD
+            snps_in_ld = self.local_values(normalised_snps, i, sid_count)
+
+            # Calculate the distance dot product, store the clipped r2 value in the ld_dict
+            distance_dp = np.dot(snp, snps_in_ld.T) / iid_count
+            ld_dict[i] = mc.shrink_r2_matrix(distance_dp, iid_count)
+
+            # calculate the ld score and save it to the array
+            r2s = distance_dp ** 2
+            ld_scores[i] = np.sum(r2s - ((1 - r2s) / (iid_count - 2)), dtype="float32")
+
+        return ld_dict, ld_scores
 
     def calculate_genome_wide_heritability(self):
         """
@@ -116,54 +149,6 @@ class LDHerit(Input):
 
         return chromosome, load_file.column_length, core.iid_count
 
-    def compute_ld_scores(self, sm_dict, gen_file, snp_count, iid_count, load_path, ld_dict=False):
-        """
-        This will calculate the ld scores and create a dict of the ld reference for each snp in our normalised list of
-        snps
-        """
-
-        # Setup arrays and dicts
-        ld_scores = np.ones(snp_count)
-        if ld_dict:
-            ld_dict = {}
-        else:
-            ld_dict = None
-
-        # Create the normalised snps, then calculate the disequilibrium with them
-        norm_snps, stds = self.normalise_snps(gen_file, self.variant_names(sm_dict),  True)
-        for i, snp in enumerate(norm_snps):
-            self._calculate_disequilibrium(sm_dict, load_path, i, snp, norm_snps, ld_scores, iid_count, snp_count, ld_dict)
-
-        # Store relevant values
-        sm_dict[self.ld_scores] = ld_scores
-        sm_dict[self.ld_dict] = ld_dict
-        sm_dict[self.norm_snps] = norm_snps
-        sm_dict[self.stds] = stds
-
-    def _calculate_disequilibrium(self, sm_dict, load_path, snp_index, current_snp, norm_snps, ld_scores, iid_count,
-                                  snp_count, ld_dict=None):
-        """
-        This will calculate the disequilibrium of the snps in a given radius window
-        """
-        # todo THis does work -- tecnically -- but its too slow when running snp by snp.
-        # Create a window of normalised snps around the current snp with a maximum length of (self.ld_radius * 2) + 1
-        # print(norm_snps.shape)
-
-        # Load and normalise the snp dosage data for this window
-
-        # snp_names = self.local_values(self.variant_names(sm_dict), snp_index, snp_count)
-        # snps_in_ld, _ = self.normalise_snps(self.gen_reference(load_path), snp_names)
-
-        snps_in_ld = self.local_values(norm_snps, snp_index, snp_count)
-
-        # Calculate the distance dot product
-        distance_dp = np.dot(current_snp, snps_in_ld.T) / iid_count
-        if isinstance(ld_dict, dict):
-            ld_dict[snp_index] = mc.shrink_r2_matrix(distance_dp, iid_count)
-
-        # calculate the ld score
-        r2s = distance_dp ** 2
-        ld_scores[snp_index] = np.sum(r2s - ((1 - r2s) / (iid_count - 2)), dtype="float32")
 
     def _chromosome_heritability(self, load_file, chromosome, snp_count):
         """
