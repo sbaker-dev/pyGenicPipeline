@@ -23,7 +23,7 @@ class FilterSnps(Input):
         t0 = time.time()
 
         # Chunk the snps, freqs, and bp positions so we can load raw dosage data in a memory conscious way
-        sm_dict = self.sm_dict_from_csv()
+        sm_dict = self.sm_dict_from_csv(self.summary_directory, f"Cleaned_{self.target_chromosome}.csv")
         snp_list, chunks = self.chunked_snp_names(sm_dict, chunk_return=True)
         bp_positions = np.array_split(mc.variant_array(self.bp_position.lower(), sm_dict[self.sm_variants]), chunks)
         freqs = np.array_split(sm_dict[self.freq], chunks)

@@ -151,13 +151,12 @@ class Input(CommonGenetic, SummaryLoader, ArgsParser):
         else:
             return [1, 0.3, 0.1, 0.03, 0.01, 0.003, 0.001]
 
-    def sm_dict_from_csv(self):
+    def sm_dict_from_csv(self, directory, name):
         """
         Load a saved cleaned file from summary statistics for a given chromosome found at the load_path provided, and
         use this to construct the sm_dict we pass between methods
         """
-        load_file = CsvObject(Path(self.summary_directory, f"Cleaned_{self.target_chromosome}.csv"), self.cleaned_types,
-                              set_columns=True)
+        load_file = CsvObject(Path(directory, name), self.cleaned_types, set_columns=True)
 
         chromo = load_file.column_data[self.summary_dict[self.chromosome]]
         bp_pos = load_file.column_data[self.summary_dict[self.bp_position]]
