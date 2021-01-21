@@ -43,7 +43,7 @@ class SummaryCleaner(Input):
 
         # Log to terminal what has been filtered / removed, then write out if requested, and return the sm dict
         mc.error_dict_to_terminal(self._sum_error_dict, "Summary_Stats", t0)
-        print(f"Found {len(sm_dict[self.sm_variants])}, will create {len(self.chunked_snp_names(sm_dict)[0])} Chunks")
+        print(f"Found {len(sm_dict[self.sm_variants])}")
         return self.write_summary_files(sm_dict, write, self.target_chromosome, "Cleaned", self.summary_directory)
 
     def _valid_snps_lines_and_variants(self):
