@@ -1,5 +1,3 @@
-
-# Input error codes
 def job_violation(jobs):
     return f"TO MANY JOBS SPECIFIED\n" \
            f"pyGeneticPipe is setup to take a single process at a time, controlled via shell scripts or via separate " \
@@ -73,6 +71,14 @@ def all_missing(attributes_str, operation):
 def ld_radius_to_large():
     return "Warning: LD radius seems small in comparision to average LD score!\nConsider using a smaller radius or" \
            " less snps"
+
+
+def herit_type(type_herit):
+    return f"ERROR: PREDEFINED HERITABILITY IS NEITHER DICT NOR FLOAT\n" \
+           f"If you are providing a heritability on a per chromosome baises then it needs to be a dict of chromosme: " \
+           f"heritability\nIf you want to distribute heritability over the chromosomes then provide float\nIf you " \
+           f"want to calculate the heritability then provide None, if float is set it will still calculate it\n" \
+           f"Yet Found {type_herit}"
 
 
 def heritability_to_large():

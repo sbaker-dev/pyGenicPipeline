@@ -131,6 +131,7 @@ class LDHerit(Input):
         chromosome information that does not take the form of lists, in a yaml config file.
         """
 
+        t0 = time.time()
         config_dict = {}
         cumulative_ld, sum_sq_beta, total_snps = self._heritability_by_chromosome(config_dict)
 
@@ -143,8 +144,9 @@ class LDHerit(Input):
         chi_square_lambda = np.mean(self.sample_size * sum_sq_beta / float(total_snps))
         gw_h2_ld_score_est = max(0.0001, (max(1.0, float(chi_square_lambda)) - 1.0) /
                                  (self.sample_size * (average_gw_ld_score / total_snps)))
-        config_dict["Genome"] = {f"{self.genome_key}_{self.avg_ld}": average_gw_ld_score,
-                                 f"{self.genome_key}_{self.herit}": gw_h2_ld_score_est,
+
+        # Construct the write dict
+        config_dict["Genome"] = {f"{self.avg_ld}": average_gw_ld_score, f"{self.herit}": gw_h2_ld_score_est,
                                  "Genome_Description": "Genome-wide Statistics"}
 
         # Log warnings if applicable then print information to terminal
@@ -153,13 +155,14 @@ class LDHerit(Input):
         if gw_h2_ld_score_est > 1:
             print(Fore.RED + ec.heritability_to_large())
 
+        # Log information to the terminal
         self._genome_dict["Lambda Inflation"] = round(float(chi_square_lambda), 7)
         self._genome_dict["Mean LD Score"] = round(float(average_gw_ld_score), 7)
         self._genome_dict["Genome-Wide Heritability"] = round(float(gw_h2_ld_score_est), 7)
-        mc.error_dict_to_terminal(self._genome_dict)
+        mc.error_dict_to_terminal(self._genome_dict, "calculate_genome_wide_heritability", t0)
 
         # Construct config file
-        ArgMaker().write_yaml_config_dict(config_dict, self.working_dir, "genome_wide_config")
+        ArgMaker().write_yaml_config_dict(config_dict, Path(self.working_dir, "PGS"), "genome_wide_config")
 
     def _heritability_by_chromosome(self, config_dict):
         """
@@ -167,41 +170,36 @@ class LDHerit(Input):
         calculation
         """
         cumulative_ld = sum_sq_beta = total_snps = 0
-        for file in directory_iterator(self.clean_directory):
-            load_file = CsvObject(Path(self.clean_directory, file), self.cleaned_types, set_columns=True)
+        for file in directory_iterator(self.ld_directory):
 
-            # Isolate the generic information
-            chromosome, n_snps, n_iid = self._chromosome_from_load(load_file)
+            # Infer the chromosome of this file via remove the 'LD' prefix
+            chromosome = file[2:]
+            print(f"Processing Chromosome {chromosome}")
+
+            # Load the ld data from the ld_directory and use it to set sid/iid count
+            data = load_pickle(self.ld_directory, file)
+            sid_count, iid_count = data[self.norm_snps].shape
+
+            # Isolate the betas from the Filtered to calculate the sum squared betas, also ld scores from ld data
+            betas = self.sm_dict_from_csv(self.filter_directory, f"Filtered_{chromosome}.csv")[self.beta]
+            sum_beta_sq = np.sum(np.array(betas) ** 2)
+            ld_scores = data[self.ld_scores]
 
             # Calculate the heritability and average LD at a chromosome level
-            heritability, average_ld = self._chromosome_heritability(load_file, chromosome, n_snps)
+            heritability, average_ld = self._chromosome_heritability(chromosome, ld_scores, sum_beta_sq, sid_count)
 
             # Cumulate ld, snps, and sum square beta
-            cumulative_ld += np.sum(load_file.column_data[self.c_ld_score])
-            total_snps += n_snps
-            sum_sq_beta += np.sum(np.array(load_file.column_data[self.c_beta]) ** 2)
+            cumulative_ld += np.sum(ld_scores)
+            total_snps += sid_count
+            sum_sq_beta += np.sum(sum_beta_sq)
 
             # Store Values for config file
-            chromosome_values = {self.herit: heritability, self.count_snp: n_snps, self.count_iid: n_iid,
+            chromosome_values = {self.herit: heritability, self.count_snp: sid_count, self.count_iid: iid_count,
                                  self.avg_ld: average_ld, "Description": f"Chromosome {chromosome}"}
             config_dict[chromosome] = chromosome_values
         return cumulative_ld, sum_sq_beta, total_snps
 
-    def _chromosome_from_load(self, load_file):
-        """
-        We will need to extract the number of individuals, which requires re-parsing in the genetic file. We choose this
-        based on the chromosome of the load file.
-        """
-        # Isolate the chromosome from the first row of data
-        chromosome = load_file.row_data[0][self.c_chromosome]
-        load_path = str(self.select_file_on_chromosome(chromosome, self.gen_directory, self.gen_type))
-
-        # Isolate the genetic load file according to summary, and use this to isolate number of individuals
-        _, core = self.construct_validation(load_path)
-
-        return chromosome, load_file.column_length, core.iid_count
-
-    def _chromosome_heritability(self, load_file, chromosome, snp_count):
+    def _chromosome_heritability(self, chromosome, ld_scores, sum_beta_sq, snp_count):
         """
         This will calculated the chromosome chi-squared lambda (maths from LDPred), and then take the maximum of 0.0001
         or the computed heritability of
@@ -212,15 +210,14 @@ class LDHerit(Input):
 
         :return: estimated heritability (h2 in ldpred)
         """
-        if self.herit_calculated:
+        if isinstance(self.herit_calculated, dict):
             try:
                 return self.herit_calculated[chromosome]
             except KeyError:
                 raise Exception("You have said you will provided pre-calculated heritability but failed to find it for"
                                 f"chromosome {chromosome}")
         else:
-            average_ld = np.mean(load_file.column_data[self.c_ld_score])
-            sum_beta_sq = np.sum(np.array(load_file.column_data[self.c_beta]) ** 2)
+            average_ld = np.mean(ld_scores)
             chi_sq_lambda = np.mean((self.sample_size * sum_beta_sq) / snp_count)
 
             herit = max(0.0001, (max(1.0, float(chi_sq_lambda)) - 1) / (self.sample_size * (average_ld / snp_count)))
