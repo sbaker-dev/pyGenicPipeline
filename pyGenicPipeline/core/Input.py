@@ -31,8 +31,7 @@ class Input(SummaryLoader, LDLoader, CommonGenetic, ArgsParser):
         self.phenotype_file = mc.validate_path(self.args["Phenotype"])
         self.covariates_file = mc.validate_path(self.args["Covariates"])
 
-        if (self.sm_case_freq is not None) or (self.sm_control_n is not None):
-            raise NotImplementedError("Psychiatric Genomics Consortium Summary stats are untested and unfinished!")
+
 
     @staticmethod
     def _set_current_job(operation_dict):

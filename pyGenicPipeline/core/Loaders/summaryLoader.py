@@ -30,6 +30,9 @@ class SummaryLoader(ArgsParser):
 
         self.summary_headers, self.summary_dict = self._set_summary_write_headers()
 
+        if (self.sm_case_freq is not None) or (self.sm_control_n is not None):
+            raise NotImplementedError("Psychiatric Genomics Consortium Summary stats are untested and unfinished!")
+
     def _set_summary_stats(self):
         """
         If we are reading in the summary statistics file then validate its path, construct a valid set of snps in a set
