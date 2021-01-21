@@ -157,7 +157,6 @@ class SummaryLoader(ArgsParser):
                                                 sm_dict[self.freq]):
                 rows_out.append(v.items() + [log_odds, beta, freq])
 
-            print(directory)
             write_csv(directory, f"{summary_type}_{chromosome}", self.summary_headers, rows_out)
         return sm_dict
 

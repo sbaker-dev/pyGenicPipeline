@@ -190,9 +190,14 @@ class CommonGenetic(ArgsParser):
         duplicates = np.sum(r_count - len(ref))
         return set(ref), indexer, duplicates
 
-    def variant_names(self, sm_dict):
+    def snp_names(self, sm_dict):
         """Variant names differ in pysnptools bgen, so account for this and just return rs_id's"""
         return mc.variant_array(self.snp_id.lower(), sm_dict[self.sm_variants])
+
+    @staticmethod
+    def revert_snp_names(snp_names):
+        """PySnpTools stores snp_names as (snp,snp) and we may need to restore the names for some processes"""
+        return [f"{name},{name}" for name in snp_names]
 
     def isolate_raw_snps(self, gen_file, variant_names):
         """

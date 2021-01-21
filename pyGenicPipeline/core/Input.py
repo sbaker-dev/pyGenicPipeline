@@ -101,7 +101,7 @@ class Input(CommonGenetic, SummaryLoader, ArgsParser):
         """
 
         # Extract variant names
-        variant_names = self.variant_names(sm_dict)
+        variant_names = self.snp_names(sm_dict)
 
         # Calculate the number of chunks required, then return the variant names split on chunk size
         chunks = int(np.ceil(len(variant_names) / self._filter_iter_size))
