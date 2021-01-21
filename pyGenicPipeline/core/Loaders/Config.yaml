@@ -1,3 +1,6 @@
+# This file contains internal configurations for process run by pyGenicPipeline. It will be loaded once by ArgsParser
+# then for a given loader that requires it pre-set args they will be accessed via a dict key. For example for the
+# summary config it will be self._config = config[Summary]
 Summary:
   Mandatory_Headers: ["SNP_ID", "Effect_Allele", "Alt_Allele", "Effect_Size", "P_Value"]
 
