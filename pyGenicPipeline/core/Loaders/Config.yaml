@@ -27,8 +27,3 @@ Summary:
     'G': 'C'
     'T': 'A'
     'C': 'G'
-
-Other:
-  #todo These should be in args not config
-  Min_Maf: 0.01
-  Max_Freq_Discrepancy: 0.1

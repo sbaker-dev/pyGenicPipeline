@@ -22,25 +22,8 @@ class Input(SummaryLoader, LDLoader, CommonGenetic, ArgsParser):
         self.filter_directory = Path(self.working_dir, "PGS", "Filtered")
         self.filter_index = self.args["Filter_Index"]
         self._filter_iter_size = self.args["Filter_Range"]
-        # Todo this is bad, needs to made external
-        self._config = self.config["Other"]
-        self.maf_min = self._config["Min_Maf"]
-        self.freq_discrepancy = self._config["Max_Freq_Discrepancy"]
-
-        # Gibbs information
-        self.make_sub_directory("PGS", "Weights")
-        self.weights_directory = Path(self.working_dir, "PGS", "Weights")
-        self.gibbs_causal_fractions = self._set_causal_fractions()
-        # todo set these up externally
-        self.gibbs_run = False
-        self.gibbs_iter = 100
-        self.gibbs_burn_in = 10
-        self.gibbs_shrink = 1
-        self.gibbs_zero_jump = 0.01
-        self.gibbs_random_seed = 42
-        self.gibbs_tight = None
-        self.gibbs_headers, self._gibbs_header_dict = self._set_gibbs_headers()
-        self.gibbs_breaker = True
+        self.maf_min = self.args["Min_Maf"]
+        self.freq_discrepancy = self.args["Max_Freq_Discrepancy"]
 
         # Score information
         self.make_sub_directory("PGS", "Scores")
