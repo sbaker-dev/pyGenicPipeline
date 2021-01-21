@@ -12,6 +12,15 @@ import re
 
 class Input(SummaryLoader, FilterLoader, LDLoader, GibbLoader, CommonGenetic, ArgsParser):
     def __init__(self, args):
+        """
+        This Class Loads all other Loaders that represent specific or common attributes/methods that are used across
+        processors.
+
+        Methods or attributes set within this class are dependent on multiple attributes from its inherited sub class or
+        are specific to Input
+
+        :param args: Args Passed by the users
+        """
         super().__init__(args)
 
         # General operational parameters
