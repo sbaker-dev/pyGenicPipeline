@@ -3,7 +3,7 @@ from pyGenicPipeline.utils import errors as ec
 from pyGenicPipeline.utils import misc as mc
 from pyGenicPipeline.core.Input import Input
 
-from miscSupports import directory_iterator
+from miscSupports import directory_iterator, write_json
 from csvObject import CsvObject
 from colorama import Fore
 from pathlib import Path
@@ -22,18 +22,19 @@ class LDHerit(Input):
         # Re load the filtered snps into memory
         sm_dict = self.sm_dict_from_csv(self.filter_directory, f"Filtered_{self.target_chromosome}.csv")
 
-        # use the snps we found to filter down our reference panel, create the normalised snps
+        # Use the snps we found to filter down our reference panel, create the normalised snps, set the sid/iid counts
         ref = self.construct_reference_panel()
         normalised_snps, std = self.normalise_snps(ref, self.snp_names(sm_dict), True)
+        sid_count, iid_count = normalised_snps.shape
 
-        # Calculate the Ld scores and dict
-        ld_dict, ld_scores = self._calculate_ld_scores(normalised_snps)
+        # Calculate the Ld scores, ld reference dict, and the ld matrix
+        ld_dict, ld_scores = self._calculate_ld_scores(normalised_snps, sid_count, iid_count)
+        ld_matrix = self._calculate_ld_matrix(normalised_snps, sid_count, iid_count)
 
-    def _calculate_ld_scores(self, normalised_snps):
+    def _calculate_ld_scores(self, normalised_snps, sid_count, iid_count):
         """This will calculate the Linkage Disequilibrium """
 
         # Setup arrays and dicts, then iterate though the snps
-        sid_count, iid_count = normalised_snps.shape
         ld_scores = np.ones(sid_count)
         ld_dict = {}
         for i, snp in enumerate(normalised_snps):
@@ -49,6 +50,17 @@ class LDHerit(Input):
             ld_scores[i] = np.sum(r2s - ((1 - r2s) / (iid_count - 2)), dtype="float32")
 
         return ld_dict, ld_scores
+
+    def _calculate_ld_matrix(self, normalised_snps, sid_count, iid_count):
+        ld_matrix = {}
+        for index, window in enumerate(range(0, sid_count, self.ld_radius * 2)):
+            # Isolate the snps in the current window
+            snp_window = self.window_values(normalised_snps, sid_count, window)
+
+            # Calculate the disequilibrium, then append the shrunk r2 matrix to the ld_matrix
+            disequilibrium_dp = np.dot(snp_window, snp_window.T) / iid_count
+            ld_matrix[index] = mc.shrink_r2_matrix(disequilibrium_dp, iid_count)
+        return ld_matrix
 
     def calculate_genome_wide_heritability(self):
         """
