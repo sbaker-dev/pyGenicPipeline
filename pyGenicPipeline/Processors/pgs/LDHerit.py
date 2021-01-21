@@ -19,6 +19,12 @@ class LDHerit(Input):
         self._genome_dict = {"Genome-wide Stats": "Values", "Lambda Inflation": 0.0, "Mean LD Score": 0.0,
                              "Genome-Wide Heritability": 0.0}
 
+    def suggest_ld_radius(self):
+        """Suggest the size of LD that the user should be using"""
+        total_snps = sum([CsvObject(file).column_length for file in directory_iterator(self.filter_directory)])
+        print(f"Suggested LD Radius based on total snps found after filtering / 3000 is {total_snps / 3000}")
+        return total_snps / 3000
+
     def calculate_ld(self):
         """
         This will calculate the chromosome specific LD information which will be used later to construct genome_wide LD
@@ -85,6 +91,29 @@ class LDHerit(Input):
         print(f"Constructed LD matrix {terminal_time()}")
         return ld_matrix
 
+    def distribute_heritability_genome_wide(self):
+        """If we can't calculate heritability, distribute it from a provided float"""
+        total_snps = 0
+        config_dict = {}
+        for file in directory_iterator(self.summary_directory):
+            print(file)
+            load_file = CsvObject(Path(self.summary_directory, file), self.cleaned_types, set_columns=True)
+
+            # Isolate the generic information
+            chromosome, n_snps, n_iid = self._chromosome_from_load(load_file)
+            chromosome_values = {self.count_snp: n_snps, self.count_iid: n_iid,
+                                 "Description": f"Chromosome {chromosome}"}
+            config_dict[chromosome] = chromosome_values
+            total_snps += n_snps
+
+        print(f"Suggested LD_Radius based on {total_snps} / 3000 is {total_snps / 3000}")
+
+        for key, value in config_dict.items():
+            config_dict[key][self.herit] = self.herit_calculated * (config_dict[key][self.count_snp] / total_snps)
+
+        config_dict["Genome"] = {f"{self.genome_key}_{self.herit}": self.herit_calculated}
+        ArgMaker().write_yaml_config_dict(config_dict, self.working_dir, "genome_wide_config")
+
     def calculate_genome_wide_heritability(self):
         """
         Once we have cleaned our data sets, we can store the genome wide data along side with some individual
@@ -119,29 +148,6 @@ class LDHerit(Input):
         mc.error_dict_to_terminal(self._genome_dict)
 
         # Construct config file
-        ArgMaker().write_yaml_config_dict(config_dict, self.working_dir, "genome_wide_config")
-
-    def distribute_heritability_genome_wide(self):
-        """If we can't calculate heritability, distribute it from a provided float"""
-        total_snps = 0
-        config_dict = {}
-        for file in directory_iterator(self.clean_directory):
-            print(file)
-            load_file = CsvObject(Path(self.clean_directory, file), self.cleaned_types[:-1], set_columns=True)
-
-            # Isolate the generic information
-            chromosome, n_snps, n_iid = self._chromosome_from_load(load_file)
-            chromosome_values = {self.count_snp: n_snps, self.count_iid: n_iid,
-                                 "Description": f"Chromosome {chromosome}"}
-            config_dict[chromosome] = chromosome_values
-            total_snps += n_snps
-
-        print(f"Suggested LD_Radius based on {total_snps} / 3000 is {total_snps / 3000}")
-
-        for key, value in config_dict.items():
-            config_dict[key][self.herit] = self.herit_calculated * (config_dict[key][self.count_snp] / total_snps)
-
-        config_dict["Genome"] = {f"{self.genome_key}_{self.herit}": self.herit_calculated}
         ArgMaker().write_yaml_config_dict(config_dict, self.working_dir, "genome_wide_config")
 
     def _heritability_by_chromosome(self, config_dict):
@@ -183,7 +189,6 @@ class LDHerit(Input):
         _, core = self.construct_validation(load_path)
 
         return chromosome, load_file.column_length, core.iid_count
-
 
     def _chromosome_heritability(self, load_file, chromosome, snp_count):
         """
