@@ -1,3 +1,3 @@
 from pyGenicPipeline.core.Main import Main
-from pyGenicPipeline.support.ArgMaker import ArgMaker
-from pyGenicPipeline.core.Constructors.Shell import Shell
+from pyGenicPipeline.utils.ArgMaker import ArgMaker
+from pyGenicPipeline.Processors.Shell import Shell

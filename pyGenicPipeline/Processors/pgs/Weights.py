@@ -7,12 +7,12 @@ import numpy as np
 import time
 
 
-class Gibbs(Input):
+class Weights(Input):
     def __init__(self, args):
         super().__init__(args)
         self.start_time = 0
 
-    def construct_gibbs_weights(self, sm_dict, load_path, chromosome):
+    def pgs_construct_weights(self, sm_dict, load_path, chromosome):
         """
         THis will construct weights for both the infinitesimal and variant fraction models, with the latter being run
         via a Gibbs processor. Both methods from LDPred
@@ -81,7 +81,7 @@ class Gibbs(Input):
             current_window = stop_i - start_i
 
             # Load and normalise the snp dosage data for this window
-            window_snp_names = self.variant_names(sm_dict)[start_i: min(snp_count, (start_i + ld_window))]
+            window_snp_names = self.snp_names(sm_dict)[start_i: min(snp_count, (start_i + ld_window))]
             window_snps, std = self.normalise_snps(self.gen_reference(load_path), window_snp_names, True)
 
             # Load the disequilibrium (D in LDPred)?

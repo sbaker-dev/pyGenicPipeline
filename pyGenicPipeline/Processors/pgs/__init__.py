@@ -1,5 +1,5 @@
 from .FilterSnps import FilterSnps
-from .Gibbs import Gibbs
+from .Weights import Weights
 from .LDHerit import LDHerit
 from .Score import Score
 from .SummaryCleaner import SummaryCleaner
