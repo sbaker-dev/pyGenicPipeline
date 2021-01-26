@@ -10,6 +10,7 @@ A high level API for various packages and pipelines, which have been altered or 
 
 ##### major version changes
 
+* commit 80dd1c5 Version 0.08.0 - Reworking with actual reference panel for weights and major reformatting
 * commit 5a91051 Version 0.07.0 - Making scores be memory considerate
 * commit 192ade3 Version 0.06.0 - Adding more methods and call normalised from sliced rather than the full array
 * commit be640d1 Version 0.05.0 - Adding more methods to Main to allow for smaller less aggregated processes
