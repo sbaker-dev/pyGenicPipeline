@@ -16,7 +16,7 @@ class LDLoader(ArgsParser):
         self.ld_radius = self.args["LD_Radius"]
 
         # Load genomic heritability calculations if set and the pre-calculated input if that was set
-        self.gm = self._set_genome()
+        self.genomic_data = self._set_genome()
         self.herit_calculated = self._set_herit()
 
     def local_values(self, norm_snps, snp_index, number_of_snps):
@@ -65,7 +65,7 @@ class LDLoader(ArgsParser):
 
     def _set_genome(self):
         """Load the genome file if it has been produced, else return None"""
-        genome_path = Path(self.working_dir, "genome_wide_config.yaml")
+        genome_path = Path(self.working_dir, "PGS", "genome_wide_config.yaml")
         if genome_path.exists():
             return load_yaml(genome_path)
         else:
