@@ -89,28 +89,3 @@ class LDLoader(ArgsParser):
             return herit
         else:
             raise TypeError(ec.herit_type(type(herit)))
-
-    @property
-    def ld_dict(self):
-        """Stores snp specific information on ld in a dict"""
-        return "LD_Dict"
-
-    @property
-    def ld_scores(self):
-        """LD score for a given snp"""
-        return "LD_Scores"
-
-    @property
-    def ld_matrix(self):
-        """LD matrix of normalised snps"""
-        return "LD_matrix"
-
-    @property
-    def norm_snps(self):
-        """Normalised snps"""
-        return "Norm_Snps"
-
-    @property
-    def raw_stds(self):
-        """Standard errors of the raw snps"""
-        return "Snp_Std"

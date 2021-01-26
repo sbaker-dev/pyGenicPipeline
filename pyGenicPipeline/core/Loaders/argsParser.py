@@ -163,7 +163,12 @@ class ArgsParser:
     @property
     def norm_snps(self):
         """Key used for accessing Raw_Snps headers, groups or other attributes"""
-        return "Normalised_Snps"
+        return "Norm_Snps"
+
+    @property
+    def raw_stds(self):
+        """Standard errors of the raw snps"""
+        return "Snp_Std"
 
     @property
     def count_snp(self):
@@ -201,7 +206,7 @@ class ArgsParser:
         return "Gibbs_Beta"
 
     @property
-    def genome_key(self):
+    def genome(self):
         """Key used for accessing Genome wide data in headers, groups or other attributes"""
         return "Genome"
 
@@ -231,16 +236,6 @@ class ArgsParser:
         return "FID"
 
     @property
-    def f_id(self):
-        """Key used for accessing the Fathers Identifiers in headers, groups or other attributes"""
-        return "F_ID"
-
-    @property
-    def m_id(self):
-        """Key used for accessing the Mothers Identifiers in headers, groups or other attributes"""
-        return "F_ID"
-
-    @property
     def sex(self):
         """Key used for accessing the Sex in headers, groups or other attributes"""
         return "Sex"
@@ -259,3 +254,11 @@ class ArgsParser:
     def covariants(self):
         """Key used for accessing the covariants in headers, groups or other attributes"""
         return "Covariants"
+
+    @property
+    def sid_count(self):
+        return "Snp_Count"
+
+    @property
+    def iid_count(self):
+        return "IID_Count"
