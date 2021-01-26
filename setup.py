@@ -22,10 +22,9 @@ MAINTAINER = 'Samuel Baker'
 MAINTAINER_EMAIL = 'samuelbaker.researcher@gmail.com'
 LICENSE = 'MIT'
 DOWNLOAD_URL = "https://github.com/sbaker-dev/pyGenicPipeline"
-VERSION = "0.08.0`"
+VERSION = "0.09.0`"
 PYTHON_REQUIRES = ">=3.7"
 
-# todo Pipe install pyGenicPipe
 INSTALL_REQUIRES = [
 
     'pysnptools',
@@ -35,7 +34,8 @@ INSTALL_REQUIRES = [
     'zstd',
     'scipy',
     'PyYAML',
-    'miscSupports']
+    'miscSupports',
+    'pyGenicParser']
 
 CLASSIFIERS = [
     'Programming Language :: Python :: 3.7',
