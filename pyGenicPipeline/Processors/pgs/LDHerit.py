@@ -42,13 +42,11 @@ class LDHerit(Input):
         normalised_snps, std = self.normalise_snps(ref, self.snp_names(sm_dict), True)
         sid_count, iid_count = normalised_snps.shape
 
-        # Calculate the Ld scores, ld reference dict, and the ld matrix
+        # Calculate the Ld scores and ld reference dict
         ld_dict, ld_scores = self._calculate_ld_scores(normalised_snps, sid_count, iid_count)
-        ld_matrix = self._calculate_ld_matrix(normalised_snps, sid_count, iid_count)
 
         # Write the information as a combined dict to pickle file
-        write_ld = {"LD_Dict": ld_dict, "LD_Scores": ld_scores, "LD_Matrix": ld_matrix, "Norm_Snps": normalised_snps,
-                    "Snp_Std": std}
+        write_ld = {"LD_Dict": ld_dict, "LD_Scores": ld_scores, "Norm_Snps": normalised_snps, "Snp_Std": std}
         write_pickle(self.ld_directory, f"LD{self.target_chromosome}", write_ld)
 
         print(f"Constructed LD for chromosome {self.target_chromosome} in {time.time() - t0} seconds")
@@ -74,20 +72,6 @@ class LDHerit(Input):
 
         print(f"Constructed LD scores {terminal_time()}")
         return ld_dict, ld_scores
-
-    def _calculate_ld_matrix(self, normalised_snps, sid_count, iid_count):
-        """This will use a window of snps rather than snps in local LD to calculate the disequilibrium"""
-        ld_matrix = {}
-        for index, window in enumerate(range(0, sid_count, self.ld_radius * 2)):
-            # Isolate the snps in the current window
-            snp_window = self.window_values(normalised_snps, sid_count, window)
-
-            # Calculate the disequilibrium, then append the shrunk r2 matrix to the ld_matrix
-            disequilibrium_dp = np.dot(snp_window, snp_window.T) / iid_count
-            ld_matrix[index] = mc.shrink_r2_matrix(disequilibrium_dp, iid_count)
-
-        print(f"Constructed LD matrix {terminal_time()}")
-        return ld_matrix
 
     def distribute_heritability_genome_wide(self):
         """If we can't calculate heritability, distribute it from a provided float"""
