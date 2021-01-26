@@ -8,8 +8,8 @@ class GibbLoader(ArgsParser):
         super().__init__(args)
 
         # Set the write information for the weight data
-        self.make_sub_directory("PGS", "Weights")
-        self.weights_directory = Path(self.working_dir, "PGS", "Weights")
+        self.make_sub_directory("PGS", "InfWeights")
+        self.inf_directory = Path(self.working_dir, "PGS", "InfWeights")
 
         # Setup the Gibbs processor Config args
         self.gibbs_causal_fractions = self._set_causal_fractions()
@@ -44,4 +44,3 @@ class GibbLoader(ArgsParser):
         gibbs_dict = {header: i for i, header in enumerate(gibbs_headers)}
 
         return gibbs_headers, gibbs_dict
-

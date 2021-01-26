@@ -1,7 +1,7 @@
 from pyGenicPipeline.utils import misc as mc
 from pyGenicPipeline.core.Input import Input
 
-from miscSupports import load_pickle, terminal_time
+from miscSupports import load_pickle, terminal_time, flip_list
 from csvObject import write_csv
 import numpy as np
 import time
@@ -36,8 +36,9 @@ class Weights(Input):
         updated_betas = self._infinitesimal_betas(herit, iid_count, normalised_snps, sid_count, sm_dict)
         infinitesimal = updated_betas / snp_stds.flatten()
 
-        # Write the constructed betas to a csv
-        write_csv(self.weights_directory, f"INF_{self.target_chromosome}", ["Inf_beta"], infinitesimal)
+        # Write the snp name - constructed betas to a csv
+        write_out = flip_list([self.snp_names(sm_dict), infinitesimal])
+        write_csv(self.inf_directory, f"INF_{self.target_chromosome}", [self.snp_id, self.inf_beta], write_out)
         print(f"Constructed infinitesimal weights in {time.time() - t0} at {terminal_time()}")
 
     def _infinitesimal_betas(self, herit, iid_count, normalised_snps, sid_count, sm_dict):

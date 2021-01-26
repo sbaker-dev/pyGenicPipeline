@@ -211,7 +211,7 @@ class ArgsParser:
         return "Genome"
 
     @property
-    def inf_dec(self):
+    def inf_beta(self):
         """Key used for accessing Infinitesimal data in headers, groups or other attributes"""
         return "Infinitesimal"
 
