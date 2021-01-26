@@ -25,10 +25,12 @@ class Input(SummaryLoader, FilterLoader, LDLoader, GibbLoader, CommonGenetic, Ar
 
         # General operational parameters
         self.operation = self._set_current_job(self.args["Operation"])
+        self.iter_size = self.args["Iter_Size"]
 
         # Score information
         self.make_sub_directory("PGS", "Scores")
         self.scores_directory = Path(self.working_dir, "PGS", "Scores")
+        self.score_type = "Inf_Weights"
         self.phenotype_file = mc.validate_path(self.args["Phenotype"])
         self.covariates_file = mc.validate_path(self.args["Covariates"])
 
@@ -83,11 +85,11 @@ class Input(SummaryLoader, FilterLoader, LDLoader, GibbLoader, CommonGenetic, Ar
     def chunked_snp_names(self, sm_dict, chunk_return=False):
         """
         Even a couple of 10's of thousands of snps will lead to memory issues especially if there are large numbers of
-        individuals in the data set. This will load the variant names that have been cleaned, then chunk them by a
-        dimension calculated from the number of variant names by the filter_iter_size set by the user.
+        individuals in the data set. This chunk snp_names by a dimension calculated from the number of variant names by
+        the snp_iteration set by the user.
 
-        :param sm_dict: Dict of cleaned summary statistics
-        :type sm_dict: dict
+        :param sm_dict: Dict of cleaned summary statistics or a list of snp names
+        :type sm_dict: dict | list
 
         :param chunk_return: If True returns the chunk size as well as the variants, otherwise just the variants
         :type chunk_return: bool
@@ -95,46 +97,21 @@ class Input(SummaryLoader, FilterLoader, LDLoader, GibbLoader, CommonGenetic, Ar
         :return:  np.array_split numpy arrays of snp names, or this combined with the chunk size
         """
 
-        # Extract variant names
-        variant_names = self.snp_names(sm_dict)
+        # Determine the snp names base on the type provided to sm_dict
+        if isinstance(sm_dict, dict):
+            # Extract variant names
+            variant_names = self.snp_names(sm_dict)
+        elif isinstance(sm_dict, list):
+            variant_names = sm_dict
+        else:
+            raise TypeError(f"Chunk snps expected sm_dict or a list of snp names but found {type(sm_dict)}")
 
         # Calculate the number of chunks required, then return the variant names split on chunk size
-        chunks = int(np.ceil(len(variant_names) / self.filter_iter_size))
+        chunks = int(np.ceil(len(variant_names) / self.iter_size))
         if chunk_return:
             return np.array_split(variant_names, chunks), chunks
         else:
             return np.array_split(variant_names, chunks)
-
-    def genetic_phenotypes(self, gen_file, load_path):
-        """
-        Load the full genetic data for this chromosome and isolate any information that can be isolated from it. In this
-        case, .bed load types can access more than bgen due to the ability to extract sex from the .fam file.
-        """
-
-        ph_dict = {}
-        # For plink files, load the fam file then extract the fid, iid and sex information
-        if self.gen_type == ".bed":
-            ph_dict[self.fam] = np.array(PlinkObject(load_path).get_family_identifiers())
-            ph_dict[self.fid] = mc.variant_array(self.fid.lower(), ph_dict[self.fam])
-            ph_dict[self.iid] = mc.variant_array(self.iid.lower(), ph_dict[self.fam])
-            ph_dict.pop(self.fam, None)
-
-        # Bgen doesn't have a fam equivalent, so just load the fid and iid
-        elif self.gen_type == ".bgen":
-            # todo update to allow for sex and missing if we have loaded .sample
-            if self._snp_tools:
-                ids = gen_file.iid
-            else:
-                # todo - This won't work. Ids only returns iid not iid + fid
-                ids = gen_file.iid_array()
-
-            ph_dict[self.fid] = np.array([fid for fid, iid in ids])
-            ph_dict[self.iid] = np.array([iid for fid, iid in ids])
-
-        else:
-            raise Exception("Unknown load type set")
-
-        return ph_dict
 
     def sm_dict_from_csv(self, directory, name):
         """

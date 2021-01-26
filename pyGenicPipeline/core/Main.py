@@ -7,7 +7,7 @@ from miscSupports import terminal_time
 from colorama import init
 
 
-class Main(Shell, SummaryCleaner, FilterSnps, LDHerit, Weights, Input, ABC):
+class Main(Shell, SummaryCleaner, FilterSnps, LDHerit, Weights, Score, Input, ABC):
     def __init__(self, args):
         """
         This Class inherits all other classes that can be used, and then execute the job via getattr
