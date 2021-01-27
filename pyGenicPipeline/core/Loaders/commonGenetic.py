@@ -56,6 +56,9 @@ class CommonGenetic(ArgsParser):
         :rtype: Path | None
         """
 
+        if self.args[access_key] is None:
+            self.args[access_key] = False
+
         if string_to_bool(self.args[access_key]):
             package_root = Path(__file__).parent.parent
 
