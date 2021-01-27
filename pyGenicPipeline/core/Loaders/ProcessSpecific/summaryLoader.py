@@ -2,6 +2,7 @@ from pyGenicPipeline.utils import errors as ec
 from pyGenicPipeline.utils import misc as mc
 from ..argsParser import ArgsParser
 
+from miscSupports import string_to_bool
 from csvObject import write_csv
 from pathlib import Path
 
@@ -135,7 +136,7 @@ class SummaryLoader(ArgsParser):
         :return: True if assertion of standard errors is also True, if set_z_scores is None then return None
         :rtype: None | bool
         """
-        if set_z_scores:
+        if string_to_bool(set_z_scores):
             assert self._summary_headers[self.standard_errors] is not None, ec.z_scores_with_standard_errors
             return True
         else:
