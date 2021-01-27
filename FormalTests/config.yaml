@@ -2,6 +2,3 @@
 
 # Location of Plink on system
 plink_1_path: C:\Users\Samuel\plink.exe
-
-# Path to write data to
-test_path: C:\Users\Samuel\PycharmProjects\pyGenicPipeline\FormalTests\TestDirectory
