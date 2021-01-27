@@ -10,8 +10,8 @@ has_children: true
 ### Server
 
 If you are using this pipeline on a sever you will need to setup a virtual environment for python. If you haven't done
-so before, check out the [conda setup] instructions. These also include the instructions for setting up the python
-package as well.
+so before, check out the [conda setup](conda.md) instructions. These also include the instructions for setting up the 
+python package as well.
 
 ### Python
 
@@ -31,8 +31,8 @@ pip install git+https://github.com/sbaker-dev/bgen-reader-py
 
 ### GUI
 
-To install the GUI go the releases part of the [github page][GHP] and download the most up to date release
-
+To install the GUI go the releases part of the [github page][GHP] and download the most up to date release. Once you 
+have download this .... [TODO write this once complied]
 
 
 [GHP]: https://github.com/sbaker-dev/pyGenicPipeline
