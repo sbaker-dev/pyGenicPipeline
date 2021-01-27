@@ -67,7 +67,7 @@ class Shell(Input):
         """
         file = open(Path(self.working_dir, f"{self.operation}.sh"), "w")
         file.write("#!/bin/bash\n\n")
-        file.write("# Generate by pyGeneticPipe/support/ShellMaker.py\n\n")
+        file.write("# Generate by pyGeneticPipe/Processors/Shell.py\n\n")
         return file
 
     def _construct_args(self, file, args_list):
