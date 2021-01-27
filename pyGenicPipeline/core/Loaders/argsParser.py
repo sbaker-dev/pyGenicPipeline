@@ -16,6 +16,7 @@ class ArgsParser:
         self.args = mc.set_args(args)
         self.working_dir = mc.validate_path(self.args["Working_Directory"], False)
         self.config = load_yaml(Path(Path(__file__).parent, "Config.yaml"))
+        self.load_file = self.args["Load_File"]
 
     def make_sub_directory(self, job, name):
         """
