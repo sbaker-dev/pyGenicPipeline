@@ -2,7 +2,7 @@ from pyGenicPipeline.utils import errors as ec
 from pyGenicPipeline.utils import misc as mc
 from .argsParser import ArgsParser
 
-from miscSupports import directory_iterator, string_to_bool
+from miscSupports import directory_iterator
 from bgen_reader import custom_meta_path
 from pysnptools.distreader import Bgen
 from pysnptools.snpreader import Bed
@@ -56,10 +56,7 @@ class CommonGenetic(ArgsParser):
         :rtype: Path | None
         """
 
-        if self.args[access_key] is None:
-            self.args[access_key] = False
-
-        if string_to_bool(self.args[access_key]):
+        if self.args[access_key]:
             package_root = Path(__file__).parent.parent
 
             if access_key == "HapMap3":
