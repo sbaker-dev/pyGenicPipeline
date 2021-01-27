@@ -20,8 +20,13 @@ class MyTestCase(unittest.TestCase):
         """Some processes like plink need their paths/attributes set externally from a yaml config file"""
         return load_yaml(Path(Path(__file__).parent.absolute(), "config.yaml"))
 
-    def _file_exists_cleanup(self):
+    @staticmethod
+    def _file_exists_cleanup(file_path):
         """Some tests we simply want to validate a file exists, what is within them """
+
+        assert file_path.exists(), "plink failed to produce toy_data.frq"
+        print(f"Found {file_path.name}: Deleting")
+        file_path.unlink()
 
     def test_plink(self):
         """
@@ -41,18 +46,9 @@ class MyTestCase(unittest.TestCase):
         # Check for process
         assert not job.returncode, "Subprocess of plink1 failed"
 
-        # Create paths to these files
-        freq_file = Path(write_path, 'toy_data.frq')
-        log_file = Path(write_path, 'toy_data.log')
-
         # Check the two test outputs have been created, delete them if they have
-        assert freq_file.exists(), "plink failed to produce toy_data.frq"
-        print(f"Found {freq_file.name}: Deleting")
-        freq_file.unlink()
-
-        assert log_file.exists(), "plink failed to produce toy_data.log"
-        print(f"Found {log_file.name}: Deleting")
-        log_file.unlink()
+        self._file_exists_cleanup(Path(write_path, 'toy_data.frq'))
+        self._file_exists_cleanup(Path(write_path, 'toy_data.log'))
 
 
 if __name__ == '__main__':
