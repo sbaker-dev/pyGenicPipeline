@@ -7,18 +7,8 @@
 
 all_args:
 
-  ## LOAD ARGUMENTS
-  # During debug mode some additional print statements may occur
-  Debug: null
-
-  # The name of this project, allows for multiple projects stored in one directory as it will be used to name the h5py
-  # file that stores information of subsequent steps
-  Project_Name: null
-
-  # If override is set to True, then the h5py file will be destroyed on run and re-created
-  Override: false
-
-  # Where you want the h5py file or any other files to be written
+  ## LOAD ARGUMENTS ####################################################################################################
+  # Project or output directory
   Working_Directory: null
 
   # The operation to be run, can take a string if the method name or a dict of operations where only one element is true
@@ -27,13 +17,27 @@ all_args:
   # Some operations will require a path to a set file
   Load_File: null
 
-  # Other operations will require a path to a directory, and some may need both hence them being separate
+  # Other operations will require a path to a directory. (Some may need both, hence them being separate)
   Load_Directory: null
 
   # .bed or .bgen are only valid options. The '.' is required
   Load_Type: null
 
-  ## SHELL ARGUMENTS
+  # Use the PySnpTools bgen reader rather than pyGenicParser, defaults to True
+  PySnpTools_Bgen: True
+
+  # Most pipeline files are run by chromosome. Provide an int to this for a given file
+  Target_Chromosome: null
+
+  # When using certain pipelines you will need to provide a link to individuals whom are genetically un-related to this
+  # parameter
+  Reference_Panel: null
+
+  # Many large processes can be chunked into smaller sub processes to save memory, this is the maximum size you
+  #  want a chunk be. Defaults to 10000
+  Iter_Size: 10000
+
+  ## SHELL ARGUMENTS ###################################################################################################
 
   # Takes the values of slurm, qsub, and null
   Job_Scheduler: null
@@ -50,14 +54,20 @@ all_args:
   # Amount of memory to allocate via Job_Memory, defaults to 100m
   Job_Memory: "100m"
 
-  # Path to plink on sever, has a default based on bc4 bristol
-  Plink_Path: "apps/plink/2.00"
+  # Path to plink on sever
+  Plink_Path: null
 
-  # Path to qctoolv2 on sever, has a default based on bc4 bristol
-  QCTool_Path: "apps/qctool/2.0rc4"
+  # Path to qctoolv2 on sever
+  QCTool_Path: null
 
   # Path to the compiled bgenix folder in build/apps/bgenix
   BGENIX_Path: null
+
+  ## PolyGenic Score Pipeline Arguments ################################################################################
+  ### pgs_clean_summary_stats args #####################################################################################
+
+  # If the user has summary header information not within our own testing list, then they can add it here
+  Custom_Summary_Header: null
 
   # A path to summary statistics, which will be handled differently than other files
   Summary_Path: null
@@ -65,36 +75,48 @@ all_args:
   # The number of samples in the summary statistics
   Summary_Sample_Size: null
 
-  # If the user has summary header information not within our own testing list, then they can add it here
-  Custom_Summary_Header: null
-
-  # If the user has frequencies within the summary staistics file
-  Summary_Frequency: null
-
   # The effect type within the summary statistics file
   Summary_Effect_Type: null
-
-  # If the user wants to compute z scores from summary file
-  Z_Scores: null
 
   # If the user wants to only use HapMap3 snps then they need to provide a file to those snps
   HapMap3: null
 
+  # If the user wants to compute z scores from summary file
+  Z_Scores: null
 
+  ### pgs_filter_snps args #############################################################################################
+
+  # Filter out snps in long range LD if set to True
+  Filter_Long_Range_LD: null
+
+  # The minimum Minor allele frequency, defaults to 0.01
+  Filter_Min_Maf: 0.01
+
+  # The maximum Frequency Discrepancy, defaults to 0.1
+  Filter_Max_Freq_Discrepancy: 0.1
+
+  # LD args ############################################################################################################
+
+  # The Linkage disequilibrium (LD) radius to create iteration windows of snps to correct for LD.
+  LD_Radius: null
+
+  # If you want to provide pre-calculate heritability estimates you can do so per chromosome via passing a dict of type
+  # Chromosome_Number: herit, if you want to distribute heritability across chromosomes provide a float, or if you want
+  #it to be calculated then leave as None
+  Heritability_Calculated: null
+
+  # Score args #########################################################################################################
+  # Path to covariates for correction of scores
+  "Covariates": null
+
+  # Path to phenotype for correction of scores
+  "Phenotype": null
 
 # For writing new yaml files with human readable comments, here the comments for all args are stored so they can be
 # accessed via keys
 Arg_Descriptions:
-
-  Debug: During debug mode some additional print statements may occur
-
-  Project_Name: >-
-    The name of this project, allows for multiple projects stored in one directory as it will be used to name the h5py
-    file that stores information of subsequent steps
-
-  Override: If override is set to True, then the h5py file will be destroyed on run and re-created
-
-  Working_Directory: Where you want the h5py file or any other files to be written
+  ## LOAD ARGUMENTS ####################################################################################################
+  Working_Directory: Project or output directory
 
   Operation: >-
     The operation to be run, can take a string if the method name or a dict of operations where only one element is true
@@ -105,6 +127,20 @@ Arg_Descriptions:
     Other operations will require a path to a directory, and some may need both hence them being separate
 
   Load_Type: .bed or .bgen are only valid options. The '.' is required
+
+  PySnpTools_Bgen: Use the PySnpTools bgen reader rather than pyGenicParser, defaults to True
+
+  Target_Chromosome: Most pipeline files are run by chromosome. Provide an int to this for a given file
+
+  Reference_Panel: >-
+    When using certain pipelines you will need to provide a link to individuals whom are genetically un-related to this
+    parameter
+
+  Iter_Size: >-
+    Many large processes can be chunked into smaller sub processes to save memory, this is the maximum size you want a
+    chunk be. Defaults to 10000
+
+  ## SHELL ARGUMENTS ###################################################################################################
 
   Job_Scheduler: Takes the values of slurm, qsub, and null
 
@@ -122,51 +158,44 @@ Arg_Descriptions:
 
   BGENIX_Path: Path to the compiled bgenix folder in build/apps/bgenix
 
-  Summary_Path: Some Operations will require a path to summary statistics, which will be handled differently than other files
+  ## PolyGenic Score Pipeline Arguments ################################################################################
+  ### pgs_clean_summary_stats args #####################################################################################
+
+  Summary_Path: >-
+    Some Operations will require a path to summary statistics, which will be handled differently than other files
 
   Summary_Sample_Size: The number of samples in the summary statistics
 
   Custom_Summary_Header: >-
     If the user has summary header information not within our own testing list, then they can add it here
 
-  Summary_Frequency: If the user has frequencies within the summary staistics file
-
   Summary_Effect_Type: The effect type within the summary statistics file
-
-  Z_Scores: If the user wants to compute z scores from summary file
 
   HapMap3: If the user wants to only use HapMap3 snps then they need to provide a file to those snps
 
+  Z_Scores: If the user wants to compute z scores from summary file
 
+  ### pgs_filter_snps args #############################################################################################
 
+  Filter_Long_Range_LD: Filter out snps in long range LD if set to True
 
-# Valid operations
-Operations:
+  Filter_Min_Maf: The minimum Minor allele frequency, defaults to 0.01
 
-  # This will generate a shell script using plink to split a bed file into the respective chromosomes
-  split_bed_by_chromosome: false
+  Filter_Max_Freq_Discrepancy: The maximum Frequency Discrepancy, defaults to 0.1
 
-  # This will create a script to utilise qctoolv2 to convert plink .bed to .bgen files.
-  convert_to_bgen: false
+  # LD args ############################################################################################################
 
+  LD_Radius: The Linkage disequilibrium (LD) radius to create iteration windows of snps to correct for LD.
 
+  Heritability_Calculated: >-
+    If you want to provide pre-calculate heritability estimates you can do so per chromosome via passing a dict of type
+    Chromosome_Number: herit, if you want to distribute heritability across chromosomes provide a float, or if you want
+    it to be calculated then leave as None
 
-# Mandatory arguments for convert_to_bgen
-convert_to_bgen_M: ["Working_Directory", "Load_File", "Operation", "Job_Scheduler", "Partition", "QCTool_Path",
-                    "BGENIX_Path"]
+  # Score args #########################################################################################################
+  "Covariates": Path to covariates for correction of scores
 
-# Optional arguments for convert_to_bgen
-convert_to_bgen_O: ["Nodes", "Job_Time", "Job_Memory",]
-
-
-
-
-# Mandatory arguments for split_bed_by_chromosome
-split_bed_by_chromosome_M: ["Working_Directory", "Load_File", "Operation", "Job_Scheduler", "Partition", "Plink_Path"]
-
-# Optional arguments for split_bed_by_chromosome
-split_bed_by_chromosome_O: ["Nodes", "Job_Time", "Job_Memory"]
-
+  "Phenotype": Path to phenotype for correction of scores
 
 
 # Whilst default summary header keys have been extract from LDPred, it is possible they are not the ones within the
@@ -209,3 +238,42 @@ custom_summary_header_keys:
   Control_Freq: null
   Case_N: null
   Control_N: null
+
+# Valid operations
+Operations:
+
+  # This will generate a shell script using plink to split a bed file into the respective chromosomes
+  split_bed_by_chromosome: false
+
+  # This will create a script to utilise qctoolv2 to convert plink .bed to .bgen files.
+  convert_to_bgen: false
+
+
+# convert_to_bgen ######################################################################################################
+# Mandatory arguments for convert_to_bgen
+convert_to_bgen_M: ["Working_Directory", "Load_File", "Operation", "Job_Scheduler", "Partition", "QCTool_Path",
+                    "BGENIX_Path"]
+
+# Optional arguments for convert_to_bgen
+convert_to_bgen_O: ["Nodes", "Job_Time", "Job_Memory",]
+########################################################################################################################
+
+# split_bed_by_chromosome ##############################################################################################
+
+# Mandatory arguments for split_bed_by_chromosome
+split_bed_by_chromosome_M: ["Working_Directory", "Load_File", "Operation", "Job_Scheduler", "Partition", "Plink_Path"]
+
+# Optional arguments for split_bed_by_chromosome
+split_bed_by_chromosome_O: ["Nodes", "Job_Time", "Job_Memory"]
+########################################################################################################################
+
+# pgs_clean_summary_stats ##############################################################################################
+
+# Mandatory arguments for split_bed_by_chromosome
+pgs_clean_summary_stats_M: ["Working_Directory", "Operation", "Job_Scheduler", "Partition", "Load_Type",
+                            "PySnpTools_Bgen", "Target_Chromosome", "Load_Directory", "Summary_Path",
+                            "Summary_Sample_Size", "Summary_Effect_Type", "HapMap3", "Z_Scores"]
+
+# Optional arguments for split_bed_by_chromosome
+pgs_clean_summary_stats_O: ["Nodes", "Job_Time", "Job_Memory", "Custom_Summary_Header"]
+
