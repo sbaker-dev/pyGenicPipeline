@@ -1,21 +1,15 @@
 ---
 layout: default
-title: setup
+title: Conda
+parent: Setup
 nav_order: 2
-has_children: true
 ---
 
-# PyGenicPipe
+## Conda
 
-This is the docs page, **but its still very early**
-
-### Setup
-
-This is going to assume your working on a linux server. We will be using a python environment setup via conda. If you 
-have not built one before, then follow these instructs otherwise you just need an activate conda environment with the
-pyGenicPipe module and the bgen-reader forked form sbaker-dev to allow for custom meta data locations.
-
-### Conda
+This is going to assume your working on a linux server. We will be using a python environment, setup via conda. If you 
+have not built one before, then follow these instructions. Otherwise you just need an activate conda environment with 
+the pyGenicPipe module and the bgen-reader forked form sbaker-dev to allow for custom meta data locations.
 
 First we need to add python anaconda to our bash environment. If you have anaconda on your server then you will need to 
 check which version of anaconda you have. This can be done by typing 
