@@ -53,9 +53,19 @@ class ArgMaker:
 
     def _make_working_dict(self, key):
         """This will construct the working dict of args that the user needs to submit for a given operation"""
+        # Set the mandatory and optional args from the yaml_parameters
         working_dict = {"Mandatory": self._get_operation_dict(self._yaml_parameters[f"{key}_M"]),
                         "Optional": self._get_operation_dict(self._yaml_parameters[f"{key}_O"])}
+
+        # Set the operation to be the operation key
         working_dict["Mandatory"]["Operation"] = key
+
+        # Update any keys based on the defaults
+        for key in working_dict.keys():
+            for attribute in working_dict[key].keys():
+                if attribute in self._defaults.keys():
+                    working_dict[key][attribute] = self._defaults[attribute]
+
         return working_dict
 
     def _get_operation_dict(self, operation_keys):
