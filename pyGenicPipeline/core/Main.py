@@ -1,6 +1,7 @@
 from abc import ABC
 
 from ..Processors import *
+from ..utils import *
 from pyGenicPipeline.core.Input import Input
 
 from miscSupports import terminal_time
