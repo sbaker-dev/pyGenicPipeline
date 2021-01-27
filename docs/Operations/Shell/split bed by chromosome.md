@@ -3,7 +3,7 @@ layout: default
 title: Split Bed by Chromosome
 parent: Shell
 grand_parent: Operations
-nav_order: 1
+nav_order: 2
 ---
 
 ## Split Bed by Chromosome

@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Shell
-parent: operations
+parent: Operations
 has_children: true
 nav_order: 1
 ---
