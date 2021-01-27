@@ -20,7 +20,7 @@ class ArgMaker:
         # args have been set
         if validation:
             for key, value in zip(args_dict["Mandatory"].keys(), args_dict["Mandatory"].values()):
-                assert value, ec.missing_arg(args_dict["Mandatory"]["Operation"], key)
+                assert value is not None, ec.missing_arg(args_dict["Mandatory"]["Operation"], key)
 
         # Create the .yaml stub
         file = self._create_yaml_file(args_dict["Mandatory"]["Operation"], write_directory)
@@ -34,10 +34,13 @@ class ArgMaker:
         self._write_args(file, args_dict, "Optional")
 
         # Write require to run the system, but needed for this operation
-        self._write_header(file, "SYSTEM ARGS - WILL NOT BE USED FOR THIS OPERATION BUT REQUIRED TO EXIST IN FILE")
+        self._write_header(file, "SYSTEM ARGS - WILL NOT BE USED FOR THIS OPERATION AND CAN STAY AS NULL BUT REQUIRED "
+                                 "TO EXIST IN FILE")
         loaded_keys = list(args_dict["Mandatory"].keys()) + list(args_dict["Optional"].keys())
         args_dict["System"] = {key: None for key in self.all_args if key not in loaded_keys}
         self._write_args(file, args_dict, "System")
+
+        # Finish the file
         file.close()
         print(f"Constructed file for {args_dict['Mandatory']['Operation']}")
 
@@ -127,6 +130,11 @@ class ArgMaker:
         return self._yaml_parameters["all_args"]
 
     @property
+    def _arg_descriptions(self):
+        """So we can replicate comments in write file"""
+        return self._yaml_parameters["Arg_Descriptions"]
+
+    @property
     def split_bed_by_chromosome(self):
         """Returns the arguments the user needs to set for split_bed_by_chromosome"""
         return self._make_working_dict("split_bed_by_chromosome")
@@ -137,6 +145,6 @@ class ArgMaker:
         return self._make_working_dict("convert_to_bgen")
 
     @property
-    def _arg_descriptions(self):
-        """So we can replicate comments in write file"""
-        return self._yaml_parameters["Arg_Descriptions"]
+    def pgs_clean_summary_stats(self):
+        """Returns the arguments the user needs to set for pgs_clean_summary_stats"""
+        return self._make_working_dict("pgs_clean_summary_stats")
