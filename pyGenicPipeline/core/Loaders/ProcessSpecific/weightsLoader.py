@@ -11,19 +11,21 @@ class GibbLoader(ArgsParser):
         self.make_sub_directory("PGS", "Inf_Weights")
         self.inf_directory = Path(self.working_dir, "PGS", "Inf_Weights")
 
-        # Setup the Gibbs processor Config args
-        self.gibbs_causal_fractions = self._set_causal_fractions()
-        self.gibbs_run = self.args["Gibbs_Run"]
-        self.gibbs_iter = self.args["Gibbs_Iter"]
-        self.gibbs_burn_in = self.args["Gibbs_Burn_In"]
-        self.gibbs_shrink = self.args["Gibbs_Shrink"]
-        self.gibbs_zero_jump = self.args["Gibbs_Zero_Jump"]
-        self.gibbs_random_seed = self.args["Gibbs_Random_Seed"]
-        self.gibbs_tight = self.args["Gibbs_Tight"]
-        self.gibbs_breaker = self.args["Gibbs_Breaker"]
+        # Not used in the current version
 
-        # Set the headers of the write file
-        self.gibbs_headers, self._gibbs_header_dict = self._set_gibbs_headers()
+        # # Setup the Gibbs processor Config args
+        # self.gibbs_causal_fractions = self._set_causal_fractions()
+        # self.gibbs_run = self.args["Gibbs_Run"]
+        # self.gibbs_iter = self.args["Gibbs_Iter"]
+        # self.gibbs_burn_in = self.args["Gibbs_Burn_In"]
+        # self.gibbs_shrink = self.args["Gibbs_Shrink"]
+        # self.gibbs_zero_jump = self.args["Gibbs_Zero_Jump"]
+        # self.gibbs_random_seed = self.args["Gibbs_Random_Seed"]
+        # self.gibbs_tight = self.args["Gibbs_Tight"]
+        # self.gibbs_breaker = self.args["Gibbs_Breaker"]
+        #
+        # # Set the headers of the write file
+        # self.gibbs_headers, self._gibbs_header_dict = self._set_gibbs_headers()
 
     def _set_causal_fractions(self):
         """
