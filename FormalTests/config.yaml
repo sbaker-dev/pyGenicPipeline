@@ -2,3 +2,21 @@
 
 # Location of Plink on system
 plink_1_path: C:\Users\Samuel\plink.exe
+
+# Defaults for ArgsMakers for running the unit tests
+defaults:
+
+  # BC4 uses slurm so we want this default to be set
+  Job_Scheduler: "slurm"
+
+  # Partition for default submissions
+  Partition: "test"
+
+  # By default use pysnptools as its faster
+  PySnpTools_Bgen: True
+
+  # By default use bgen as thats what we need to use on the sever
+  Load_Type: ".bgen"
+
+  # For testing purposes we just set the chromosome to be 2
+  Target_Chromosome: 2
