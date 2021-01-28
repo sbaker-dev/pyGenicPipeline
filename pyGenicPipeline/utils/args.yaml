@@ -247,41 +247,95 @@ custom_summary_header_keys:
   Case_N: null
   Control_N: null
 
-# Valid operations
+# Valid operations by operation group with each operation being given its description as its value
 Operations:
+  File_Support:
+    Description: >-
+      These methods are designed to aid you format raw genetic data into different file formats or sizes
 
-  # This will generate a shell script using plink to split a bed file into the respective chromosomes
-  split_bed_by_chromosome: false
+    split_bed_by_chromosome:
+      Description: >-
+        This will generate a shell script using plink to split a bed file into the respective chromosomes
+      Mandatory: ["Working_Directory", "Load_File", "Operation", "Job_Scheduler", "Partition", "QCTool_Path",
+                  "BGENIX_Path"]
+      Optional: ["Nodes", "Job_Time", "Job_Memory"]
 
-  # This will create a script to utilise qctoolv2 to convert plink .bed to .bgen files.
-  convert_to_bgen: false
+    convert_to_bgen:
+      Description: >-
+        This will create a script to utilise qctoolv2 to convert plink .bed to .bgen files.
+      Mandatory: ["Working_Directory", "Load_File", "Operation", "Job_Scheduler", "Partition", "Plink_Path"]
+      Optional: ["Nodes", "Job_Time", "Job_Memory"]
 
+  PGS_Pipeline:
+    Description: >-
+      These methods are designed to aid you format raw genetic data into different file formats or sizes
+    construct_polygenic_score:
+      Description: >-
+        This will help you setup all the parameters you need to construct a polygenic score, this will make all the
+        files for all the operations that are below, but you can make them individually or run them separately if you
+        want something specific from them.
 
-# convert_to_bgen ######################################################################################################
-# Mandatory arguments for convert_to_bgen
-convert_to_bgen_M: ["Working_Directory", "Load_File", "Operation", "Job_Scheduler", "Partition", "QCTool_Path",
-                    "BGENIX_Path"]
+      Mandatory: ["Working_Directory", "Operation", "Job_Scheduler", "Partition", "Load_Type", "PySnpTools_Bgen",
+                  "Target_Chromosome", "Load_Directory", "Summary_Path", "Summary_Sample_Size", "Summary_Effect_Type",
+                  "HapMap3", "Z_Scores"]
+      Optional: ["Nodes", "Job_Time", "Job_Memory", "Custom_Summary_Header"]
 
-# Optional arguments for convert_to_bgen
-convert_to_bgen_O: ["Nodes", "Job_Time", "Job_Memory",]
-########################################################################################################################
+    pgs_clean_summary_stats:
+      Description: >-
+        This will take the summary statistics and access the validatable snps, found by cross referencing the genetic
+        validation constructed from the reference file, and clean them of possible errors. It then returns an ordered on
+        base pair position dictionary of information required for constructing poly-genetic scores and by default writes
+        this information to a csv.
 
-# split_bed_by_chromosome ##############################################################################################
+      Mandatory: ["Working_Directory", "Operation", "Job_Scheduler", "Partition", "Load_Type", "PySnpTools_Bgen",
+                  "Target_Chromosome", "Load_Directory", "Summary_Path", "Summary_Sample_Size", "Summary_Effect_Type",
+                  "HapMap3", "Z_Scores"]
+      Optional: ["Nodes", "Job_Time", "Job_Memory", "Custom_Summary_Header"]
 
-# Mandatory arguments for split_bed_by_chromosome
-split_bed_by_chromosome_M: ["Working_Directory", "Load_File", "Operation", "Job_Scheduler", "Partition", "Plink_Path"]
+    pgs_filter_snps:
+      Description: >-
+        From our cleaned summary statistics we can construct a set of information for our validation and reference
+        genetic samples. These samples need there raw snps to be loaded, and then we can use these to calculate genetic
+        frequencies and standard deviations.
 
-# Optional arguments for split_bed_by_chromosome
-split_bed_by_chromosome_O: ["Nodes", "Job_Time", "Job_Memory"]
-########################################################################################################################
+        If we have information on summary frequencies, the user has specified a maf_min or wants to filter snps in long
+        range LD then we can filter those out. This process will always filter out monomorphic snps.
 
-# pgs_clean_summary_stats ##############################################################################################
+      Mandatory: []
+      Optional: []
 
-# Mandatory arguments for split_bed_by_chromosome
-pgs_clean_summary_stats_M: ["Working_Directory", "Operation", "Job_Scheduler", "Partition", "Load_Type",
-                            "PySnpTools_Bgen", "Target_Chromosome", "Load_Directory", "Summary_Path",
-                            "Summary_Sample_Size", "Summary_Effect_Type", "HapMap3", "Z_Scores"]
+    pgs_calculate_ld:
+      Description: >-
+        This will calculate the chromosome specific LD information which will be used later to construct genome_wide LD
+        information, whilst also saving the values of the normalised Snps and standard errors
 
-# Optional arguments for split_bed_by_chromosome
-pgs_clean_summary_stats_O: ["Nodes", "Job_Time", "Job_Memory", "Custom_Summary_Header"]
+      Mandatory: []
+      Optional: []
 
+    calculate_genome_wide_heritability:
+      Description: >-
+        Once we have cleaned our data sets, we can store the genome wide data along side with some individual
+        chromosome information that does not take the form of lists, in a yaml config file.
+
+      Mandatory: []
+      Optional: []
+
+    pgs_infinitesimal:
+      Description: >-
+        This will weight the beta values conditional on LD using infinitesimal shrinkage
+      Mandatory: []
+      Optional: []
+
+    pgs_scores:
+      Description: >-
+        This will construct the pgs for a given weight beta type, such as infinitesimal, within this chromosome
+
+      Mandatory: []
+      Optional: []
+
+    aggregate_scores:
+      Description: >-
+        This will combine the scores found by chromosome into a single file
+
+      Mandatory: []
+      Optional: []
