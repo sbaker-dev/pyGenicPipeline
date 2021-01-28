@@ -1,14 +1,13 @@
 from abc import ABC
 
 from ..Processors import *
-from ..utils import *
 from pyGenicPipeline.core.Input import Input
 
 from miscSupports import terminal_time
 from colorama import init
 
 
-class Main(Shell, SummaryCleaner, FilterSnps, LDHerit, Weights, Score, Input, ABC):
+class Main(SummaryCleaner, FilterSnps, LDHerit, Weights, Score, Input, ABC):
     def __init__(self, args):
         """
         This Class inherits all other classes that can be used, and then execute the job via getattr
