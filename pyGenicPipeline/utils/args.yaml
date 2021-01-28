@@ -268,7 +268,7 @@ Operations:
 
   PGS_Pipeline:
     Description: >-
-      These methods are designed to aid you format raw genetic data into different file formats or sizes
+      These methods are designed to aid you to construct polygenic scores
     construct_polygenic_score:
       Description: >-
         This will help you setup all the parameters you need to construct a polygenic score, this will make all the
