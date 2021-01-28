@@ -16,6 +16,10 @@ class ArgMaker:
         This will write a .yaml file contain all the parameters, split by mandatory and not required, for the current
         operation.
         """
+        # Args dict may come from user or from process. If from process it will not have mandatory or optional keys so
+        # we need to set them
+        args_dict = self._configure_read_dict(args_dict)
+
         # If validation, because the args have been set within python via dict replacement, then check all mandatory
         # args have been set
         if validation:
@@ -44,12 +48,24 @@ class ArgMaker:
         file.close()
         print(f"Constructed file for {args_dict['Mandatory']['Operation']}")
 
-    def write_yaml_config_dict(self, config_dict, write_directory, operation):
-        """Write a dict of one level of separation"""
-        file = self._create_yaml_file(operation, write_directory)
-        for key, values in zip(config_dict.keys(), config_dict.values()):
-            if "Description" in values.keys():
-                self._write_header(file, values["Description"])
+    def _configure_read_dict(self, read_dict):
+        """
+        If the file was parsed in as yaml then it will not have the Mandatory Optional parameters and these will need to
+        be re-set for write_yaml_args. If it was the input from the properties of ArgMaker, we can just return the dict
+        that will have been passed
+
+        :param read_dict: Dict of Dicts from ArgMaker properties or Dict from Yaml create from ArgMaker
+        :type read_dict: dict
+
+        :return: Configured Dict with Mandatory and Optional Tags
+        """
+
+        if ("Mandatory" in read_dict.keys()) and ("Optional" in read_dict.keys()):
+            return read_dict
+        else:
+            # Yaml Messes with False values by setting to null which will trip the Validation
+            # Extract the formatted file for this operation
+            formatted = self._make_working_dict(read_dict["Operation"])
 
             file.write(f"{key}: \n")
             self._write_args(file, config_dict, key, spacing=1, write_descriptions=False)
