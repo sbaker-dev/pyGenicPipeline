@@ -75,8 +75,14 @@ class ArgMaker:
             # Extract the formatted file for this operation
             formatted = self._make_working_dict(read_dict["Operation"])
 
-            file.write(f"{key}: \n")
-            self._write_args(file, config_dict, key, spacing=1, write_descriptions=False)
+            # Update any keys based on what was submitted
+            for variable_type in formatted.keys():
+                for parameter in formatted[variable_type].keys():
+                    for attribute in read_dict.keys():
+                        if attribute == parameter:
+                            formatted[variable_type][parameter] = read_dict[attribute]
+
+            return formatted
 
     def _make_working_dict(self, key):
         """This will construct the working dict of args that the user needs to submit for a given operation"""
