@@ -16,7 +16,7 @@ class Score(Input):
 
     def pgs_scores(self):
         """
-        This will construct the pgs for a given type, such as infinitesimal, within this chromosome
+        This will construct the pgs for a given weight beta type, such as infinitesimal, within this chromosome
         """
 
         # Load the reference to the full sample of ID's, and use it to extract genetic phenotype information
@@ -100,10 +100,7 @@ class Score(Input):
 
     def aggregate_scores(self):
         """
-        This will check the headers where we have full information across all our chromosomes and return the names of
-        those headers as a list of strings. Failures will be printed to the terminal.
-
-        The successful headers that where isolated will then be aggregated
+        This will combine the scores found by chromosome into a single file
         """
 
         combined_array = []

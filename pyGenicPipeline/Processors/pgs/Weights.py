@@ -14,8 +14,7 @@ class Weights(Input):
 
     def pgs_infinitesimal(self):
         """
-        THis will construct weights for both the infinitesimal and variant fraction models, with the latter being run
-        via a Gibbs processor. Both methods from LDPred
+        This will weight the beta values conditional on LD using infinitesimal shrinkage
         """
         # Check to see if the ld radius is sufficient (sufficiency inferred from LD-pred)
         t0 = time.time()

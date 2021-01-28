@@ -24,9 +24,9 @@ class SummaryCleaner(Input):
     def pgs_clean_summary_stats(self, write=True):
         """
         This will take the summary statistics and access the validatable snps, found by cross referencing the genetic
-        validation and core samples, and clean them of possible errors. It then returns an ordered on base pair position
-        dictionary of information required for constructing poly-genetic scores and by default writes this information
-        to a csv.
+        validation constructed from the reference file, and clean them of possible errors. It then returns an ordered on
+        base pair position dictionary of information required for constructing poly-genetic scores and by default writes
+        this information to a csv.
         """
         t0 = time.time()
 
