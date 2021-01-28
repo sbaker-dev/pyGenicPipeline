@@ -92,9 +92,8 @@ class LDHerit(Input):
 
         for key, value in config_dict.items():
             config_dict[key][self.herit] = self.herit_calculated * (config_dict[key][self.count_snp] / total_snps)
-
-        config_dict["Genome"] = {f"{self.genome_key}_{self.herit}": self.herit_calculated}
-        ArgMaker().write_yaml_config_dict(config_dict, self.working_dir, "genome_wide_config")
+        config_dict["Genome"] = {f"{self.genome}_{self.herit}": self.herit_calculated}
+        ArgMaker().write_yaml_group_dict(config_dict, self.working_dir, "genome_wide_config")
 
     def _chromosome_from_load(self, load_file):
         """
@@ -130,8 +129,8 @@ class LDHerit(Input):
                                  (self.sample_size * (average_gw_ld_score / total_snps)))
 
         # Construct the write dict
-        config_dict["Genome"] = {f"{self.avg_ld}": average_gw_ld_score, f"{self.herit}": gw_h2_ld_score_est,
-                                 "Genome_Description": "Genome-wide Statistics"}
+        config_dict[self.genome] = {f"{self.avg_ld}": average_gw_ld_score, f"{self.herit}": gw_h2_ld_score_est,
+                                    "Genome_Description": "Genome-wide Statistics"}
 
         # Log warnings if applicable then print information to terminal
         if gw_h2_ld_score_est > self.ld_radius / 10.0:
@@ -146,7 +145,7 @@ class LDHerit(Input):
         mc.error_dict_to_terminal(self._genome_dict, "calculate_genome_wide_heritability", t0)
 
         # Construct config file
-        ArgMaker().write_yaml_config_dict(config_dict, Path(self.working_dir, "PGS"), "genome_wide_config")
+        ArgMaker().write_yaml_group_dict(config_dict, Path(self.working_dir, "PGS"), "genome_wide_config")
 
     def _heritability_by_chromosome(self, config_dict):
         """
