@@ -11,7 +11,11 @@ class ArgMaker:
         self._yaml_parameters = load_yaml(Path(Path(__file__).parent, "args.yaml"))
         self.line_width = 120
 
-    def write_yaml_args(self, args_dict, write_directory, validation=True):
+    def __repr__(self):
+        """Human readable print out of class object"""
+        return f"ArgMaker with {len(self._defaults.keys())} Default args"
+
+    def write_yaml_args(self, args_dict, write_directory, validation=True, set_write_name=False):
         """
         This will write a .yaml file contain all the parameters, split by mandatory and not required, for the current
         operation.
@@ -26,8 +30,12 @@ class ArgMaker:
             for key, value in zip(args_dict["Mandatory"].keys(), args_dict["Mandatory"].values()):
                 assert value is not None, ec.missing_arg(args_dict["Mandatory"]["Operation"], key)
 
-        # Create the .yaml stub
-        file = self._create_yaml_file(args_dict["Mandatory"]["Operation"], write_directory)
+        # Create the .yaml stub called the operation if no name is set, else the set name
+        if set_write_name:
+            write_name = set_write_name
+        else:
+            write_name = args_dict["Mandatory"]["Operation"]
+        file = self._create_yaml_file(write_name, write_directory)
 
         # Write Mandatory args
         self._write_header(file, "MANDATORY ARGS - IF ANY ARE NONE JOB WILL NOT RUN")
