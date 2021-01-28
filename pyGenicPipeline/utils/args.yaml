@@ -37,6 +37,10 @@ all_args:
   #  want a chunk be. Defaults to 10000
   Iter_Size: 10000
 
+  # Some process may be able to use a default args list to make additional files, set a path to the yaml file that
+  # contains these defaults here
+  Default_Args: null
+
   ## SHELL ARGUMENTS ###################################################################################################
 
   # Takes the values of slurm, qsub, and null
@@ -139,6 +143,10 @@ Arg_Descriptions:
   Iter_Size: >-
     Many large processes can be chunked into smaller sub processes to save memory, this is the maximum size you want a
     chunk be. Defaults to 10000
+
+  Default_Args: >-
+    Some process may be able to use a default args list to make additional files, set a path to the yaml file that
+    contains these defaults here
 
   ## SHELL ARGUMENTS ###################################################################################################
 
