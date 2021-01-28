@@ -135,6 +135,27 @@ class ArgMaker:
         for line in text_lines:
             file.write(f"# {line}\n")
 
+    def _write_header(self, file, message):
+        """Write a header with a message and trailing # up to the line length"""
+        file.write(f"# {message} " + f"".join(["#" for _ in range(self.line_width - (len(message) + 3))]) + "\n\n")
+
+    def write_yaml_group_dict(self, config_dict, write_directory, file_name):
+        """
+         Writes a yaml file called file_name from config_dict of one level of separation to write_directory
+
+        Some operations need to have common attributes stored of multiple parameters. This takes a dict where each key
+        in the dict is a parameter you wish to set, and each value is a dict of attributes you wish to set to this key.
+        """
+        file = self._create_yaml_file(file_name, write_directory)
+
+        # For each key, set the keys parameters by the dict assigned as the value
+        for key, values in zip(config_dict.keys(), config_dict.values()):
+            if "Description" in values.keys():
+                self._write_header(file, values["Description"])
+
+            file.write(f"{key}: \n")
+            self._write_args(file, config_dict[key], spacing=1, write_descriptions=False)
+
     @staticmethod
     def _create_yaml_file(operation, write_directory):
         """
@@ -157,6 +178,11 @@ class ArgMaker:
             return load_yaml(defaults)
 
     @property
+    def _arg_descriptions(self):
+        """So we can replicate comments in write file"""
+        return self._yaml_parameters["Arg_Descriptions"]
+
+    @property
     def operations(self):
         """Returns the current defined operations for processing"""
         return self._yaml_parameters["Operations"]
@@ -166,11 +192,7 @@ class ArgMaker:
         """Return all the arguments that are within the yaml file"""
         return self._yaml_parameters["all_args"]
 
-    @property
-    def _arg_descriptions(self):
-        """So we can replicate comments in write file"""
-        return self._yaml_parameters["Arg_Descriptions"]
-
+    # Shell Commands
     @property
     def split_bed_by_chromosome(self):
         """Returns the arguments the user needs to set for split_bed_by_chromosome"""
@@ -181,6 +203,7 @@ class ArgMaker:
         """Returns the arguments the user needs to set for convert_to_bgen"""
         return self._make_working_dict("convert_to_bgen")
 
+    # PGS by chromosome Commands
     @property
     def pgs_clean_summary_stats(self):
         """Returns the arguments the user needs to set for pgs_clean_summary_stats"""
