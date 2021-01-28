@@ -23,6 +23,6 @@ def set_genetic_path(path_text):
 
 
 if __name__ == '__main__':
-    eel.init("")
+    eel.init("Web")
 
     eel.start("index.html")
