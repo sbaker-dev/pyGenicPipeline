@@ -1,4 +1,4 @@
-from pyGenicPipeline.utils import misc as mc
+from pyGenicPipeline.utils.misc import set_args, validate_path
 
 from miscSupports import load_yaml
 from pathlib import Path
@@ -13,11 +13,9 @@ class ArgsParser:
         Contains common names as attributes so that they can be used as arguments to avoid spelling/alternative naming
         where-ever possible
         """
-        self.args = mc.set_args(args)
-        self.working_dir = mc.validate_path(self.args["Working_Directory"], False)
+        self.args = set_args(args)
+        self.working_dir = validate_path(self.args["Working_Directory"], False)
         self.config = load_yaml(Path(Path(__file__).parent, "Config.yaml"))
-        self.load_file = self.args["Load_File"]
-        self.default_args = self.args["Default_Args"]
 
     def make_sub_directory(self, job, name):
         """

@@ -23,6 +23,37 @@ def set_args(args):
         return load_yaml(yaml_path)
 
 
+def set_current_job(operation_dict):
+    """
+    Set the current job to be processed
+
+    :param operation_dict:
+        May be None if the user is using the main method as an object
+        May be a string if the user is using a job submission form
+        May be a dict if the user is using the method for development or natively in python
+    :type operation_dict: None | str | dict
+
+    :return:
+        If None, Returns None
+        If str, Returns operation_dict
+        If Dict, Asserts that only 1 job is selected and then returns the job name as a string
+
+    :raises TypeError, AssertionError:
+        TypeError if job is not a None, str, or dict.
+        AssertionError if the job dict contains more than a single job
+    """
+    if not operation_dict:
+        return None
+    elif isinstance(operation_dict, str):
+        return operation_dict
+    elif isinstance(operation_dict, dict):
+        job = [job_name for job_name, run in zip(operation_dict.keys(), operation_dict.values()) if run]
+        assert len(job) == 1, ec.job_violation(job)
+        return job[0]
+    else:
+        raise TypeError(ec.job_type(type(operation_dict)))
+
+
 def validate_path(path, allow_none=True):
     """
     We have multiple types of files and directories, some may be allow to be None as they will not be required
