@@ -1,20 +1,27 @@
+from pyGenicPipeline.utils.misc import set_args, set_current_job
 from pyGenicPipeline.utils import errors as ec
-from pyGenicPipeline.core.Input import Input
 
-from miscSupports import terminal_time
+from miscSupports import terminal_time, load_yaml
+from .ArgMaker import ArgMaker
 from pathlib import Path
 
 
-class Shell(Input):
+class Shell:
     def __init__(self, args):
-        super().__init__(args)
+
+        self.args = set_args(args)
+
+        self.load_file = self.args["Load_File"]
+        self.default_args = self.args["Default_Args"]
+        self.local_directory = self.args["Local_Directory"]
+        self.operation = set_current_job(self.args["Operation"])
 
     def split_bed_by_chromosome(self):
         """
         Create a script to split the current master .bed into separate chromosomes
         """
         # Create the file
-        file = self._create_shell_file()
+        file = self._create_shell_file("split_bed_by_chromosome")
         self._create_batch_header(file)
         file.write("# Source: zx8754 - https://www.biostars.org/p/387132/ \n\n")
 
@@ -36,7 +43,7 @@ class Shell(Input):
         Creates a script to use QCtoolv2 to convert .bed files to .bgen v1.2 files
         """
         # Create the file
-        file = self._create_shell_file()
+        file = self._create_shell_file("convert_to_bgen")
         self._create_batch_header(file)
         file.write("# See other conversions from "
                    "https://www.well.ox.ac.uk/~gav/qctool/documentation/examples/converting.html \n\n")
@@ -61,13 +68,21 @@ class Shell(Input):
         file.close()
         print(f"Created {self.operation}.sh script {terminal_time()}")
 
-    def _create_shell_file(self):
+    def _create_shell_file(self, file_name):
         """
-        Create an sh file
+        Create an sh file called file_name
         """
-        file = open(Path(self.working_dir, f"{self.operation}.sh"), "w")
+        file = open(Path(self.local_directory, f"{file_name}.sh"), "w")
         file.write("#!/bin/bash\n\n")
         file.write("# Generate by pyGeneticPipe/Utils/Shell.py\n\n")
+        return file
+
+    def _create_py_file(self, file_name):
+        """
+        Create an py file called file_name
+        """
+        file = open(Path(self.local_directory, f"{file_name}.py"), "w")
+        file.write("#!/usr/bin/env python\n\n")
         return file
 
     def _construct_args(self, file, args_list):
