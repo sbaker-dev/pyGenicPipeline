@@ -20,7 +20,8 @@ class LDHerit(Input):
 
     def suggest_ld_radius(self):
         """Suggest the size of LD that the user should be using"""
-        total_snps = sum([CsvObject(file).column_length for file in directory_iterator(self.filter_directory)])
+        total_snps = sum([CsvObject(Path(self.filter_directory, file)).column_length
+                          for file in directory_iterator(self.filter_directory)])
         print(f"Suggested LD Radius based on total snps found after filtering / 3000 is {total_snps / 3000}")
         return total_snps / 3000
 
