@@ -70,6 +70,57 @@ class Shell:
         file.write(f"done\n")
         self._close(file)
 
+    def chromosome_controllers(self):
+
+        # Load the python controller
+        py_file = self._create_py_file("py_controller")
+        py_file.write("from pyGenicPipeline import Main\n")
+        py_file.write("import sys\n")
+        py_file.write("Main(sys.argv[1])\n")
+        py_file.close()
+
+        # Set the Submission bash file is going to be batch submitted via sbatch for example
+        file = self._create_shell_file(f"bash_batch_submission")
+        self._create_batch_header(file)
+
+        file.write("echo 'Starting Job'\n\n")
+        file.write("# first source bashrc (with conda.sh), then conda can be used\n")
+        file.write("source ~/.bashrc\n\n")
+
+        file.write("# make sure conda base is activated\n")
+        # Todo we need to exposure the environment name
+        file.write("conda activate pyGenicPipe\n\n")
+
+        file.write("# Set the file_path name as the first argument passed from central bash controller\n")
+        file.write("FILE_PATH=$1\n\n")
+
+        file.write("# Run the script\n")
+        file.write("python py_controller.py $FILE_PATH\n")
+        file.close()
+
+        # Set the central base controller, set the operation to the current operation to be run
+        master = self._create_shell_file("bash_controller")
+        master.write(f"operation={self.operation}\n")
+
+        # Iterate through files in the given job folder, submitting the file_name as the argument to the bash controller
+        # If the file_name is the same as the operator
+        master.write(f"for file_name in *\n")
+        master.write(f"do\n\n")
+        master.write("if [[ $file_name == *$operation* ]]\n")
+        master.write("then\n")
+        master.write('echo "`pwd`/$file_name"\n')
+        master.write('sbatch bash_batch_submission.sh "`pwd`/$file_name"\n')
+        master.write("fi\n\n")
+        master.write(f"done\n")
+        master.close()
+
+        # Set the yaml files to be by chromosome in this local directory
+        args_maker = ArgMaker(self.default_args)
+
+        for i in range(1, 23):
+            self.args["Target_Chromosome"] = i
+            args_maker.write_yaml_args(self.args, self.local_directory, False, f"{self.operation}_{i}")
+
     def _close(self, file):
         """
         Close the file and log the process is finished
