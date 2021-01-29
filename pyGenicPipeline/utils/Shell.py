@@ -108,7 +108,7 @@ class Shell:
         master.write(f"do\n\n")
         master.write("if [[ $file_name == *$operation* ]]\n")
         master.write("then\n")
-        master.write('echo "`pwd`/$file_name"\n')
+        master.write('echo "Submitting $file_name"\n')
         master.write('sbatch bash_batch_submission.sh "`pwd`/$file_name"\n')
         master.write("fi\n\n")
         master.write(f"done\n")
