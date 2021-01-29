@@ -1,5 +1,5 @@
 from pyGenicPipeline.utils import errors as ec
-from pyGenicPipeline.utils import misc as mc
+from pyGenicPipeline.utils.misc import variant_array, validate_path
 from .argsParser import ArgsParser
 
 from miscSupports import directory_iterator
@@ -31,7 +31,7 @@ class CommonGenetic(ArgsParser):
         self.lr_ld_path = self._load_local_data_path("Filter_Long_Range_LD")
 
         # Genetic files attributes
-        self.gen_directory = mc.validate_path(self.args["Load_Directory"])
+        self.gen_directory = validate_path(self.args["Load_Directory"])
         self.gen_type = self.args["Load_Type"]
         self._snp_tools = self.args["PySnpTools_Bgen"]
 
@@ -100,10 +100,19 @@ class CommonGenetic(ArgsParser):
         return long_dict
 
     def _set_reference_panel(self):
+        """
+        Many operations will need a reference panel of individuals that are genetically dis-similar/ Not related to each
+        other. This will load a csv or similar text file with two columns of type FID - IID if set. Else will return
+        None.
+
+        Note
+        -----
+        This operation does NOT allow for headers, so do not set them!
+        """
         if self.args["Reference_Panel"]:
             path_to_file = Path(self.args["Reference_Panel"])
-            mc.validate_path(path_to_file, False)
-            return CsvObject(path_to_file, set_columns=True).row_data
+            validate_path(path_to_file, False)
+            return CsvObject(path_to_file, set_columns=True, file_headers=False).row_data
 
         else:
             return None
@@ -192,7 +201,7 @@ class CommonGenetic(ArgsParser):
 
     def snp_names(self, sm_dict):
         """Variant names differ in pysnptools bgen, so account for this and just return rs_id's"""
-        return mc.variant_array(self.snp_id.lower(), sm_dict[self.sm_variants])
+        return variant_array(self.snp_id.lower(), sm_dict[self.sm_variants])
 
     @staticmethod
     def revert_snp_names(snp_names, gen_file):

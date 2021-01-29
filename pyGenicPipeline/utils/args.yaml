@@ -30,7 +30,7 @@ all_args:
   Target_Chromosome: null
 
   # When using certain pipelines you will need to provide a link to individuals whom are genetically un-related to this
-  # parameter
+  # parameter as a csv like file WITHOUT file headers where the first column is the FID and the second the IID
   Reference_Panel: null
 
   # Many large processes can be chunked into smaller sub processes to save memory, this is the maximum size you
@@ -138,7 +138,7 @@ Arg_Descriptions:
 
   Reference_Panel: >-
     When using certain pipelines you will need to provide a link to individuals whom are genetically un-related to this
-    parameter
+    parameter as a csv like file WITHOUT file headers where the first column is the FID and the second the IID
 
   Iter_Size: >-
     Many large processes can be chunked into smaller sub processes to save memory, this is the maximum size you want a
@@ -276,8 +276,8 @@ Operations:
         want something specific from them.
 
       Mandatory: ["Working_Directory", "Operation", "Job_Scheduler", "Partition", "Load_Type", "PySnpTools_Bgen",
-                  "Target_Chromosome", "Load_Directory", "Summary_Path", "Summary_Sample_Size", "Summary_Effect_Type",
-                  "HapMap3", "Z_Scores"]
+                  "Target_Chromosome", "Load_Directory", "Reference_Panel", "Summary_Path", "Summary_Sample_Size",
+                  "Summary_Effect_Type", "HapMap3", "Z_Scores"]
       Optional: ["Nodes", "Job_Time", "Job_Memory", "Custom_Summary_Header"]
 
     pgs_clean_summary_stats:
@@ -288,9 +288,9 @@ Operations:
         this information to a csv.
 
       Mandatory: ["Working_Directory", "Operation", "Job_Scheduler", "Partition", "Load_Type", "PySnpTools_Bgen",
-                  "Target_Chromosome", "Load_Directory", "Summary_Path", "Summary_Sample_Size", "Summary_Effect_Type",
-                  "HapMap3", "Z_Scores"]
-      Optional: ["Nodes", "Job_Time", "Job_Memory", "Custom_Summary_Header"]
+                  "Target_Chromosome", "Load_Directory", "Reference_Panel", "Summary_Path", "Summary_Sample_Size",
+                  "Summary_Effect_Type", "HapMap3", "Z_Scores"]
+      Optional: ["Nodes", "Job_Time", "Job_Memory", "Custom_Summary_Header", "Ref"]
 
     pgs_filter_snps:
       Description: >-
