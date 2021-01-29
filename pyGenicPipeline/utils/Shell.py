@@ -1,20 +1,27 @@
 from pyGenicPipeline.utils.misc import set_args, set_current_job
 from pyGenicPipeline.utils import errors as ec
-
-from miscSupports import terminal_time, load_yaml
 from .ArgMaker import ArgMaker
+
+from miscSupports import terminal_time
 from pathlib import Path
+import os
 
 
 class Shell:
-    def __init__(self, args):
+    def __init__(self, args, write_path):
 
+        # Load the args, defaults for by chromosome operations, and the operation that is being performed.
         self.args = set_args(args)
-
-        self.load_file = self.args["Load_File"]
         self.default_args = self.args["Default_Args"]
-        self.local_directory = self.args["Local_Directory"]
         self.operation = set_current_job(self.args["Operation"])
+
+        # Make a sub directory so we don't include the yaml master within the folder needed for upload
+        try:
+            os.mkdir(Path(write_path, self.operation))
+        except FileExistsError:
+            pass
+
+        self.local_directory = Path(write_path, self.operation)
 
     def split_bed_by_chromosome(self):
         """
