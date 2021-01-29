@@ -222,7 +222,8 @@ class ArgMaker:
 
     @property
     def pgs_filter_snps(self):
-        return
+        """Returns the arguments the user needs to set for pgs_filter_snps"""
+        return self._make_working_dict("pgs_filter_snps")
 
     @property
     def pgs_calculate_ld(self):

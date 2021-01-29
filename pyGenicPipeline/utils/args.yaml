@@ -276,8 +276,8 @@ Operations:
         want something specific from them.
 
       Mandatory: ["Working_Directory", "Operation", "Job_Scheduler", "Partition", "Load_Type", "PySnpTools_Bgen",
-                  "Target_Chromosome", "Load_Directory", "Reference_Panel", "Summary_Path", "Summary_Sample_Size",
-                  "Summary_Effect_Type", "HapMap3", "Z_Scores"]
+                  "Target_Chromosome", "Load_Directory", "Reference_Panel", "Iter_Size", "Summary_Path",
+                  "Summary_Sample_Size", "Summary_Effect_Type", "HapMap3", "Z_Scores"]
       Optional: ["Nodes", "Job_Time", "Job_Memory", "Custom_Summary_Header"]
 
     pgs_clean_summary_stats:
@@ -290,7 +290,7 @@ Operations:
       Mandatory: ["Working_Directory", "Operation", "Job_Scheduler", "Partition", "Load_Type", "PySnpTools_Bgen",
                   "Target_Chromosome", "Load_Directory", "Reference_Panel", "Summary_Path", "Summary_Sample_Size",
                   "Summary_Effect_Type", "HapMap3", "Z_Scores"]
-      Optional: ["Nodes", "Job_Time", "Job_Memory", "Custom_Summary_Header", "Ref"]
+      Optional: ["Nodes", "Job_Time", "Job_Memory", "Custom_Summary_Header"]
 
     pgs_filter_snps:
       Description: >-
@@ -301,8 +301,10 @@ Operations:
         If we have information on summary frequencies, the user has specified a maf_min or wants to filter snps in long
         range LD then we can filter those out. This process will always filter out monomorphic snps.
 
-      Mandatory: []
-      Optional: []
+      Mandatory: ["Working_Directory", "Operation", "Job_Scheduler", "Partition", "Load_Type", "PySnpTools_Bgen",
+                  "Target_Chromosome", "Load_Directory", "Reference_Panel", "Iter_Size", "Filter_Min_Maf",
+                  "Filter_Max_Freq_Discrepancy", "Filter_Long_Range_LD"]
+      Optional: ["Nodes", "Job_Time", "Job_Memory", ]
 
     pgs_calculate_ld:
       Description: >-
