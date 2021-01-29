@@ -28,6 +28,7 @@ class Shell:
         Create a script to split the current master .bed into separate chromosomes
         """
         # Create the file
+        assert self.operation == "split_bed_by_chromosome", f"Job {self.operation} does not match the shell constructor"
         file = self._create_shell_file("split_bed_by_chromosome")
         self._create_batch_header(file)
         file.write("# Source: zx8754 - https://www.biostars.org/p/387132/ \n\n")
@@ -50,6 +51,7 @@ class Shell:
         Creates a script to use QCtoolv2 to convert .bed files to .bgen v1.2 files
         """
         # Create the file
+        assert self.operation == "convert_to_bgen", f"Job {self.operation} does not match the shell constructor"
         file = self._create_shell_file("convert_to_bgen")
         self._create_batch_header(file)
         file.write("# See other conversions from "
