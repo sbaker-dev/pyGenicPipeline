@@ -219,3 +219,32 @@ class ArgMaker:
     def pgs_clean_summary_stats(self):
         """Returns the arguments the user needs to set for pgs_clean_summary_stats"""
         return self._make_working_dict("pgs_clean_summary_stats")
+
+    @property
+    def pgs_filter_snps(self):
+        return
+
+    @property
+    def pgs_calculate_ld(self):
+        return
+
+    @property
+    def pgs_infinitesimal(self):
+        return
+
+    @property
+    def pgs_scores(self):
+        return
+
+    # Not by Chromosome PGS Commands
+    @property
+    def suggest_ld_radius(self):
+        return
+
+    @property
+    def calculate_genome_wide_heritability(self):
+        return
+
+    @property
+    def aggregate_scores(self):
+        return

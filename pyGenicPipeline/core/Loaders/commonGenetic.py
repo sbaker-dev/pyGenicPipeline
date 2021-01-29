@@ -57,7 +57,7 @@ class CommonGenetic(ArgsParser):
         """
 
         if self.args[access_key]:
-            package_root = Path(__file__).parent.parent
+            package_root = Path(__file__).parent.parent.parent
 
             if access_key == "HapMap3":
                 access_path = Path(package_root, "Data", "hm3_sids.txt.gz")
