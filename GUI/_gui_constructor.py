@@ -4,7 +4,14 @@ construction as each 'job' is basically the same page just with different argume
 """
 
 from pyGenicPipeline import ArgMaker
-from bs4 import BeautifulSoup
+import sys
+
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    BeautifulSoup = None
+    sys.exit("GUI Constructor requires bs4 BeautifulSoup")
+
 from pathlib import Path
 
 
@@ -17,6 +24,8 @@ class GUIMaker(ArgMaker):
         print(self.operations)
 
     def construct_gui(self):
+
+        # todo To compile, go to the eel page to get the commands to put into the command line
 
         # Construct the main page that we load into
         self.construct_title_page()

@@ -2,10 +2,10 @@
 /venv2
 /Tests
 /.idea
-/GUI/.idea
-/GUI/css/boot
-/GUI/js/boot
-/GUI/Images/Theme.png
+/GUI/Web/.idea
+/GUI/Web/css/boot
+/GUI/Web/js/boot
+/GUI/Web/Images/Theme.png
 /docs/.idea
 /docs/css/boot
 /docs/js/boot
