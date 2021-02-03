@@ -220,8 +220,8 @@ class CommonGenetic(ArgsParser):
 
         # bed returns 2, 1, 0 rather than 0, 1, 2 although it says its 0, 1, 2; so this inverts it
         if self.gen_type == ".bed":
-            ordered_common = gen_file[:, gen_file.sid_to_index(variant_names)].read(dtype=np.int8).val
-            raw_snps = np.array([abs(snp - 2) for snp in ordered_common.T], dtype=np.int8)
+            ordered_common = gen_file[:, gen_file.sid_to_index(variant_names)]
+            return np.array([abs(snp - 2) for snp in ordered_common.read(dtype=np.int8).val.T], dtype=np.int8)
 
         # We have a [1, 0, 0], [0, 1, 0], [0, 0, 1] array return for 0, 1, 2 respectively. So if we multiple the arrays
         # by their index position and then sum them we get [0, 1, 2]
@@ -230,16 +230,14 @@ class CommonGenetic(ArgsParser):
                 # Re-construct the variant_id-rs_id
                 variant_names = self.revert_snp_names(variant_names, gen_file)
 
-                ordered_common = gen_file[:, gen_file.sid_to_index(variant_names)].read(dtype=np.int8).val
-                raw_snps = sum(np.array([snp * i for i, snp in enumerate(ordered_common.T)], dtype=np.int8))
+                ordered_common = gen_file[:, gen_file.sid_to_index(variant_names)]
+                return sum(np.array([snp * i for i, snp in enumerate(ordered_common.read(dtype=np.int8).val.T)],
+                                    dtype=np.int8))
             else:
-                raw_snps = gen_file.dosage_from_sid(variant_names)
+                return gen_file.dosage_from_sid(variant_names)
 
         else:
             raise Exception(f"Critical Error: Unknown load type {self.gen_type} found in _isolate_dosage")
-
-        assert len(raw_snps) == len(variant_names), "Failed to filter out duplicates"
-        return raw_snps
 
     def normalise_snps(self, gen_file, variant_names, std_return=False):
         """For gibbs we use normalised snps, this process will use the information we have filtered to construct it"""
