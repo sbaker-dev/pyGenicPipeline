@@ -314,7 +314,7 @@ Operations:
                   "Target_Chromosome", "Load_Directory", "Reference_Panel"]
       Optional: ["Nodes", "Job_Time", "Job_Memory"]
 
-    pgs_calculate_ld_score:
+    pgs_calculate_ld:
       Description: >-
         This will calculate the chromosome specific LD information which will be used later to construct genome_wide LD
         information, whilst also saving the values of the normalised Snps and standard errors
@@ -328,8 +328,9 @@ Operations:
         Once we have cleaned our data sets, we can store the genome wide data along side with some individual
         chromosome information that does not take the form of lists, in a yaml config file.
 
-      Mandatory: []
-      Optional: []
+      Mandatory: ["Working_Directory", "Operation", "Job_Scheduler", "Partition", "Load_Type", "PySnpTools_Bgen",
+                  "Target_Chromosome", "Load_Directory", "Reference_Panel", "LD_Radius", "Summary_Sample_Size"]
+      Optional: ["Nodes", "Job_Time", "Job_Memory"]
 
     pgs_infinitesimal:
       Description: >-

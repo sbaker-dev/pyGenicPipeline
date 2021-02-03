@@ -226,9 +226,9 @@ class ArgMaker:
         return self._make_working_dict("pgs_filter_snps")
 
     @property
-    def pgs_calculate_ld_score(self):
+    def pgs_calculate_ld(self):
         """Returns the arguments the user needs to set for pgs_calculate_ld_score"""
-        return self._make_working_dict("pgs_calculate_ld_score")
+        return self._make_working_dict("pgs_calculate_ld")
 
     @property
     def pgs_infinitesimal(self):
@@ -246,7 +246,8 @@ class ArgMaker:
 
     @property
     def calculate_genome_wide_heritability(self):
-        return
+        """Returns the arguments the user needs to set for calculate_genome_wide_heritability"""
+        return self._make_working_dict("calculate_genome_wide_heritability")
 
     @property
     def aggregate_scores(self):
