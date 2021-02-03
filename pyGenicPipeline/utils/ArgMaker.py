@@ -226,8 +226,9 @@ class ArgMaker:
         return self._make_working_dict("pgs_filter_snps")
 
     @property
-    def pgs_calculate_ld(self):
-        return
+    def pgs_calculate_ld_score(self):
+        """Returns the arguments the user needs to set for pgs_calculate_ld_score"""
+        return self._make_working_dict("pgs_calculate_ld_score")
 
     @property
     def pgs_infinitesimal(self):
@@ -240,7 +241,8 @@ class ArgMaker:
     # Not by Chromosome PGS Commands
     @property
     def suggest_ld_radius(self):
-        return
+        """Returns the arguments the user needs to set for suggest_ld_radius"""
+        return self._make_working_dict("suggest_ld_radius")
 
     @property
     def calculate_genome_wide_heritability(self):

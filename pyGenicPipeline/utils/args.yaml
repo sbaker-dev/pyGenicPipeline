@@ -304,15 +304,24 @@ Operations:
       Mandatory: ["Working_Directory", "Operation", "Job_Scheduler", "Partition", "Load_Type", "PySnpTools_Bgen",
                   "Target_Chromosome", "Load_Directory", "Reference_Panel", "Iter_Size", "Filter_Min_Maf",
                   "Filter_Max_Freq_Discrepancy", "Filter_Long_Range_LD"]
-      Optional: ["Nodes", "Job_Time", "Job_Memory", ]
+      Optional: ["Nodes", "Job_Time", "Job_Memory"]
 
-    pgs_calculate_ld:
+    suggest_ld_radius:
+      Description: >-
+        This will use the snp_count / 3000 formula from LD-pred to get a rough LD radius
+
+      Mandatory: ["Working_Directory", "Operation", "Job_Scheduler", "Partition", "Load_Type", "PySnpTools_Bgen",
+                  "Target_Chromosome", "Load_Directory", "Reference_Panel"]
+      Optional: ["Nodes", "Job_Time", "Job_Memory"]
+
+    pgs_calculate_ld_score:
       Description: >-
         This will calculate the chromosome specific LD information which will be used later to construct genome_wide LD
         information, whilst also saving the values of the normalised Snps and standard errors
 
-      Mandatory: []
-      Optional: []
+      Mandatory: ["Working_Directory", "Operation", "Job_Scheduler", "Partition", "Load_Type", "PySnpTools_Bgen",
+                  "Target_Chromosome", "Load_Directory", "Reference_Panel", "LD_Radius"]
+      Optional: ["Nodes", "Job_Time", "Job_Memory"]
 
     calculate_genome_wide_heritability:
       Description: >-
