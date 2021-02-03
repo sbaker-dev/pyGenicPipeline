@@ -229,7 +229,6 @@ class CommonGenetic(ArgsParser):
             if self._snp_tools:
                 # Re-construct the variant_id-rs_id
                 variant_names = self.revert_snp_names(variant_names, gen_file)
-
                 ordered_common = gen_file[:, gen_file.sid_to_index(variant_names)]
                 return sum(np.array([snp * i for i, snp in enumerate(ordered_common.read(dtype=np.int8).val.T)],
                                     dtype=np.int8))

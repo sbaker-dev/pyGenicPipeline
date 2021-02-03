@@ -40,16 +40,22 @@ class SummaryLoader(ArgsParser):
         """
 
         # Stop if not required
-        if not self.summary_file:
+        if not self.summary_file and not self.args["Summary_Sample_Size"]:
             return None, None
 
-        # Check the sample size from this study has been provided
-        sample_size = self.args["Summary_Sample_Size"]
-        assert (sample_size is not None) and (sample_size > 0), ec.sample_size()
+        # Return the sample size if we just need this, for example for supporting genome wide heritability estimates
+        elif not self.summary_file and self.args["Summary_Sample_Size"] > 0:
+            return None, self.args["Summary_Sample_Size"]
 
-        # Determine if the summary file is g-zipped
-        gz_status = (self.summary_file.suffix == ".gz")
-        return gz_status, sample_size
+        # Otherwise assume we are running the summary cleaner, and setup for cleaning
+        else:
+            # Check the sample size from this study has been provided
+            sample_size = self.args["Summary_Sample_Size"]
+            assert (sample_size is not None) and (sample_size > 0), ec.sample_size()
+
+            # Determine if the summary file is g-zipped
+            gz_status = (self.summary_file.suffix == ".gz")
+            return gz_status, sample_size
 
     def _set_summary_headers(self):
         """
