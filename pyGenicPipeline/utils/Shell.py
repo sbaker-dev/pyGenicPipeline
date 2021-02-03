@@ -70,7 +70,7 @@ class Shell:
         file.write(f"done\n")
         self._close(file)
 
-    def chromosome_controllers(self):
+    def chromosome_controllers(self, chromosome_range=23):
 
         # Load the python controller
         py_file = self._create_py_file("py_controller")
@@ -117,7 +117,7 @@ class Shell:
         # Set the yaml files to be by chromosome in this local directory
         args_maker = ArgMaker(self.default_args)
 
-        for i in range(1, 23):
+        for i in range(1, chromosome_range):
             self.args["Target_Chromosome"] = i
             args_maker.write_yaml_args(self.args, self.local_directory, False, f"{self.operation}_{i}")
 
