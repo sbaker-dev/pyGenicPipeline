@@ -232,11 +232,13 @@ class ArgMaker:
 
     @property
     def pgs_infinitesimal(self):
-        return
+        """Returns the arguments the user needs to set for pgs_infinitesimal"""
+        return self._make_working_dict("pgs_infinitesimal")
 
     @property
     def pgs_scores(self):
-        return
+        """Returns the arguments the user needs to set for pgs_scores"""
+        return self._make_working_dict("pgs_scores")
 
     # Not by Chromosome PGS Commands
     @property

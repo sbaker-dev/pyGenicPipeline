@@ -335,15 +335,17 @@ Operations:
     pgs_infinitesimal:
       Description: >-
         This will weight the beta values conditional on LD using infinitesimal shrinkage
-      Mandatory: []
-      Optional: []
+      Mandatory: ["Working_Directory", "Operation", "Job_Scheduler", "Partition", "Load_Type", "PySnpTools_Bgen",
+                  "Target_Chromosome", "Load_Directory", "Reference_Panel", "LD_Radius", "Summary_Sample_Size"]
+      Optional: ["Nodes", "Job_Time", "Job_Memory"]
 
     pgs_scores:
       Description: >-
         This will construct the pgs for a given weight beta type, such as infinitesimal, within this chromosome
 
-      Mandatory: []
-      Optional: []
+      Mandatory: ["Working_Directory", "Operation", "Job_Scheduler", "Partition", "Load_Type", "PySnpTools_Bgen",
+                  "Target_Chromosome", "Load_Directory", "Reference_Panel", "Iter_Size"]
+      Optional: ["Nodes", "Job_Time", "Job_Memory"]
 
     aggregate_scores:
       Description: >-
