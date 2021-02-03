@@ -37,7 +37,7 @@ class Weights(Input):
 
         # Write the snp name - constructed betas to a csv
         write_out = flip_list([self.snp_names(sm_dict), infinitesimal])
-        write_csv(self.inf_directory, f"INF_{self.target_chromosome}", [self.snp_id, self.inf_beta], write_out)
+        write_csv(self.inf_directory, f"Inf_{self.target_chromosome}", [self.snp_id, self.inf_beta], write_out)
         print(f"Constructed infinitesimal weights in {time.time() - t0} at {terminal_time()}")
 
     def _infinitesimal_betas(self, herit, iid_count, normalised_snps, sid_count, sm_dict):

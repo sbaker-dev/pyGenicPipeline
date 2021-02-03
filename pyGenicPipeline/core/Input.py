@@ -30,7 +30,7 @@ class Input(SummaryLoader, FilterLoader, LDLoader, GibbLoader, CommonGenetic, Ar
         self.make_sub_directory("PGS", "Scores")
         self.scores_directory = Path(self.working_dir, "PGS", "Scores")
         # todo expose this but have a default
-        self.score_type = "INF_Weights"
+        self.score_type = "Inf_Weights"
         self.phenotype_file = validate_path(self.args["Phenotype"])
         self.covariates_file = validate_path(self.args["Covariates"])
 
