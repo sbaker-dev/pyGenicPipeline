@@ -351,5 +351,6 @@ Operations:
       Description: >-
         This will combine the scores found by chromosome into a single file
 
-      Mandatory: []
-      Optional: []
+      Mandatory: ["Working_Directory", "Operation", "Job_Scheduler", "Partition", "Load_Type", "PySnpTools_Bgen",
+                  "Target_Chromosome", "Load_Directory", "Reference_Panel"]
+      Optional: ["Nodes", "Job_Time", "Job_Memory"]

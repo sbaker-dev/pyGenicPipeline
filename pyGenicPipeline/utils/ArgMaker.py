@@ -253,4 +253,5 @@ class ArgMaker:
 
     @property
     def aggregate_scores(self):
-        return
+        """Returns the arguments the user needs to set for aggregate_scores"""
+        return self._make_working_dict("aggregate_scores")
