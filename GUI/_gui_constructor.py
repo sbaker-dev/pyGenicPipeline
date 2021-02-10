@@ -19,10 +19,6 @@ class GUIMaker(ArgMaker):
     def __init__(self):
         super().__init__()
 
-        print(self.yaml_parameters)
-
-        print(self.operations)
-
     def construct_gui(self):
 
         # todo To compile, go to the eel page to get the commands to put into the command line
@@ -47,7 +43,7 @@ class GUIMaker(ArgMaker):
         # Add the job groupings that have been defined
         for job_group in self.operations:
             description = self.operations[job_group]["Description"]
-            title_base.find("div", attrs={"class": "container"}).extend(self._linker_card(job_group, description))
+            title_base.find("div", attrs={"class": "container"}).extend(self._link_card(job_group, description))
 
         # Write the index controller
         # todo will be renamed to index when finished
@@ -55,23 +51,39 @@ class GUIMaker(ArgMaker):
             file.write(str(title_base))
 
     def construct_job_type_page(self, job_group):
-        # Base page
+        # Construct the Job Type page
         base = open(Path(Path(__file__).parent, "Web", f"{job_group}.html"), "rb")
-        job_base = BeautifulSoup(base, features="html.parser")
+        job_type_base = BeautifulSoup(base, features="html.parser")
 
+        # Create the Job Pages to Link to
         self._create_html_files(self.operations[job_group].keys())
 
+        # Link Job Pages to the Job Type Page
         for job in self.operations[job_group]:
             if job != "Description":
                 description = self.operations[job_group][job]["Description"]
-                job_base.find("div", attrs={"class": "container"}).extend(self._linker_card(job, description))
+                job_type_base.find("div", attrs={"class": "container"}).extend(self._link_card(job, description))
+                self.construct_job_page(job, self.operations[job_group][job])
 
         with open(Path(Path(__file__).parent, "Web", f"{job_group}.html"), "w", encoding="utf-8") as file:
+            file.write(str(job_type_base))
+
+    def construct_job_page(self, job, job_args):
+
+        base = open(Path(Path(__file__).parent, "Web", f"{job}.html"), "rb")
+        job_base = BeautifulSoup(base, features="html.parser")
+
+        for arg_type in job_args.keys():
+            if arg_type != "Description":
+                # todo Add separator elements to allow for the different types via parsing arg_type to the yaml file
+                # todo Need to add a arg type seperator (this will allow us to generalise this)
+
+                for arg in job_args[arg_type]:
+                    description = self.yaml_parameters["Arg_Descriptions"][arg]
+                    job_base.find("div", attrs={"class": "container"}).extend(self._arg_card(arg, description))
+
+        with open(Path(Path(__file__).parent, "Web", f"{job}.html"), "w", encoding="utf-8") as file:
             file.write(str(job_base))
-
-    def construct_job_page(self):
-        return
-
 
     def _create_html_files(self, group_of_jobs):
         """
@@ -91,9 +103,9 @@ class GUIMaker(ArgMaker):
                 with open(Path(Path(__file__).parent, "Web", f"{page}.html"), "w", encoding="utf-8") as file:
                     file.write(str(title_base))
 
-    def _linker_card(self, job, info):
+    def _link_card(self, job, info):
         """
-        THis updates a linker card base with the information needed to link to the next job group / job.
+        This updates a link card base with the information needed to link to the next job group / job.
 
         :param job: The current job name
         :param info: The job information, description, or other details to describe what is going to happen after
@@ -102,7 +114,7 @@ class GUIMaker(ArgMaker):
         :rtype: BeautifulSoup
         """
         # Load cards
-        card = open(Path(self.template_path, "card.html"), "rb")
+        card = open(Path(self.template_path, "link_card.html"), "rb")
         card_base = BeautifulSoup(card, features="html.parser")
 
         # Set the Title ID and string based on the operation
@@ -118,6 +130,28 @@ class GUIMaker(ArgMaker):
         linker = card_base.find("a")
         linker["href"] = f"{job}.html"
         linker.string = f"Go to {job.replace('_', ' ')} operations"
+        return card_base
+
+    def _arg_card(self, arg, info):
+        # Load cards
+        card = open(Path(self.template_path, "arg_card.html"), "rb")
+        card_base = BeautifulSoup(card, features="html.parser")
+
+        # Set the Title ID and string based on the operation
+        card_element = card_base.find("h2")
+        card_element["id"] = arg
+        card_element.string = arg.replace("_", " ")
+
+        # Set the descriptions of the arg group
+        description = card_base.find("p")
+        description.string = info
+
+        label = card_base.find("label")
+        label["for"] = f"{arg}_input"
+
+        text_input = card_base.find("input")
+        text_input["id"] = f"{arg}_input"
+        text_input["placeholder"] = f"Please enter the information for {arg.replace('_', ' ')} here"
         return card_base
 
     @property
