@@ -2,6 +2,7 @@ from pyGenicPipeline.utils import errors as ec
 from pyGenicPipeline.utils import misc as mc
 from ..argsParser import ArgsParser
 
+from miscSupports import decode_line, open_setter
 from csvObject import write_csv
 from pathlib import Path
 
@@ -79,12 +80,12 @@ class SummaryLoader(ArgsParser):
             # Based on known summary statistics from LDPred sum_stats_parsers.py
             header_sets = self._config["header_keys"]
 
-        with mc.open_setter(self.summary_file)(self.summary_file) as file:
+        with open_setter(self.summary_file)(self.summary_file) as file:
 
             # Determine if we have custom headers or not via _loaded_sum_headers
             raw_headers = file.readline()
 
-            headers = {header: self._check_header(header, mc.decode_line(raw_headers, self.zipped), header_sets)
+            headers = {header: self._check_header(header, decode_line(raw_headers, self.zipped), header_sets)
                        for header in header_sets}
 
             file.close()

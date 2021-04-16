@@ -2,6 +2,7 @@ from pyGenicPipeline.utils import errors as ec
 from pyGenicPipeline.utils import misc as mc
 from pyGenicPipeline.core.Input import Input
 
+from miscSupports import decode_line, open_setter
 from pyGenicParser import Nucleotide
 from scipy import stats
 import numpy as np
@@ -81,7 +82,7 @@ class SummaryCleaner(Input):
     def _line_by_line_summary(self, validation_snps):
         """This will check, for every line in the summary statistics, if a snp is within our list of accept snps."""
         sm_line = []
-        with mc.open_setter(self.summary_file)(self.summary_file) as file:
+        with open_setter(self.summary_file)(self.summary_file) as file:
             # Skip the header
             file.readline()
 
@@ -89,7 +90,7 @@ class SummaryCleaner(Input):
             for index, line_byte in enumerate(file):
 
                 # Decode the line and extract the snp_id
-                line = mc.decode_line(line_byte, self.zipped)
+                line = decode_line(line_byte, self.zipped)
                 snp_id = line[self.sm_snp_id]
 
                 # If the snp exists in both the validation and core snp samples then clean this line, else skip.
